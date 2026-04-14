@@ -16,6 +16,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { EditControl } from "react-leaflet-draw";
 import "leaflet-draw/dist/leaflet.draw.css";
 import { LineChart, Line, Tooltip as RechartsTooltip, YAxis } from "recharts";
+import MarkerClusterGroup from "react-leaflet-cluster";
 
 import {
   useCreateValve,
@@ -642,12 +643,20 @@ function CustomersLayer({
     iconAnchor: [highlighted ? 13 : 11, highlighted ? 13 : 11],
   });
 
+  const createClusterCustomIcon = function (cluster: any) {
+    return L.divIcon({
+      html: `<div style="background-color: #10b981; color: white; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-size: 14px;">${cluster.getChildCount()}</div>`,
+      className: "custom-marker-cluster",
+      iconSize: L.point(34, 34, true),
+    });
+  };
+
   return (
     <>
-      {customers.map((c: any) => {
+      {/* ── Render Service Lines separately from Markers ── */}
+      {showServiceLines && customers.map((c: any) => {
         if (!c.lat || !c.lng) return null;
 
-        // Find closest point on pipeline for service line
         let closestPt: [number, number] | null = null;
         let minDist = Infinity;
 
@@ -665,26 +674,39 @@ function CustomersLayer({
               const dist = dx * dx + dy * dy;
               if (dist < minDist) {
                 minDist = dist;
-                closestPt = [proj.y, proj.x]; // [lat, lng]
+                closestPt = [proj.y, proj.x];
               }
             }
           }
         }
 
+        if (!closestPt) return null;
+
         return (
-          <React.Fragment key={c.id}>
-            {showServiceLines && closestPt && (
-              <Polyline
-                positions={[closestPt, [Number(c.lat), Number(c.lng)]]}
-                pathOptions={{
-                  color: serviceLineHighlighted ? "#0284c7" : "#0ea5e9",
-                  weight: serviceLineHighlighted ? 3 : 2,
-                  dashArray: serviceLineHighlighted ? "6, 4" : "4, 6",
-                  opacity: serviceLineHighlighted ? 1 : 0.85,
-                }}
-              />
-            )}
-            <Marker position={[Number(c.lat), Number(c.lng)]} icon={customerIcon}>
+          <Polyline
+            key={`line-${c.id}`}
+            positions={[closestPt, [Number(c.lat), Number(c.lng)]]}
+            pathOptions={{
+              color: serviceLineHighlighted ? "#0284c7" : "#0ea5e9",
+              weight: serviceLineHighlighted ? 3 : 2,
+              dashArray: serviceLineHighlighted ? "6, 4" : "4, 6",
+              opacity: serviceLineHighlighted ? 1 : 0.85,
+            }}
+          />
+        );
+      })}
+
+      {/* ── Render Customer Markers with Cluster ── */}
+      <MarkerClusterGroup
+        chunkedLoading
+        iconCreateFunction={createClusterCustomIcon}
+        showCoverageOnHover={false}
+        maxClusterRadius={50}
+      >
+        {customers.map((c: any) => {
+          if (!c.lat || !c.lng) return null;
+          return (
+            <Marker key={`marker-${c.id}`} position={[Number(c.lat), Number(c.lng)]} icon={customerIcon}>
               <Popup className="custom-popup">
                 <div className="p-1" style={{ minWidth: 210 }}>
                   <div className="flex items-center gap-2 mb-2 border-b pb-2">
@@ -706,9 +728,12 @@ function CustomersLayer({
                 </div>
               </Popup>
             </Marker>
-          </React.Fragment>
-        );
-      })}
+          );
+        })}
+      </MarkerClusterGroup>
     </>
   );
 }
+
+// Fix typescript complains
+export {};
