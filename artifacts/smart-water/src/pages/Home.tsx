@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { RadioReceiver } from "lucide-react";
 
 import {
   useListValves,
@@ -15,6 +16,7 @@ import { TelemetryPanel } from "@/components/TelemetryPanel";
 export default function Home() {
   const [editMode, setEditMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [telemetryOpen, setTelemetryOpen] = useState(false);
 
   const { data: valves } = useListValves();
   const { data: pipes } = useListPipes();
@@ -65,9 +67,20 @@ export default function Home() {
           />
         </div>
 
-        <div className="absolute right-4 top-4 z-10 w-80 space-y-4">
-          <TelemetryPanel valves={valves || []} />
-        </div>
+        {telemetryOpen ? (
+          <div className="absolute right-4 top-4 z-10 w-80 space-y-4">
+            <TelemetryPanel valves={valves || []} onClose={() => setTelemetryOpen(false)} />
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setTelemetryOpen(true)}
+            className="absolute right-4 top-4 z-10 flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-md hover:bg-slate-50"
+          >
+            <RadioReceiver className="h-4 w-4 text-blue-700" />
+            Buka Telemetri
+          </button>
+        )}
       </main>
     </div>
   );

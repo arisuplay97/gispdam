@@ -5,10 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioReceiver } from "lucide-react";
+import { RadioReceiver, X } from "lucide-react";
 import { toast } from "sonner";
 
-export function TelemetryPanel({ valves }: { valves: Valve[] }) {
+export function TelemetryPanel({ valves, onClose }: { valves: Valve[]; onClose: () => void }) {
   const [selectedValveId, setSelectedValveId] = useState<string>("");
   const [pressure, setPressure] = useState<number>(5.0);
 
@@ -39,9 +39,19 @@ export function TelemetryPanel({ valves }: { valves: Valve[] }) {
   return (
     <Card className="border-slate-200 bg-white/95 shadow-md">
       <CardHeader className="border-b border-slate-200 pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-          <RadioReceiver className="h-4 w-4 text-blue-700" /> Simulasi Telemetri
-        </CardTitle>
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+            <RadioReceiver className="h-4 w-4 text-blue-700" /> Simulasi Telemetri
+          </CardTitle>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+            aria-label="Tutup simulasi telemetri"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4 pt-4">
         <div className="space-y-2">

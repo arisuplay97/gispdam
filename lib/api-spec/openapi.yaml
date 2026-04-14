@@ -14,6 +14,8 @@ tags:
     description: Valve management
   - name: pipes
     description: Pipe management
+  - name: pipelines
+    description: Pipeline GeoJSON layer
   - name: sources
     description: Water source management
   - name: import-export
@@ -210,6 +212,19 @@ paths:
       responses:
         "204":
           description: Pipe deleted
+
+  /pipelines/geojson:
+    get:
+      operationId: getPipelinesGeoJson
+      tags: [pipelines]
+      summary: Get radial pipeline network as GeoJSON
+      responses:
+        "200":
+          description: Radial pipeline GeoJSON feature collection
+          content:
+            application/json:
+              schema:
+                type: object
 
   /sources:
     get:
