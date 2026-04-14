@@ -2,7 +2,7 @@
   "version": 2,
   "buildCommand": "pnpm install && cd artifacts/smart-water && pnpm run build",
   "installCommand": "pnpm install --no-frozen-lockfile",
-  "outputDirectory": "artifacts/smart-water/dist",
+  "outputDirectory": "artifacts/smart-water/dist/public",
   "rewrites": [
     {
       "source": "/api/(.*)",
