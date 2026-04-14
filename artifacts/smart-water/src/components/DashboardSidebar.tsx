@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { DashboardStats, PressureRecord } from "@workspace/api-client-react";
+import { DashboardStats, Pipe, PressureRecord, Valve } from "@workspace/api-client-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { Activity, AlertTriangle, Droplets, Map, Upload, Download, Power, Zap, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useImportGeoJson, getListValvesQueryKey, getListPipesQueryKey, getGetDashboardStatsQueryKey } from "@workspace/api-client-react";
@@ -14,12 +14,43 @@ interface DashboardSidebarProps {
   pressureHistory?: PressureRecord[];
   editMode: boolean;
   setEditMode: (v: boolean) => void;
+  searchTerm: string;
+  setSearchTerm: (v: string) => void;
+  valves: Valve[];
+  pipes: Pipe[];
 }
 
-export function DashboardSidebar({ stats, pressureHistory, editMode, setEditMode }: DashboardSidebarProps) {
+export function DashboardSidebar({
+  stats,
+  pressureHistory,
+  editMode,
+  setEditMode,
+  searchTerm,
+  setSearchTerm,
+  valves,
+  pipes
+}: DashboardSidebarProps) {
   const [minimized, setMinimized] = useState(false);
   const queryClient = useQueryClient();
   const importGeoJson = useImportGeoJson();
+  const query = searchTerm.trim().toLowerCase();
+  const matchingValves = valves.filter((valve) => {
+    if (!query) return false;
+    return (
+      valve.valveId.toLowerCase().includes(query) ||
+      valve.name.toLowerCase().includes(query) ||
+      valve.status.toLowerCase().includes(query)
+    );
+  });
+  const matchingPipes = pipes.filter((pipe) => {
+    if (!query) return false;
+    return (
+      pipe.name.toLowerCase().includes(query) ||
+      (pipe.fromNode || "").toLowerCase().includes(query) ||
+      (pipe.toNode || "").toLowerCase().includes(query) ||
+      (pipe.material || "").toLowerCase().includes(query)
+    );
+  });
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -94,6 +125,55 @@ export function DashboardSidebar({ stats, pressureHistory, editMode, setEditMode
       </div>
 
       <div className="flex-1 space-y-7 p-5">
+        <section>
+          <h2 className="mb-3 text-sm font-semibold text-slate-700">
+            Cari Data Jaringan
+          </h2>
+          <div className="rounded-lg border border-slate-200 bg-white p-4">
+            <input
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Cari valve atau pipa..."
+              className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-blue-700 focus:ring-2 focus:ring-blue-100"
+            />
+            {searchTerm.trim() ? (
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <span>Hasil: {matchingValves.length} valve, {matchingPipes.length} pipa</span>
+                  <button
+                    type="button"
+                    onClick={() => setSearchTerm("")}
+                    className="font-medium text-blue-700 hover:text-blue-800"
+                  >
+                    Reset
+                  </button>
+                </div>
+                <div className="max-h-36 space-y-2 overflow-y-auto pr-1">
+                  {matchingValves.map((valve) => (
+                    <div key={`search-valve-${valve.id}`} className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+                      <div className="font-medium text-slate-900">{valve.valveId} - {valve.name}</div>
+                      <div className="text-xs text-slate-500">Valve, tekanan {valve.pressure.toFixed(2)} bar</div>
+                    </div>
+                  ))}
+                  {matchingPipes.map((pipe) => (
+                    <div key={`search-pipe-${pipe.id}`} className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+                      <div className="font-medium text-slate-900">{pipe.name}</div>
+                      <div className="text-xs text-slate-500">Pipa{pipe.material ? `, material ${pipe.material}` : ""}</div>
+                    </div>
+                  ))}
+                  {matchingValves.length === 0 && matchingPipes.length === 0 ? (
+                    <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
+                      Data tidak ditemukan
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              <p className="mt-2 text-xs text-slate-500">Masukkan nama, ID valve, material, atau node pipa.</p>
+            )}
+          </div>
+        </section>
+
         <section>
           <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
             <Activity className="h-4 w-4" /> Ringkasan Sistem
