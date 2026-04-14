@@ -27,7 +27,16 @@ Smart Water System is a SCADA-based water distribution monitoring and management
 - **Dashboard**: Real-time statistics - total valves, pipes, sources, average pressure, health status counts
 - **Telemetry**: Simulate pressure readings via the telemetry panel
 - **Pressure History**: Chart showing pressure trends over time
-- **Dark Theme**: SCADA-style dark interface with glowing indicators
+- **Light Theme**: Clean professional light interface with standard blue accents
+- **Collapsible Sidebar**: Sidebar can be minimized to maximize map area
+- **Indonesian UI**: Main user-facing labels are in Bahasa Indonesia
+
+## User Interface Preferences
+
+- Prefer light mode over dark mode
+- Use simple professional colors; avoid bright cyan/glow-heavy styling
+- Use standard readable fonts; avoid overly stylized/monospace-heavy UI
+- Use Bahasa Indonesia for user-facing text
 
 ## Database Tables
 

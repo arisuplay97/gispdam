@@ -1,16 +1,14 @@
-import React, { useRef, useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, Polyline, Popup, FeatureGroup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { EditControl } from "react-leaflet-draw";
 import "leaflet-draw/dist/leaflet.draw.css";
 
-import { useCreateValve, useCreatePipe, useUpdateValve, useDeleteValve, useUpdatePipe, useDeletePipe, getListValvesQueryKey, getListPipesQueryKey, getGetDashboardStatsQueryKey } from "@workspace/api-client-react";
+import { useCreateValve, useCreatePipe, useDeleteValve, getListValvesQueryKey, getListPipesQueryKey, getGetDashboardStatsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Valve, Pipe, WaterSource } from "@workspace/api-client-react";
 
-// Fix leaflet icon paths
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
@@ -27,18 +25,25 @@ interface ScadaMapProps {
 
 export function ScadaMap({ valves, pipes, sources, editMode }: ScadaMapProps) {
   const queryClient = useQueryClient();
-  
   const createValve = useCreateValve();
   const createPipe = useCreatePipe();
-  const updateValve = useUpdateValve();
   const deleteValve = useDeleteValve();
-  
+
   const getValveColor = (status: string) => {
     switch(status) {
-      case 'normal': return '#00ff00';
-      case 'warning': return '#ffff00';
-      case 'critical': return '#ff0000';
-      default: return '#00ffff';
+      case 'normal': return '#16a34a';
+      case 'warning': return '#f59e0b';
+      case 'critical': return '#dc2626';
+      default: return '#2563eb';
+    }
+  };
+
+  const statusLabel = (status: string) => {
+    switch(status) {
+      case 'normal': return 'Normal';
+      case 'warning': return 'Peringatan';
+      case 'critical': return 'Kritis';
+      default: return status;
     }
   };
 
@@ -46,7 +51,7 @@ export function ScadaMap({ valves, pipes, sources, editMode }: ScadaMapProps) {
     const color = getValveColor(status);
     return L.divIcon({
       className: 'bg-transparent',
-      html: `<div style="width: 16px; height: 16px; border-radius: 50%; background-color: ${color}; box-shadow: 0 0 10px ${color}, 0 0 20px ${color}; border: 2px solid #000;"></div>`,
+      html: `<div style="width: 16px; height: 16px; border-radius: 50%; background-color: ${color}; border: 2px solid white; box-shadow: 0 1px 4px rgba(15,23,42,0.35);"></div>`,
       iconSize: [16, 16],
       iconAnchor: [8, 8]
     });
@@ -55,7 +60,7 @@ export function ScadaMap({ valves, pipes, sources, editMode }: ScadaMapProps) {
   const createSourceIcon = () => {
     return L.divIcon({
       className: 'bg-transparent',
-      html: `<div style="width: 20px; height: 20px; background-color: #00ffff; box-shadow: 0 0 10px #00ffff; border: 2px solid #000; transform: rotate(45deg);"></div>`,
+      html: `<div style="width: 20px; height: 20px; background-color: #2563eb; border: 2px solid white; box-shadow: 0 1px 4px rgba(15,23,42,0.35); transform: rotate(45deg);"></div>`,
       iconSize: [20, 20],
       iconAnchor: [10, 10]
     });
@@ -63,14 +68,14 @@ export function ScadaMap({ valves, pipes, sources, editMode }: ScadaMapProps) {
 
   const onCreated = (e: any) => {
     const { layerType, layer } = e;
-    
+
     if (layerType === 'marker') {
       const { lat, lng } = layer.getLatLng();
       const idStr = `V-${Math.floor(Math.random() * 1000)}`;
       createValve.mutate({
         data: {
           valveId: idStr,
-          name: `New Valve ${idStr}`,
+          name: `Valve Baru ${idStr}`,
           lat,
           lng,
           pressure: 6.0
@@ -79,33 +84,39 @@ export function ScadaMap({ valves, pipes, sources, editMode }: ScadaMapProps) {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getListValvesQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() });
-          toast.success("Valve created");
+          toast.success("Valve berhasil ditambahkan");
+        },
+        onError: () => {
+          toast.error("Gagal menambahkan valve");
         }
       });
     } else if (layerType === 'polyline') {
       const latlngs = layer.getLatLngs();
       const coords = latlngs.map((ll: any) => [ll.lng, ll.lat]);
-      
+
       createPipe.mutate({
         data: {
-          name: `Pipe-${Math.floor(Math.random() * 1000)}`,
+          name: `Pipa-${Math.floor(Math.random() * 1000)}`,
           coordinates: coords
         }
       }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getListPipesQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() });
-          toast.success("Pipe created");
+          toast.success("Pipa berhasil ditambahkan");
+        },
+        onError: () => {
+          toast.error("Gagal menambahkan pipa");
         }
       });
     }
   };
 
   return (
-    <div className="w-full h-full relative">
-      <MapContainer 
-        center={[-8.65, 116.31]} 
-        zoom={14} 
+    <div className="relative h-full w-full">
+      <MapContainer
+        center={[-8.65, 116.31]}
+        zoom={14}
         style={{ width: '100%', height: '100%' }}
         zoomControl={false}
       >
@@ -130,81 +141,85 @@ export function ScadaMap({ valves, pipes, sources, editMode }: ScadaMapProps) {
         )}
 
         {sources.map(source => (
-          <Marker 
-            key={`source-${source.id}`} 
+          <Marker
+            key={`source-${source.id}`}
             position={[source.lat, source.lng]}
             icon={createSourceIcon()}
           >
-            <Popup className="scada-popup">
-              <div className="bg-card text-card-foreground p-3 rounded-md border border-primary/50 shadow-[0_0_15px_rgba(0,255,255,0.2)]">
-                <h3 className="font-bold text-primary font-mono">{source.name}</h3>
-                <p className="text-xs text-muted-foreground mt-1">Water Source</p>
+            <Popup>
+              <div className="min-w-[160px] rounded-md bg-white p-2 text-slate-800">
+                <h3 className="font-semibold text-blue-700">{source.name}</h3>
+                <p className="mt-1 text-sm text-slate-500">Sumber air</p>
               </div>
             </Popup>
           </Marker>
         ))}
 
         {pipes.map(pipe => (
-          <Polyline 
+          <Polyline
             key={`pipe-${pipe.id}`}
             positions={pipe.coordinates.map(c => [c[1], c[0]])}
-            color="#00ffff"
-            weight={3}
-            opacity={0.6}
-            dashArray="5, 10"
+            color="#2563eb"
+            weight={4}
+            opacity={0.75}
           >
             <Popup>
-              <div className="bg-card text-card-foreground p-3 rounded-md border border-primary/50 shadow-[0_0_15px_rgba(0,255,255,0.2)]">
-                <h3 className="font-bold text-primary font-mono">{pipe.name}</h3>
-                <p className="text-xs">Diameter: {pipe.diameter || 'Unknown'}mm</p>
-                <p className="text-xs">Material: {pipe.material || 'Unknown'}</p>
+              <div className="min-w-[180px] rounded-md bg-white p-2 text-slate-800">
+                <h3 className="font-semibold text-blue-700">{pipe.name}</h3>
+                <p className="text-sm">Diameter: {pipe.diameter || 'Belum diisi'} mm</p>
+                <p className="text-sm">Material: {pipe.material || 'Belum diisi'}</p>
               </div>
             </Popup>
           </Polyline>
         ))}
 
         {valves.map(valve => (
-          <Marker 
-            key={`valve-${valve.id}`} 
+          <Marker
+            key={`valve-${valve.id}`}
             position={[valve.lat, valve.lng]}
             icon={createValveIcon(valve.status)}
           >
             <Popup>
-              <div className="bg-card text-card-foreground p-3 rounded-md border border-primary/50 shadow-[0_0_15px_rgba(0,255,255,0.2)] min-w-[200px]">
-                <div className="flex justify-between items-center mb-2 border-b border-border pb-2">
-                  <h3 className="font-bold text-primary font-mono">{valve.valveId}</h3>
-                  <span className={`text-xs px-2 py-0.5 rounded-full uppercase tracking-wider font-bold
-                    ${valve.status === 'normal' ? 'bg-green-500/20 text-green-500 border border-green-500/50' : 
-                      valve.status === 'warning' ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/50' : 
-                      'bg-red-500/20 text-red-500 border border-red-500/50'}`}>
-                    {valve.status}
+              <div className="min-w-[200px] rounded-md bg-white p-2 text-slate-800">
+                <div className="mb-2 flex items-center justify-between border-b border-slate-200 pb-2">
+                  <h3 className="font-semibold text-blue-700">{valve.valveId}</h3>
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium
+                    ${valve.status === 'normal' ? 'bg-green-50 text-green-700 border border-green-200' :
+                      valve.status === 'warning' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                      'bg-red-50 text-red-700 border border-red-200'}`}>
+                    {statusLabel(valve.status)}
                   </span>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm"><span className="text-muted-foreground">Name:</span> {valve.name}</p>
-                  <p className="text-sm flex items-center justify-between">
-                    <span className="text-muted-foreground">Pressure:</span>
-                    <span className={`font-mono text-lg font-bold
-                      ${valve.status === 'normal' ? 'text-green-400' : 
-                      valve.status === 'warning' ? 'text-yellow-400' : 
-                      'text-red-400'}`}>
+                  <p className="text-sm"><span className="text-slate-500">Nama:</span> {valve.name}</p>
+                  <p className="flex items-center justify-between text-sm">
+                    <span className="text-slate-500">Tekanan:</span>
+                    <span className={`font-semibold
+                      ${valve.status === 'normal' ? 'text-green-700' :
+                      valve.status === 'warning' ? 'text-amber-700' :
+                      'text-red-700'}`}>
                       {valve.pressure.toFixed(2)} bar
                     </span>
                   </p>
                 </div>
                 {editMode && (
-                  <div className="mt-3 pt-3 border-t border-border flex justify-end">
-                    <button 
-                      className="text-xs bg-destructive text-destructive-foreground px-2 py-1 rounded hover:bg-destructive/90"
+                  <div className="mt-3 flex justify-end border-t border-slate-200 pt-3">
+                    <button
+                      className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700"
                       onClick={() => {
                         deleteValve.mutate({ id: valve.id }, {
                           onSuccess: () => {
                             queryClient.invalidateQueries({ queryKey: getListValvesQueryKey() });
+                            queryClient.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() });
+                            toast.success("Valve berhasil dihapus");
+                          },
+                          onError: () => {
+                            toast.error("Gagal menghapus valve");
                           }
                         });
                       }}
                     >
-                      Delete
+                      Hapus
                     </button>
                   </div>
                 )}
@@ -213,30 +228,29 @@ export function ScadaMap({ valves, pipes, sources, editMode }: ScadaMapProps) {
           </Marker>
         ))}
       </MapContainer>
-      
-      {/* Legend */}
-      <div className="absolute bottom-6 left-6 z-[1000] bg-card/90 backdrop-blur-md p-4 rounded-lg border border-primary/30 shadow-[0_0_20px_rgba(0,255,255,0.1)]">
-        <h4 className="text-primary font-mono text-sm uppercase font-bold tracking-widest mb-3 border-b border-primary/20 pb-2">Legend</h4>
-        <div className="space-y-3 text-sm">
+
+      <div className="absolute bottom-6 left-6 z-[1000] rounded-lg border border-slate-200 bg-white/95 p-4 shadow-md">
+        <h4 className="mb-3 border-b border-slate-200 pb-2 text-sm font-semibold text-slate-800">Legenda</h4>
+        <div className="space-y-3 text-sm text-slate-700">
           <div className="flex items-center gap-3">
-            <div className="w-4 h-4 rounded-full bg-[#00ff00] shadow-[0_0_10px_#00ff00] border-2 border-black"></div>
+            <div className="h-4 w-4 rounded-full border-2 border-white bg-green-600 shadow-sm"></div>
             <span>Normal ({">"}5 bar)</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-4 h-4 rounded-full bg-[#ffff00] shadow-[0_0_10px_#ffff00] border-2 border-black"></div>
-            <span>Warning (2-5 bar)</span>
+            <div className="h-4 w-4 rounded-full border-2 border-white bg-amber-500 shadow-sm"></div>
+            <span>Peringatan (2-5 bar)</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-4 h-4 rounded-full bg-[#ff0000] shadow-[0_0_10px_#ff0000] border-2 border-black"></div>
-            <span>Critical ({"<"}2 bar)</span>
+            <div className="h-4 w-4 rounded-full border-2 border-white bg-red-600 shadow-sm"></div>
+            <span>Kritis ({"<"}2 bar)</span>
           </div>
-          <div className="flex items-center gap-3 pt-2 border-t border-border/50">
-            <div className="w-4 h-4 bg-[#00ffff] shadow-[0_0_10px_#00ffff] border-2 border-black transform rotate-45"></div>
-            <span>Water Source</span>
+          <div className="flex items-center gap-3 border-t border-slate-200 pt-2">
+            <div className="h-4 w-4 rotate-45 border-2 border-white bg-blue-700 shadow-sm"></div>
+            <span>Sumber air</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-6 h-[2px] border-b-2 border-dashed border-[#00ffff]"></div>
-            <span>Pipe</span>
+            <div className="h-[3px] w-6 bg-blue-700"></div>
+            <span>Pipa</span>
           </div>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Valve, usePostTelemetry, getListValvesQueryKey, getGetDashboardStatsQueryKey } from "@workspace/api-client-react";
+import { Valve, usePostTelemetry, getListValvesQueryKey, getGetDashboardStatsQueryKey, getGetPressureHistoryQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,13 +11,13 @@ import { toast } from "sonner";
 export function TelemetryPanel({ valves }: { valves: Valve[] }) {
   const [selectedValveId, setSelectedValveId] = useState<string>("");
   const [pressure, setPressure] = useState<number>(5.0);
-  
+
   const queryClient = useQueryClient();
   const postTelemetry = usePostTelemetry();
 
   const handleSendTelemetry = () => {
     if (!selectedValveId) return;
-    
+
     postTelemetry.mutate({
       data: {
         valveId: selectedValveId,
@@ -25,55 +25,59 @@ export function TelemetryPanel({ valves }: { valves: Valve[] }) {
       }
     }, {
       onSuccess: () => {
-        toast.success(`Telemetry sent to ${selectedValveId}`);
+        toast.success(`Data telemetri dikirim ke ${selectedValveId}`);
         queryClient.invalidateQueries({ queryKey: getListValvesQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetPressureHistoryQueryKey() });
+      },
+      onError: () => {
+        toast.error("Gagal mengirim data telemetri");
       }
     });
   };
 
   return (
-    <Card className="bg-card/90 backdrop-blur-md border-primary/30 shadow-[0_0_20px_rgba(0,255,255,0.05)]">
-      <CardHeader className="pb-3 border-b border-border/50">
-        <CardTitle className="text-sm font-mono uppercase flex items-center gap-2 text-primary">
-          <RadioReceiver className="w-4 h-4" /> Telemetry Simulator
+    <Card className="border-slate-200 bg-white/95 shadow-md">
+      <CardHeader className="border-b border-slate-200 pb-3">
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+          <RadioReceiver className="h-4 w-4 text-blue-700" /> Simulasi Telemetri
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-4 space-y-4">
+      <CardContent className="space-y-4 pt-4">
         <div className="space-y-2">
-          <label className="text-xs font-mono text-muted-foreground uppercase">Target Node</label>
+          <label className="text-sm text-slate-600">Target Valve</label>
           <Select value={selectedValveId} onValueChange={setSelectedValveId}>
-            <SelectTrigger className="font-mono bg-background/50 border-primary/20 text-xs h-8">
-              <SelectValue placeholder="Select a valve..." />
+            <SelectTrigger className="h-9 border-slate-300 bg-white text-sm">
+              <SelectValue placeholder="Pilih valve..." />
             </SelectTrigger>
-            <SelectContent className="font-mono">
+            <SelectContent>
               {valves.map(v => (
                 <SelectItem key={v.id} value={v.valveId}>{v.valveId} - {v.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-        
+
         <div className="space-y-4">
           <div className="flex justify-between">
-            <label className="text-xs font-mono text-muted-foreground uppercase">Pressure Input</label>
-            <span className="text-xs font-mono font-bold text-primary">{pressure.toFixed(1)} bar</span>
+            <label className="text-sm text-slate-600">Input Tekanan</label>
+            <span className="text-sm font-semibold text-blue-700">{pressure.toFixed(1)} bar</span>
           </div>
-          <Slider 
-            value={[pressure]} 
-            onValueChange={(v) => setPressure(v[0])} 
-            max={10} 
+          <Slider
+            value={[pressure]}
+            onValueChange={(v) => setPressure(v[0])}
+            max={10}
             step={0.1}
-            className="[&_[role=slider]]:border-primary [&_[role=slider]]:bg-primary [&_[role=slider]]:shadow-[0_0_10px_rgba(0,255,255,0.8)]"
+            className="[&_[role=slider]]:border-blue-700 [&_[role=slider]]:bg-blue-700"
           />
         </div>
 
-        <Button 
+        <Button
           onClick={handleSendTelemetry}
           disabled={!selectedValveId || postTelemetry.isPending}
-          className="w-full font-mono text-xs uppercase tracking-wider bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_15px_rgba(0,255,255,0.3)]"
+          className="w-full bg-blue-700 text-sm text-white hover:bg-blue-800"
         >
-          {postTelemetry.isPending ? "Transmitting..." : "Transmit Data"}
+          {postTelemetry.isPending ? "Mengirim..." : "Kirim Data"}
         </Button>
       </CardContent>
     </Card>
