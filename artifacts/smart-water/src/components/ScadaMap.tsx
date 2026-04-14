@@ -317,7 +317,7 @@ export function ScadaMap({
         </LayersControl>
 
         {/* ── Animated Topological Pipelines (from /api/pipelines/geojson) ── */}
-        {pipelineGeoJSON?.features.map((feature) => {
+        {(pipelineGeoJSON?.features || []).map((feature) => {
           const positions = feature.geometry.coordinates.map(
             ([lng, lat]) => [lat, lng] as [number, number]
           );

@@ -57,7 +57,8 @@ export default function Home() {
 
   // Filter valves & pipes by search term
   const query = searchTerm.trim().toLowerCase();
-  const filteredValves = (valves || []).filter((valve) => {
+  const safeValves = Array.isArray(valves) ? valves : [];
+  const filteredValves = safeValves.filter((valve) => {
     if (!query) return true;
     return (
       valve.valveId.toLowerCase().includes(query) ||
@@ -65,7 +66,8 @@ export default function Home() {
       valve.status.toLowerCase().includes(query)
     );
   });
-  const filteredPipes = (pipes || []).filter((pipe) => {
+  const safePipes = Array.isArray(pipes) ? pipes : [];
+  const filteredPipes = safePipes.filter((pipe) => {
     if (!query) return true;
     return (
       pipe.name.toLowerCase().includes(query) ||
@@ -79,13 +81,13 @@ export default function Home() {
     <div className="flex h-screen w-full overflow-hidden bg-slate-50 text-slate-900">
       <DashboardSidebar
         stats={stats}
-        pressureHistory={pressureHistory}
+        pressureHistory={Array.isArray(pressureHistory) ? pressureHistory : []}
         editMode={editMode}
         setEditMode={setEditMode}
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
-        valves={valves || []}
-        pipes={pipes || []}
+        valves={safeValves}
+        pipes={safePipes}
         addValveMode={addValveMode}
         setAddValveMode={setAddValveMode}
         selectedCoords={selectedCoords}
@@ -99,12 +101,12 @@ export default function Home() {
           <ScadaMap
             valves={filteredValves}
             pipes={filteredPipes}
-            sources={sources || []}
+            sources={Array.isArray(sources) ? sources : []}
             editMode={editMode}
             addValveMode={addValveMode}
             onMapClick={handleMapClick}
             pipelineGeoJSON={pipelineGeoJSON}
-            pressureHistory={pressureHistory || []}
+            pressureHistory={Array.isArray(pressureHistory) ? pressureHistory : []}
             showHeatmap={showHeatmap}
           />
         </div>
@@ -112,7 +114,7 @@ export default function Home() {
         {/* Telemetry panel */}
         {telemetryOpen ? (
           <div className="absolute right-4 top-4 z-10 w-80 space-y-4">
-            <TelemetryPanel valves={valves || []} onClose={() => setTelemetryOpen(false)} />
+            <TelemetryPanel valves={safeValves} onClose={() => setTelemetryOpen(false)} />
           </div>
         ) : (
           <button
