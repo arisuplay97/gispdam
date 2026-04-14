@@ -5,8 +5,22 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { setBaseUrl } from "@workspace/api-client-react";
 
-const queryClient = new QueryClient();
+// Point API calls to the Railway backend when VITE_API_URL is set.
+// Falls back to "" (relative /api) for local dev via Vite proxy.
+const apiUrl = import.meta.env.VITE_API_URL ?? "";
+setBaseUrl(apiUrl || null);
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      // Don't crash the UI on network errors – show empty state instead
+      throwOnError: false,
+    },
+  },
+});
 
 function Router() {
   return (
