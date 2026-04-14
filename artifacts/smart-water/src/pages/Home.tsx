@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { RadioReceiver } from "lucide-react";
+import { useState, useEffect } from "react";
+import { RadioReceiver, Layers, Activity, Clock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 import {
@@ -23,13 +23,17 @@ export default function Home() {
   const [editMode, setEditMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [telemetryOpen, setTelemetryOpen] = useState(false);
-
-  // New states for Tambah Valve mode
   const [addValveMode, setAddValveMode] = useState(false);
   const [selectedCoords, setSelectedCoords] = useState<SelectedCoords | null>(null);
-
-  // Heatmap toggle
   const [showHeatmap, setShowHeatmap] = useState(false);
+  const [pipelineWeight, setPipelineWeight] = useState(5);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Live clock
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Data queries
   const { data: valves } = useListValves();
@@ -38,7 +42,7 @@ export default function Home() {
   const { data: stats } = useGetDashboardStats();
   const { data: pressureHistory } = useGetPressureHistory();
 
-  // Pipeline GeoJSON — live topological network from /api/pipelines/geojson
+  // Pipeline GeoJSON
   const { data: pipelineGeoJSON } = useQuery({
     queryKey: ["pipelines-geojson"],
     queryFn: async () => {
@@ -46,16 +50,13 @@ export default function Home() {
       if (!res.ok) throw new Error("Failed to fetch pipeline GeoJSON");
       return res.json();
     },
-    // Refetch whenever valves are updated (after add/delete)
     refetchInterval: 30_000,
   });
 
-  // Map click handler — fills selectedCoords for the Add Valve form
   const handleMapClick = (lat: number, lng: number) => {
     setSelectedCoords({ lat, lng });
   };
 
-  // Filter valves & pipes by search term
   const query = searchTerm.trim().toLowerCase();
   const safeValves = Array.isArray(valves) ? valves : [];
   const filteredValves = safeValves.filter((valve) => {
@@ -76,6 +77,12 @@ export default function Home() {
       (pipe.material || "").toLowerCase().includes(query)
     );
   });
+
+  const statusCounts = {
+    normal: safeValves.filter((v) => v.status === "normal").length,
+    warning: safeValves.filter((v) => v.status === "warning").length,
+    critical: safeValves.filter((v) => v.status === "critical").length,
+  };
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-slate-50 text-slate-900">
@@ -108,24 +115,77 @@ export default function Home() {
             pipelineGeoJSON={pipelineGeoJSON}
             pressureHistory={Array.isArray(pressureHistory) ? pressureHistory : []}
             showHeatmap={showHeatmap}
+            pipelineWeight={pipelineWeight}
           />
         </div>
 
-        {/* Telemetry panel */}
-        {telemetryOpen ? (
-          <div className="absolute right-4 top-4 z-10 w-80 space-y-4">
-            <TelemetryPanel valves={safeValves} onClose={() => setTelemetryOpen(false)} />
+        {/* ── Top right: Telemetry button (repositioned, no overlap) ── */}
+        <div className="absolute right-4 top-4 z-[1000] flex flex-col items-end gap-2">
+          {telemetryOpen ? (
+            <div className="w-80 space-y-4">
+              <TelemetryPanel valves={safeValves} onClose={() => setTelemetryOpen(false)} />
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setTelemetryOpen(true)}
+              className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 shadow-md hover:bg-slate-50 transition-colors"
+            >
+              <RadioReceiver className="h-4 w-4 text-blue-700" />
+              Telemetri
+            </button>
+          )}
+        </div>
+
+        {/* ── Status bar top center ── */}
+        <div className="absolute top-3 left-1/2 z-[999] -translate-x-1/2 flex items-center gap-3 rounded-full border border-white/30 bg-slate-900/80 px-4 py-1.5 text-xs font-medium text-white shadow-lg backdrop-blur-sm">
+          <Clock className="h-3.5 w-3.5 text-blue-400" />
+          <span className="text-slate-300">
+            {currentTime.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}
+          </span>
+          <span className="text-white font-mono">
+            {currentTime.toLocaleTimeString("id-ID")}
+          </span>
+          <span className="mx-1 h-3 w-px bg-white/20" />
+          <span className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.8)]" />
+            <span>{statusCounts.normal} Normal</span>
+          </span>
+          {statusCounts.warning > 0 && (
+            <span className="flex items-center gap-1.5 text-amber-300">
+              <span className="h-2 w-2 rounded-full bg-amber-400" />
+              {statusCounts.warning} Peringatan
+            </span>
+          )}
+          {statusCounts.critical > 0 && (
+            <span className="flex items-center gap-1.5 text-red-300 animate-pulse">
+              <span className="h-2 w-2 rounded-full bg-red-500" />
+              {statusCounts.critical} Kritis!
+            </span>
+          )}
+        </div>
+
+        {/* ── Pipeline weight control (bottom right, above zoom) ── */}
+        <div className="absolute bottom-20 right-3 z-[1000] rounded-xl border border-slate-200 bg-white/95 px-3 py-2.5 shadow-lg backdrop-blur-sm">
+          <div className="flex items-center gap-2 mb-1.5">
+            <Layers className="h-3.5 w-3.5 text-blue-600" />
+            <span className="text-xs font-semibold text-slate-600">Ketebalan Pipa</span>
           </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setTelemetryOpen(true)}
-            className="absolute right-4 top-4 z-10 flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-md hover:bg-slate-50 transition-colors"
-          >
-            <RadioReceiver className="h-4 w-4 text-blue-700" />
-            Buka Telemetri
-          </button>
-        )}
+          <input
+            type="range"
+            min={2}
+            max={14}
+            step={1}
+            value={pipelineWeight}
+            onChange={(e) => setPipelineWeight(Number(e.target.value))}
+            className="h-1.5 w-28 cursor-pointer accent-blue-600"
+          />
+          <div className="mt-1 flex justify-between text-[10px] text-slate-400">
+            <span>Tipis</span>
+            <span className="font-medium text-blue-600">{pipelineWeight}px</span>
+            <span>Tebal</span>
+          </div>
+        </div>
       </main>
     </div>
   );

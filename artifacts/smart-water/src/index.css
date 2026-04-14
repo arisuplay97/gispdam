@@ -162,16 +162,31 @@
    Applies to the SVG <path> element via pathOptions.className
 ─────────────────────────────────────────── */
 .pipeline-animated {
-  stroke-dasharray: 16, 9;
-  animation: pipelineFlow 1.8s linear infinite;
+  stroke-dasharray: 18, 9;
+  animation: pipelineFlow 1.4s linear infinite;
+  stroke-linecap: round;
 }
 
 @keyframes pipelineFlow {
   from {
-    stroke-dashoffset: 50;
+    stroke-dashoffset: 54;
   }
   to {
     stroke-dashoffset: 0;
+  }
+}
+
+/* ───────────────────────────────────────────
+   Water Source Ripple animation
+─────────────────────────────────────────── */
+@keyframes sourceRipple {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.2);
   }
 }
 

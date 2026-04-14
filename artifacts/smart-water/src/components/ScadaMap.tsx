@@ -59,6 +59,7 @@ export interface ScadaMapProps {
   pipelineGeoJSON?: PipelineGeoJSON;
   pressureHistory?: PressureRecord[];
   showHeatmap: boolean;
+  pipelineWeight?: number;
 }
 
 // ─── Inner: Map click handler ────────────────────────────────────────────────
@@ -219,6 +220,7 @@ export function ScadaMap({
   pipelineGeoJSON,
   pressureHistory = [],
   showHeatmap,
+  pipelineWeight = 5,
 }: ScadaMapProps) {
   const queryClient = useQueryClient();
   const createValve = useCreateValve();
@@ -279,9 +281,12 @@ export function ScadaMap({
   const createSourceIcon = () =>
     L.divIcon({
       className: "bg-transparent",
-      html: `<div style="width:22px;height:22px;background:#1d4ed8;border:2.5px solid white;box-shadow:0 0 12px rgba(29,78,216,0.7),0 0 0 4px rgba(29,78,216,0.15);transform:rotate(45deg);"></div>`,
-      iconSize: [22, 22],
-      iconAnchor: [11, 11],
+      html: `<div style="position:relative;width:26px;height:26px">
+        <div style="position:absolute;inset:0;background:#1d4ed8;border:3px solid white;box-shadow:0 0 14px rgba(29,78,216,0.8),0 0 0 5px rgba(29,78,216,0.18);border-radius:50% 50% 0 50%;transform:rotate(45deg);"></div>
+        <div style="position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(29,78,216,0.4);animation:sourceRipple 1.8s ease-out infinite;"></div>
+      </div>`,
+      iconSize: [26, 26],
+      iconAnchor: [13, 13],
     });
 
   // ── Leaflet-draw created handler ───────────────────────────────────────
@@ -334,26 +339,43 @@ export function ScadaMap({
         {/* Map click handler for "Add Valve" mode */}
         <MapClickHandler active={addValveMode} onMapClick={onMapClick} />
 
-        {/* ── Layer Control: 3 Basemaps ──────────────────────────────── */}
+        {/* ── Layer Control: Updated Basemaps with Google Maps 2025 ── */}
         <LayersControl position="topright">
-          <LayersControl.BaseLayer checked name="🗺 OpenStreetMap (Standar)">
+          <LayersControl.BaseLayer checked name="🛰 Google Hybrid (2025)">
+            <TileLayer
+              url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+              attribution='&copy; <a href="https://maps.google.com">Google Maps</a> 2025'
+              maxZoom={22}
+            />
+          </LayersControl.BaseLayer>
+
+          <LayersControl.BaseLayer name="🌍 Google Satellite">
+            <TileLayer
+              url="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
+              attribution='&copy; <a href="https://maps.google.com">Google Maps</a>'
+              maxZoom={22}
+            />
+          </LayersControl.BaseLayer>
+
+          <LayersControl.BaseLayer name="🗺 OpenStreetMap (Standar)">
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             />
           </LayersControl.BaseLayer>
 
-          <LayersControl.BaseLayer name="🛰 Satelit (Esri World Imagery)">
+          <LayersControl.BaseLayer name="🛰 Esri World Imagery">
             <TileLayer
               url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-              attribution="Tiles &copy; Esri &mdash; Source: Esri, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community"
+              attribution="Tiles &copy; Esri &mdash; Source: Esri, USDA, USGS"
+              maxZoom={20}
             />
           </LayersControl.BaseLayer>
 
           <LayersControl.BaseLayer name="⛰ OpenTopoMap (Topografi)">
             <TileLayer
               url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
-              attribution='Map data: &copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors, SRTM | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)'
+              attribution='Map data: &copy; OpenStreetMap contributors, SRTM | &copy; OpenTopoMap (CC-BY-SA)'
             />
           </LayersControl.BaseLayer>
         </LayersControl>
@@ -368,8 +390,8 @@ export function ScadaMap({
               key={feature.properties.id}
               positions={positions}
               pathOptions={{
-                color: "#3b82f6",
-                weight: 5,
+                color: "#38bdf8",
+                weight: pipelineWeight,
                 opacity: 0.95,
                 className: "pipeline-animated",
               }}
@@ -396,8 +418,8 @@ export function ScadaMap({
             key={`pipe-${pipe.id}`}
             positions={pipe.coordinates.map((c) => [c[1], c[0]] as [number, number])}
             pathOptions={{
-              color: "#7c3aed",
-              weight: 3,
+              color: "#a855f7",
+              weight: Math.max(2, pipelineWeight - 2),
               opacity: 0.8,
               dashArray: "8 5",
             }}

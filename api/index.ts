@@ -265,6 +265,50 @@ app.get("/api/pipelines/geojson", async (_req: any, res: any) => {
   }
 });
 
+// ─── Seed Demo Data (auto-seeds if DB empty) ──────────────────────────────────
+const DEMO_VALVES = [
+  { valveId: "V-1001", name: "Valve Utara A", lat: -8.630, lng: 116.295, pressure: 7.2 },
+  { valveId: "V-1002", name: "Valve Utara B", lat: -8.635, lng: 116.305, pressure: 6.8 },
+  { valveId: "V-1003", name: "Valve Timur",   lat: -8.650, lng: 116.320, pressure: 4.1 },
+  { valveId: "V-1004", name: "Valve Selatan A", lat: -8.668, lng: 116.314, pressure: 1.8 },
+  { valveId: "V-1005", name: "Valve Selatan B", lat: -8.675, lng: 116.298, pressure: 6.5 },
+  { valveId: "V-1006", name: "Valve Barat",   lat: -8.660, lng: 116.278, pressure: 3.5 },
+  { valveId: "V-1007", name: "Valve Tengah",  lat: -8.648, lng: 116.292, pressure: 7.8 },
+];
+
+const DEMO_SOURCES = [
+  { name: "Reservoir Utama SPAM Aiq Bone", lat: -8.640, lng: 116.290, capacity: 5000, type: "Reservoir" },
+  { name: "Intake Sungai Aiq Bone",         lat: -8.655, lng: 116.325, capacity: 2500, type: "Intake" },
+];
+
+app.post("/api/seed-demo", async (_req: any, res: any) => {
+  try {
+    const [valveCount] = await db.select({ c: count() }).from(valvesTable);
+    const [sourceCount] = await db.select({ c: count() }).from(sourcesTable);
+
+    const seeded: string[] = [];
+
+    if (Number(valveCount.c) === 0) {
+      for (const v of DEMO_VALVES) {
+        const status = getStatus(v.pressure);
+        await db.insert(valvesTable).values({ ...v, status }).onConflictDoNothing();
+      }
+      seeded.push(`${DEMO_VALVES.length} valves`);
+    }
+
+    if (Number(sourceCount.c) === 0) {
+      for (const s of DEMO_SOURCES) {
+        await db.insert(sourcesTable).values(s).onConflictDoNothing();
+      }
+      seeded.push(`${DEMO_SOURCES.length} sources`);
+    }
+
+    res.json({ ok: true, seeded: seeded.length > 0 ? seeded : ["nothing (data already exists)"] });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ─── Vercel handler export ────────────────────────────────────────────────────
 export default (req: VercelRequest, res: VercelResponse) => {
   return app(req as any, res as any);
