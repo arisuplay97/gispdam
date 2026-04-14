@@ -137,6 +137,9 @@
   }
 }
 
+/* ───────────────────────────────────────────
+   Leaflet base overrides
+─────────────────────────────────────────── */
 .leaflet-container {
   background: hsl(var(--background)) !important;
   font-family: Arial, Helvetica, sans-serif;
@@ -146,4 +149,48 @@
 .leaflet-popup-tip {
   background: white;
   color: hsl(var(--foreground));
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.15);
+  border-radius: 10px;
+}
+
+.leaflet-popup-content {
+  margin: 12px 14px;
+}
+
+/* ───────────────────────────────────────────
+   Pipeline Flow Animation
+   Applies to the SVG <path> element via pathOptions.className
+─────────────────────────────────────────── */
+.pipeline-animated {
+  stroke-dasharray: 16, 9;
+  animation: pipelineFlow 1.8s linear infinite;
+}
+
+@keyframes pipelineFlow {
+  from {
+    stroke-dashoffset: 50;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ───────────────────────────────────────────
+   Map "Add Valve" mode — crosshair cursor
+─────────────────────────────────────────── */
+.map-add-valve-mode .leaflet-container {
+  cursor: crosshair !important;
+}
+
+/* ───────────────────────────────────────────
+   Critical valve pulse (applied via inline style
+   on divIcon's innerHTML)
+─────────────────────────────────────────── */
+@keyframes criticalPulse {
+  0%, 100% {
+    box-shadow: 0 0 4px rgba(220, 38, 38, 0.7), 0 0 0 0 rgba(220, 38, 38, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(220, 38, 38, 1), 0 0 0 6px rgba(220, 38, 38, 0);
+  }
 }

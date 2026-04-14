@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "buildCommand": "pnpm install && cd artifacts/smart-water && pnpm run build",
+  "outputDirectory": "artifacts/smart-water/dist",
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/artifacts/api-server/src/app.ts"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
+}
