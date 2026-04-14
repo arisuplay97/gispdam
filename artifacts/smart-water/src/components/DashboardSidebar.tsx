@@ -235,8 +235,8 @@ export function DashboardSidebar({
               <Droplets className="h-6 w-6 text-blue-700" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-slate-900">Smart Water</h1>
-              <p className="text-sm text-slate-500">SCADA PDAM · SPAM Aiq Bone</p>
+              <h1 className="text-xl font-semibold text-slate-900">Tiara smart Gis</h1>
+              <p className="text-sm text-slate-500">TIARA GIS · SPAM Aiq Bone</p>
             </div>
           </div>
           <Button variant="ghost" size="icon" onClick={() => setMinimized(true)} title="Minimalkan sidebar">

@@ -20,6 +20,7 @@ import {
   useCreateValve,
   useCreatePipe,
   useDeleteValve,
+  useUpdateValve,
   getListValvesQueryKey,
   getListPipesQueryKey,
   getGetDashboardStatsQueryKey,
@@ -89,6 +90,7 @@ function ValvePopupContent({
   pressureHistory: PressureRecord[];
   editMode: boolean;
   onDelete: () => void;
+  onUpdatePressure: (id: number, delta: number) => void;
 }) {
   // Get the last 5 pressure records for this valve (chronological order)
   const valveHistory = pressureHistory
@@ -175,11 +177,27 @@ function ValvePopupContent({
         </div>
       )}
 
+      {/* Control buttons */}
+      <div className="mt-2 grid grid-cols-2 gap-2 border-t border-slate-200 pt-2">
+        <button
+          className="rounded bg-blue-600 py-1.5 text-xs font-medium text-white shadow hover:bg-blue-700 transition"
+          onClick={() => onUpdatePressure(valve.id, 1.0)}
+        >
+          Buka Valve (+)
+        </button>
+        <button
+          className="rounded bg-slate-600 py-1.5 text-xs font-medium text-white shadow hover:bg-slate-700 transition"
+          onClick={() => onUpdatePressure(valve.id, -1.0)}
+        >
+          Tutup Valve (-)
+        </button>
+      </div>
+
       {/* Delete button (edit mode only) */}
       {editMode && (
-        <div className="mt-2 flex justify-end border-t border-slate-200 pt-2">
+        <div className="mt-2 flex justify-end">
           <button
-            className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700 transition-colors"
+            className="rounded bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 transition shadow"
             onClick={onDelete}
           >
             Hapus Valve
@@ -206,6 +224,30 @@ export function ScadaMap({
   const createValve = useCreateValve();
   const createPipe = useCreatePipe();
   const deleteValve = useDeleteValve();
+  const updateValve = useUpdateValve();
+
+  const handleUpdatePressure = (id: number, delta: number) => {
+    const valve = valves.find((v) => v.id === id);
+    if (!valve) return;
+    const newPressure = Math.max(0, valve.pressure + delta);
+    updateValve.mutate({
+      id,
+      data: {
+        name: valve.name,
+        lat: valve.lat,
+        lng: valve.lng,
+        pressure: newPressure,
+      }
+    }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListValvesQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() });
+        queryClient.invalidateQueries({ queryKey: ["pipelines-geojson"] });
+        toast.success(`Valve ${delta > 0 ? "dibuka" : "ditutup"}. Tekanan: ${newPressure.toFixed(2)} bar`);
+      },
+      onError: () => toast.error("Gagal mengupdate valve"),
+    });
+  };
 
   // ── Icon factories ─────────────────────────────────────────────────────
   const createValveIcon = (status: string) => {
@@ -421,6 +463,7 @@ export function ScadaMap({
                 valve={valve}
                 pressureHistory={pressureHistory}
                 editMode={editMode}
+                onUpdatePressure={handleUpdatePressure}
                 onDelete={() => {
                   deleteValve.mutate(
                     { id: valve.id },
