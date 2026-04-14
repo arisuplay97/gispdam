@@ -49,9 +49,10 @@ export function CustomerPanel({ onClose, onActivateMapSelect, onDeactivateMapSel
   // Toggle to form
   const handleAdd = () => {
     setEditingCustomer(null);
+    const randomId = Math.floor(100000000 + Math.random() * 900000000).toString();
     setFormData({
       nama_pelanggan: "",
-      id_pelanggan: `AQB-0${customers.length + 11}`, // Dummy generator
+      id_pelanggan: randomId,
       alamat: "",
       elevasi_m: 0,
       spam_name: "SPAM Aiq Bone",

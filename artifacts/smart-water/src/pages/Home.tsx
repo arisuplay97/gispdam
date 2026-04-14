@@ -151,8 +151,8 @@ export default function Home() {
           />
         )}
 
-        {/* ── Top Left (beside sidebar): Telemetry button (repositioned, no overlap) ── */}
-        <div className="absolute left-[340px] top-4 z-[1000] flex flex-col items-start gap-2">
+        {/* ── Top Left (beside sidebar): Telemetry button ── */}
+        <div className="absolute left-4 top-4 z-[1000] flex flex-col items-start gap-2">
           {telemetryOpen ? (
             <div className="w-80 space-y-4">
               <TelemetryPanel valves={safeValves} onClose={() => setTelemetryOpen(false)} />

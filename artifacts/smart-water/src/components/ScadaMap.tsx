@@ -23,6 +23,7 @@ import {
   useCreatePipe,
   useDeleteValve,
   useUpdateValve,
+  useDeletePipe,
   getListValvesQueryKey,
   getListPipesQueryKey,
   getGetDashboardStatsQueryKey,
@@ -247,6 +248,7 @@ export function ScadaMap({
   const createPipe = useCreatePipe();
   const deleteValve = useDeleteValve();
   const updateValve = useUpdateValve();
+  const deletePipe = useDeletePipe();
 
   const { data: rawCustomers } = useListCustomers();
   const customers = Array.isArray(rawCustomers) ? rawCustomers : [];
@@ -383,6 +385,14 @@ export function ScadaMap({
             />
           </LayersControl.BaseLayer>
 
+          <LayersControl.BaseLayer name="🗺 Google Maps (Terbaru)">
+            <TileLayer
+               url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
+               attribution='&copy; <a href="https://maps.google.com">Google Maps</a>'
+               maxZoom={22}
+            />
+          </LayersControl.BaseLayer>
+
           <LayersControl.BaseLayer name="🗺 OpenStreetMap (Standar)">
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -454,7 +464,24 @@ export function ScadaMap({
               <div style={{ minWidth: 180 }} className="text-slate-800">
                 <h3 className="font-semibold text-purple-700 text-sm">{pipe.name}</h3>
                 <p className="text-xs mt-1">Diameter: {pipe.diameter ?? "—"} mm</p>
-                <p className="text-xs">Material: {pipe.material ?? "—"}</p>
+                <p className="text-xs mb-2">Material: {pipe.material ?? "—"}</p>
+                {editMode && (
+                  <button
+                    className="w-full rounded bg-red-600 py-1.5 text-xs font-medium text-white shadow hover:bg-red-700 transition"
+                    onClick={() => {
+                      deletePipe.mutate({ id: pipe.id }, {
+                        onSuccess: () => {
+                          queryClient.invalidateQueries({ queryKey: getListPipesQueryKey() });
+                          queryClient.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() });
+                          toast.success("Pipa berhasil dihapus");
+                        },
+                        onError: () => toast.error("Gagal menghapus pipa"),
+                      });
+                    }}
+                  >
+                    Hapus Pipa
+                  </button>
+                )}
               </div>
             </Popup>
           </Polyline>
@@ -565,10 +592,10 @@ export function ScadaMap({
         <div className="space-y-1 text-xs">
           {([
             { key: "valves",       label: "Valve",                swatch: <span className="flex gap-0.5"><span className="h-3 w-3 rounded-full bg-green-600 border border-white shadow" /><span className="h-3 w-3 rounded-full bg-amber-500 border border-white shadow" /><span className="h-3 w-3 rounded-full bg-red-500 border border-white shadow" /></span> },
-            { key: "sources",      label: "Sumber Air",           swatch: <span className="h-3.5 w-3.5 rotate-45 border-2 border-white bg-blue-700 shadow inline-block" /> },
-            { key: "pipelines",    label: "Pipa Utama",           swatch: <span className="h-[3px] w-5 rounded inline-block" style={{ background: "repeating-linear-gradient(90deg,#38bdf8 0,#38bdf8 5px,transparent 5px,transparent 9px)" }} /> },
+            { key: "sources",      label: "Sumber Air",           swatch: <span className="h-3.5 w-3.5 rotate-45 border-2 border-white bg-blue-700 shadow inline-block relative"><span className="absolute inset-[-4px] rounded-full border border-blue-400 opacity-50 animate-ping"></span></span> },
+            { key: "pipelines",    label: "Pipa Utama",           swatch: <span className="h-[3px] w-5 rounded inline-block" style={{ background: `repeating-linear-gradient(90deg,${pipelineColor} 0,${pipelineColor} 5px,transparent 5px,transparent 9px)` }} /> },
             { key: "pipes",        label: "Pipa Tambahan",        swatch: <span className="h-[3px] w-5 rounded inline-block" style={{ background: "repeating-linear-gradient(90deg,#a855f7 0,#a855f7 4px,transparent 4px,transparent 8px)" }} /> },
-            { key: "customers",    label: "Pelanggan",            swatch: <span className="h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-500 shadow inline-block" /> },
+            { key: "customers",    label: "Pelanggan",            swatch: <span className="h-4 w-4 rounded-full border-2 border-white bg-emerald-500 shadow inline-flex items-center justify-center shrink-0"><svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span> },
             { key: "serviceLines", label: "Sambungan Pelanggan",  swatch: <span className="h-[2px] w-5 inline-block" style={{ background: "repeating-linear-gradient(90deg,#0ea5e9 0,#0ea5e9 4px,transparent 4px,transparent 7px)" }} /> },
           ] as Array<{ key: keyof typeof visibleLayers; label: string; swatch: React.ReactNode }>).map(({ key, label, swatch }) => {
             const isVisible = visibleLayers[key];
