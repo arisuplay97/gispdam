@@ -18,6 +18,7 @@ import {
   PanelLeftOpen,
   Plus,
   X,
+  Users,
 } from "lucide-react";
 import {
   useImportGeoJson,
@@ -52,6 +53,9 @@ interface DashboardSidebarProps {
   // Heatmap
   showHeatmap: boolean;
   setShowHeatmap: (v: boolean) => void;
+  // Panel Pelanggan
+  showCustomerPanel: boolean;
+  setShowCustomerPanel: (v: boolean) => void;
 }
 
 export function DashboardSidebar({
@@ -69,6 +73,8 @@ export function DashboardSidebar({
   setSelectedCoords,
   showHeatmap,
   setShowHeatmap,
+  showCustomerPanel,
+  setShowCustomerPanel,
 }: DashboardSidebarProps) {
   const [minimized, setMinimized] = useState(false);
   const queryClient = useQueryClient();
@@ -533,6 +539,25 @@ export function DashboardSidebar({
             <div className="h-px w-full bg-slate-200" />
 
             {/* Import / Export */}
+            {/* Data Pelanggan Toggle */}
+            <button
+              onClick={() => setShowCustomerPanel(!showCustomerPanel)}
+              className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+                showCustomerPanel
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm'
+                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Data Pelanggan
+              </div>
+              <span className={`text-[10px] uppercase font-bold tracking-wider ${showCustomerPanel ? 'text-emerald-500' : 'text-slate-400'}`}>
+                {showCustomerPanel ? 'Aktif' : 'Buka'}
+              </span>
+            </button>
+
+            <div className="h-px w-full bg-slate-200" />
             <div className="grid grid-cols-2 gap-2">
               <div className="relative">
                 <Button variant="outline" className="w-full text-sm">

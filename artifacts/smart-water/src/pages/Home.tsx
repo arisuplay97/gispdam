@@ -13,6 +13,7 @@ import {
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { ScadaMap } from "@/components/ScadaMap";
 import { TelemetryPanel } from "@/components/TelemetryPanel";
+import { CustomerPanel } from "@/components/CustomerPanel";
 
 interface SelectedCoords {
   lat: number;
@@ -28,6 +29,8 @@ export default function Home() {
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [pipelineWeight, setPipelineWeight] = useState(5);
   const [pipelineColor, setPipelineColor] = useState("#38bdf8");
+  const [showCustomerPanel, setShowCustomerPanel] = useState(false);
+  const [mapSelectCustomerCallback, setMapSelectCustomerCallback] = useState<((lat: number, lng: number) => void) | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
 
   // Live clock
@@ -55,7 +58,11 @@ export default function Home() {
   });
 
   const handleMapClick = (lat: number, lng: number) => {
-    setSelectedCoords({ lat, lng });
+    if (mapSelectCustomerCallback) {
+      mapSelectCustomerCallback(lat, lng);
+    } else {
+      setSelectedCoords({ lat, lng });
+    }
   };
 
   const query = searchTerm.trim().toLowerCase();
@@ -102,6 +109,8 @@ export default function Home() {
         setSelectedCoords={setSelectedCoords}
         showHeatmap={showHeatmap}
         setShowHeatmap={setShowHeatmap}
+        showCustomerPanel={showCustomerPanel}
+        setShowCustomerPanel={setShowCustomerPanel}
       />
 
       <main className="relative flex-1">
@@ -120,6 +129,15 @@ export default function Home() {
             pipelineColor={pipelineColor}
           />
         </div>
+
+        {/* ── Customer Panel Floating Overlay ── */}
+        {showCustomerPanel && (
+          <CustomerPanel 
+            onClose={() => setShowCustomerPanel(false)}
+            onActivateMapSelect={(cb) => setMapSelectCustomerCallback(() => cb)}
+            onDeactivateMapSelect={() => setMapSelectCustomerCallback(null)}
+          />
+        )}
 
         {/* ── Top Left (beside sidebar): Telemetry button (repositioned, no overlap) ── */}
         <div className="absolute left-[340px] top-4 z-[1000] flex flex-col items-start gap-2">

@@ -28,6 +28,8 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Valve, Pipe, WaterSource, PressureRecord } from "@workspace/api-client-react";
+import { useListCustomers } from "../hooks/useCustomers";
+import React from "react";
 
 // ─── Fix default Leaflet icon URLs ─────────────────────────────────────────
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -229,6 +231,9 @@ export function ScadaMap({
   const createPipe = useCreatePipe();
   const deleteValve = useDeleteValve();
   const updateValve = useUpdateValve();
+
+  const { data: rawCustomers } = useListCustomers();
+  const customers = Array.isArray(rawCustomers) ? rawCustomers : [];
 
   const handleUpdatePressure = (id: number, delta: number) => {
     const valve = valves.find((v) => v.id === id);
@@ -456,6 +461,9 @@ export function ScadaMap({
             />
           ))}
 
+        {/* ── Customer markers + Service Lines ─────────────────────── */}
+        <CustomersLayer customers={customers} pipelineGeoJSON={pipelineGeoJSON} />
+
         {/* ── Water source markers ───────────────────────────────────── */}
         {sources.map((source) => (
           <Marker
@@ -554,6 +562,14 @@ export function ScadaMap({
             <div className="h-[3px] w-5 rounded" style={{ background: "repeating-linear-gradient(90deg, #7c3aed 0, #7c3aed 4px, transparent 4px, transparent 8px)" }} />
             <span>Pipa Tambahan</span>
           </div>
+          <div className="flex items-center gap-2.5 border-t border-slate-200 pt-2">
+            <div className="h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-500 shadow" />
+            <span>Pelanggan</span>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <div className="h-[2px] w-5" style={{ background: "repeating-linear-gradient(90deg, #94a3b8 0, #94a3b8 3px, transparent 3px, transparent 6px)" }} />
+            <span>Sambungan Pelanggan</span>
+          </div>
         </div>
       </div>
 
@@ -564,5 +580,99 @@ export function ScadaMap({
         </div>
       )}
     </div>
+  );
+}
+
+// ─── Utility: closest point on line segment ─────────────────────────────────
+function getClosestPointOnSegment(
+  p: { x: number; y: number },
+  a: { x: number; y: number },
+  b: { x: number; y: number }
+) {
+  const ab = { x: b.x - a.x, y: b.y - a.y };
+  const ap = { x: p.x - a.x, y: p.y - a.y };
+  const len2 = ab.x * ab.x + ab.y * ab.y;
+  if (len2 === 0) return a;
+  let t = (ap.x * ab.x + ap.y * ab.y) / len2;
+  t = Math.max(0, Math.min(1, t));
+  return { x: a.x + ab.x * t, y: a.y + ab.y * t };
+}
+
+// ─── Customers Layer ────────────────────────────────────────────────────────
+function CustomersLayer({ customers, pipelineGeoJSON }: { customers: any[]; pipelineGeoJSON: any }) {
+  const customerIcon = L.divIcon({
+    className: "custom-customer-icon",
+    html: `
+      <div style="background:#10b981;border:2px solid white;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 6px rgba(0,0,0,0.3);">
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      </div>
+    `,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+  });
+
+  return (
+    <>
+      {customers.map((c: any) => {
+        if (!c.lat || !c.lng) return null;
+
+        // Find closest point on pipeline for service line
+        let closestPt: [number, number] | null = null;
+        let minDist = Infinity;
+
+        if (pipelineGeoJSON?.features) {
+          const pt = { x: Number(c.lng), y: Number(c.lat) };
+          for (const f of pipelineGeoJSON.features) {
+            if (f.geometry?.type !== "LineString") continue;
+            const coords = f.geometry.coordinates;
+            for (let i = 0; i < coords.length - 1; i++) {
+              const a = { x: coords[i][0], y: coords[i][1] };
+              const b = { x: coords[i + 1][0], y: coords[i + 1][1] };
+              const proj = getClosestPointOnSegment(pt, a, b);
+              const dx = pt.x - proj.x;
+              const dy = pt.y - proj.y;
+              const dist = dx * dx + dy * dy;
+              if (dist < minDist) {
+                minDist = dist;
+                closestPt = [proj.y, proj.x]; // [lat, lng]
+              }
+            }
+          }
+        }
+
+        return (
+          <React.Fragment key={c.id}>
+            {closestPt && (
+              <Polyline
+                positions={[closestPt, [Number(c.lat), Number(c.lng)]]}
+                pathOptions={{ color: "#94a3b8", weight: 1.5, dashArray: "4, 6", opacity: 0.8 }}
+              />
+            )}
+            <Marker position={[Number(c.lat), Number(c.lng)]} icon={customerIcon}>
+              <Popup className="custom-popup">
+                <div className="p-1" style={{ minWidth: 210 }}>
+                  <div className="flex items-center gap-2 mb-2 border-b pb-2">
+                    <div style={{ background: "#d1fae5", padding: 6, borderRadius: "50%", color: "#059669" }}>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                    </div>
+                    <div>
+                      <h3 style={{ fontWeight: 700, fontSize: 13, color: "#1e293b" }}>{c.nama_pelanggan}</h3>
+                      <p style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>{c.id_pelanggan}</p>
+                    </div>
+                  </div>
+                  <table style={{ fontSize: 11, width: "100%" }}>
+                    <tbody>
+                      <tr><td style={{ color: "#94a3b8", paddingRight: 8 }}>Alamat</td><td style={{ fontWeight: 500 }}>{c.alamat}</td></tr>
+                      <tr><td style={{ color: "#94a3b8" }}>Elevasi</td><td style={{ fontWeight: 600, color: "#059669" }}>{c.elevasi_m} m</td></tr>
+                      <tr><td style={{ color: "#94a3b8" }}>SPAM</td><td>{c.spam_name}</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </Popup>
+            </Marker>
+          </React.Fragment>
+        );
+      })}
+    </>
   );
 }
