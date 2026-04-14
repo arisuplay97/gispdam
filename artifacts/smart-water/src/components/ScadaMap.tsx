@@ -12,6 +12,7 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import { Eye, EyeOff } from "lucide-react";
 import { EditControl } from "react-leaflet-draw";
 import "leaflet-draw/dist/leaflet.draw.css";
 import { LineChart, Line, Tooltip as RechartsTooltip, YAxis } from "recharts";
@@ -63,6 +64,15 @@ export interface ScadaMapProps {
   showHeatmap: boolean;
   pipelineWeight?: number;
   pipelineColor?: string;
+  visibleLayers?: {
+    valves: boolean;
+    pipelines: boolean;
+    customers: boolean;
+    serviceLines: boolean;
+    sources: boolean;
+    pipes: boolean;
+  };
+  onToggleLayer?: (key: string) => void;
 }
 
 // ─── Inner: Map click handler ────────────────────────────────────────────────
@@ -225,6 +235,11 @@ export function ScadaMap({
   showHeatmap,
   pipelineWeight = 5,
   pipelineColor = "#38bdf8",
+  visibleLayers = {
+    valves: true, pipelines: true, customers: true,
+    serviceLines: true, sources: true, pipes: true,
+  },
+  onToggleLayer,
 }: ScadaMapProps) {
   const queryClient = useQueryClient();
   const createValve = useCreateValve();
@@ -234,6 +249,9 @@ export function ScadaMap({
 
   const { data: rawCustomers } = useListCustomers();
   const customers = Array.isArray(rawCustomers) ? rawCustomers : [];
+
+  // Hover layer highlight state
+  const [hoveredLegendLayer, setHoveredLegendLayer] = React.useState<string | null>(null);
 
   const handleUpdatePressure = (id: number, delta: number) => {
     const valve = valves.find((v) => v.id === id);
@@ -388,7 +406,7 @@ export function ScadaMap({
         </LayersControl>
 
         {/* ── Animated Topological Pipelines (from /api/pipelines/geojson) ── */}
-        {(pipelineGeoJSON?.features || []).map((feature) => {
+        {visibleLayers.pipelines && (pipelineGeoJSON?.features || []).map((feature) => {
           const positions = feature.geometry.coordinates.map(
             ([lng, lat]) => [lat, lng] as [number, number]
           );
@@ -398,8 +416,8 @@ export function ScadaMap({
               positions={positions}
               pathOptions={{
                 color: pipelineColor,
-                weight: pipelineWeight,
-                opacity: 0.95,
+                weight: hoveredLegendLayer === "pipelines" ? pipelineWeight + 3 : pipelineWeight,
+                opacity: visibleLayers.pipelines ? (hoveredLegendLayer === "pipelines" ? 1 : 0.95) : 0,
                 className: "pipeline-animated",
               }}
             >
@@ -419,8 +437,8 @@ export function ScadaMap({
           );
         })}
 
-        {/* ── Manually drawn pipes (stored in DB) ───────────────────── */}
-        {pipes.map((pipe) => (
+        {/* ── Manually drawn pipes (stored in DB) ───────────────────────── */}
+        {visibleLayers.pipes && pipes.map((pipe) => (
           <Polyline
             key={`pipe-${pipe.id}`}
             positions={pipe.coordinates.map((c) => [c[1], c[0]] as [number, number])}
@@ -462,10 +480,16 @@ export function ScadaMap({
           ))}
 
         {/* ── Customer markers + Service Lines ─────────────────────── */}
-        <CustomersLayer customers={customers} pipelineGeoJSON={pipelineGeoJSON} />
+        <CustomersLayer
+          customers={visibleLayers.customers ? customers : []}
+          pipelineGeoJSON={pipelineGeoJSON}
+          showServiceLines={visibleLayers.serviceLines}
+          highlighted={hoveredLegendLayer === "customers" || hoveredLegendLayer === "serviceLines"}
+          serviceLineHighlighted={hoveredLegendLayer === "serviceLines"}
+        />
 
         {/* ── Water source markers ───────────────────────────────────── */}
-        {sources.map((source) => (
+        {visibleLayers.sources && sources.map((source) => (
           <Marker
             key={`source-${source.id}`}
             position={[source.lat, source.lng]}
@@ -483,8 +507,8 @@ export function ScadaMap({
           </Marker>
         ))}
 
-        {/* ── Valve markers with mini chart popup ───────────────────── */}
-        {valves.map((valve) => (
+        {/* ── Valve markers with mini chart popup ─────────────────────── */}
+        {visibleLayers.valves && valves.map((valve) => (
           <Marker
             key={`valve-${valve.id}`}
             position={[valve.lat, valve.lng]}
@@ -532,45 +556,40 @@ export function ScadaMap({
         )}
       </MapContainer>
 
-      {/* ── Legend overlay ────────────────────────────────────────────── */}
-      <div className="absolute bottom-6 left-6 z-[1000] rounded-xl border border-slate-200 bg-white/95 p-4 shadow-lg backdrop-blur-sm">
-        <h4 className="mb-3 border-b border-slate-200 pb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
-          Legenda
+      {/* ── Interactive Legend (click to toggle, hover to highlight) */}
+      <div className="absolute bottom-6 left-6 z-[1000] rounded-xl border border-slate-200 bg-white/95 p-4 shadow-lg backdrop-blur-sm" style={{ minWidth: 220 }}>
+        <h4 className="mb-2 border-b border-slate-200 pb-2 text-xs font-bold uppercase tracking-wide text-slate-600">
+          Legenda &amp; Layer
         </h4>
-        <div className="space-y-2 text-xs text-slate-700">
-          <div className="flex items-center gap-2.5">
-            <div className="h-3.5 w-3.5 rounded-full border-2 border-white bg-green-600 shadow" />
-            <span>Normal (&gt;5 bar)</span>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <div className="h-3.5 w-3.5 rounded-full border-2 border-white bg-amber-500 shadow" />
-            <span>Peringatan (2–5 bar)</span>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <div className="h-3.5 w-3.5 rounded-full border-2 border-white bg-red-600 shadow" />
-            <span>Kritis (&lt;2 bar)</span>
-          </div>
-          <div className="flex items-center gap-2.5 border-t border-slate-200 pt-2">
-            <div className="h-3.5 w-3.5 rotate-45 border-2 border-white bg-blue-700 shadow" />
-            <span>Sumber Air</span>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <div className="h-[3px] w-5 rounded bg-blue-500" style={{ background: "repeating-linear-gradient(90deg, #3b82f6 0, #3b82f6 6px, transparent 6px, transparent 10px)" }} />
-            <span>Pipa Utama (animasi)</span>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <div className="h-[3px] w-5 rounded" style={{ background: "repeating-linear-gradient(90deg, #7c3aed 0, #7c3aed 4px, transparent 4px, transparent 8px)" }} />
-            <span>Pipa Tambahan</span>
-          </div>
-          <div className="flex items-center gap-2.5 border-t border-slate-200 pt-2">
-            <div className="h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-500 shadow" />
-            <span>Pelanggan</span>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <div className="h-[2px] w-5" style={{ background: "repeating-linear-gradient(90deg, #94a3b8 0, #94a3b8 3px, transparent 3px, transparent 6px)" }} />
-            <span>Sambungan Pelanggan</span>
-          </div>
+        <div className="space-y-1 text-xs">
+          {([
+            { key: "valves",       label: "Valve",                swatch: <span className="flex gap-0.5"><span className="h-3 w-3 rounded-full bg-green-600 border border-white shadow" /><span className="h-3 w-3 rounded-full bg-amber-500 border border-white shadow" /><span className="h-3 w-3 rounded-full bg-red-500 border border-white shadow" /></span> },
+            { key: "sources",      label: "Sumber Air",           swatch: <span className="h-3.5 w-3.5 rotate-45 border-2 border-white bg-blue-700 shadow inline-block" /> },
+            { key: "pipelines",    label: "Pipa Utama",           swatch: <span className="h-[3px] w-5 rounded inline-block" style={{ background: "repeating-linear-gradient(90deg,#38bdf8 0,#38bdf8 5px,transparent 5px,transparent 9px)" }} /> },
+            { key: "pipes",        label: "Pipa Tambahan",        swatch: <span className="h-[3px] w-5 rounded inline-block" style={{ background: "repeating-linear-gradient(90deg,#a855f7 0,#a855f7 4px,transparent 4px,transparent 8px)" }} /> },
+            { key: "customers",    label: "Pelanggan",            swatch: <span className="h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-500 shadow inline-block" /> },
+            { key: "serviceLines", label: "Sambungan Pelanggan",  swatch: <span className="h-[2px] w-5 inline-block" style={{ background: "repeating-linear-gradient(90deg,#0ea5e9 0,#0ea5e9 4px,transparent 4px,transparent 7px)" }} /> },
+          ] as Array<{ key: keyof typeof visibleLayers; label: string; swatch: React.ReactNode }>).map(({ key, label, swatch }) => {
+            const isVisible = visibleLayers[key];
+            const isHov = hoveredLegendLayer === key;
+            return (
+              <div
+                key={key}
+                className={`flex items-center gap-2 rounded-lg px-2 py-1.5 cursor-pointer transition-all select-none ${isHov ? "bg-blue-50 ring-1 ring-blue-200" : "hover:bg-slate-50"} ${!isVisible ? "opacity-50" : ""}`}
+                onMouseEnter={() => setHoveredLegendLayer(key)}
+                onMouseLeave={() => setHoveredLegendLayer(null)}
+                onClick={() => onToggleLayer?.(key)}
+              >
+                <span className="w-12 flex justify-center shrink-0">{swatch}</span>
+                <span className={`flex-1 ${isVisible ? "text-slate-700" : "text-slate-400 line-through"}`}>{label}</span>
+                <span className="ml-auto text-slate-400">
+                  {isVisible ? <Eye className="h-3.5 w-3.5 text-blue-500" /> : <EyeOff className="h-3.5 w-3.5" />}
+                </span>
+              </div>
+            );
+          })}
         </div>
+        <p className="mt-2 pt-2 border-t border-slate-100 text-[10px] text-slate-400">Hover untuk sorot • Klik item di props untuk sembunyikan</p>
       </div>
 
       {/* ── Add Valve Mode banner ───────────────────────────────────── */}
@@ -599,16 +618,28 @@ function getClosestPointOnSegment(
 }
 
 // ─── Customers Layer ────────────────────────────────────────────────────────
-function CustomersLayer({ customers, pipelineGeoJSON }: { customers: any[]; pipelineGeoJSON: any }) {
+function CustomersLayer({
+  customers,
+  pipelineGeoJSON,
+  showServiceLines = true,
+  highlighted = false,
+  serviceLineHighlighted = false,
+}: {
+  customers: any[];
+  pipelineGeoJSON: any;
+  showServiceLines?: boolean;
+  highlighted?: boolean;
+  serviceLineHighlighted?: boolean;
+}) {
   const customerIcon = L.divIcon({
     className: "custom-customer-icon",
     html: `
-      <div style="background:#10b981;border:2px solid white;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 6px rgba(0,0,0,0.3);">
+      <div style="background:${highlighted ? '#059669' : '#10b981'};border:${highlighted ? '3px' : '2px'} solid white;border-radius:50%;width:${highlighted ? '26' : '22'}px;height:${highlighted ? '26' : '22'}px;display:flex;align-items:center;justify-content:center;box-shadow:${highlighted ? '0 0 12px rgba(16,185,129,0.7),0 4px 6px rgba(0,0,0,0.3)' : '0 4px 6px rgba(0,0,0,0.3)'};transition:all 0.2s;">
         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       </div>
     `,
-    iconSize: [22, 22],
-    iconAnchor: [11, 11],
+    iconSize: [highlighted ? 26 : 22, highlighted ? 26 : 22],
+    iconAnchor: [highlighted ? 13 : 11, highlighted ? 13 : 11],
   });
 
   return (
@@ -642,10 +673,15 @@ function CustomersLayer({ customers, pipelineGeoJSON }: { customers: any[]; pipe
 
         return (
           <React.Fragment key={c.id}>
-            {closestPt && (
+            {showServiceLines && closestPt && (
               <Polyline
                 positions={[closestPt, [Number(c.lat), Number(c.lng)]]}
-                pathOptions={{ color: "#94a3b8", weight: 1.5, dashArray: "4, 6", opacity: 0.8 }}
+                pathOptions={{
+                  color: serviceLineHighlighted ? "#0284c7" : "#0ea5e9",
+                  weight: serviceLineHighlighted ? 3 : 2,
+                  dashArray: serviceLineHighlighted ? "6, 4" : "4, 6",
+                  opacity: serviceLineHighlighted ? 1 : 0.85,
+                }}
               />
             )}
             <Marker position={[Number(c.lat), Number(c.lng)]} icon={customerIcon}>

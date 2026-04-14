@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Users, Plus, X, Edit2, Trash2, MapPin, Save, Loader2 } from "lucide-react";
+import { Users, Plus, X, Edit2, Trash2, MapPin, Save, Loader2, Search } from "lucide-react";
 import {
   Customer,
   useListCustomers,
@@ -24,6 +24,7 @@ export function CustomerPanel({ onClose, onActivateMapSelect, onDeactivateMapSel
 
   const [view, setView] = useState<"list" | "form">("list");
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   
   // Form State
   const [formData, setFormData] = useState<Partial<Customer>>({
@@ -34,6 +35,13 @@ export function CustomerPanel({ onClose, onActivateMapSelect, onDeactivateMapSel
     spam_name: "SPAM Aiq Bone",
     lat: 0,
     lng: 0,
+  });
+
+  // Filtered customers
+  const filteredCustomers = customers.filter((c) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return c.nama_pelanggan.toLowerCase().includes(q) || c.id_pelanggan.toLowerCase().includes(q) || (c.alamat || "").toLowerCase().includes(q);
   });
 
   const [isMapSelecting, setIsMapSelecting] = useState(false);
@@ -134,14 +142,33 @@ export function CustomerPanel({ onClose, onActivateMapSelect, onDeactivateMapSel
         <div className="flex-1 overflow-auto p-6">
           {view === "list" ? (
             <div className="space-y-4">
-              <div className="flex justify-between items-center bg-slate-100/50 p-3 rounded-lg border border-slate-200">
-                <span className="text-sm font-medium text-slate-700">Total: {customers.length} Pelanggan</span>
-                <button
-                  onClick={handleAdd}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 flex items-center gap-2 rounded-lg text-sm font-semibold transition-colors shadow-sm"
-                >
-                  <Plus className="h-4 w-4" /> Tambah Data
-                </button>
+              <div className="flex flex-col sm:flex-row gap-2 bg-slate-100/50 p-3 rounded-lg border border-slate-200">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Cari nama, ID, atau alamat..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  />
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center justify-between gap-3 shrink-0">
+                  <span className="text-xs text-slate-500 whitespace-nowrap">
+                    {filteredCustomers.length}/{customers.length} pelanggan
+                  </span>
+                  <button
+                    onClick={handleAdd}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 flex items-center gap-2 rounded-lg text-sm font-semibold transition-colors shadow-sm whitespace-nowrap"
+                  >
+                    <Plus className="h-4 w-4" /> Tambah Data
+                  </button>
+                </div>
               </div>
 
               {isLoading ? (
@@ -159,7 +186,7 @@ export function CustomerPanel({ onClose, onActivateMapSelect, onDeactivateMapSel
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {customers.map((c) => (
+                      {filteredCustomers.map((c) => (
                         <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
                           <td className="px-4 py-3 font-mono text-blue-600 text-xs">{c.id_pelanggan}</td>
                           <td className="px-4 py-3 font-semibold text-slate-800">{c.nama_pelanggan}</td>
@@ -173,8 +200,10 @@ export function CustomerPanel({ onClose, onActivateMapSelect, onDeactivateMapSel
                           </td>
                         </tr>
                       ))}
-                      {customers.length === 0 && (
-                        <tr><td colSpan={5} className="p-6 text-center text-slate-400">Belum ada pelanggan.</td></tr>
+                      {filteredCustomers.length === 0 && (
+                        <tr><td colSpan={5} className="p-6 text-center text-slate-400">
+                          {searchQuery ? `Tidak ada hasil untuk "${searchQuery}"` : "Belum ada pelanggan."}
+                        </td></tr>
                       )}
                     </tbody>
                   </table>

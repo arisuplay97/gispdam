@@ -32,6 +32,16 @@ export default function Home() {
   const [showCustomerPanel, setShowCustomerPanel] = useState(false);
   const [mapSelectCustomerCallback, setMapSelectCustomerCallback] = useState<((lat: number, lng: number) => void) | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [visibleLayers, setVisibleLayers] = useState({
+    valves: true,
+    pipelines: true,
+    customers: true,
+    serviceLines: true,
+    sources: true,
+    pipes: true,
+  });
+  const toggleLayer = (key: keyof typeof visibleLayers) =>
+    setVisibleLayers((prev) => ({ ...prev, [key]: !prev[key] }));
 
   // Live clock
   useEffect(() => {
@@ -127,6 +137,8 @@ export default function Home() {
             showHeatmap={showHeatmap}
             pipelineWeight={pipelineWeight}
             pipelineColor={pipelineColor}
+            visibleLayers={visibleLayers}
+            onToggleLayer={(key) => toggleLayer(key as keyof typeof visibleLayers)}
           />
         </div>
 
