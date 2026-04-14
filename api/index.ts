@@ -281,7 +281,7 @@ const DEMO_SOURCES = [
   { name: "Intake Sungai Aiq Bone",         lat: -8.655, lng: 116.325, capacity: 2500, type: "Intake" },
 ];
 
-app.post("/api/seed-demo", async (_req: any, res: any) => {
+app.all("/api/seed-demo", async (_req: any, res: any) => {
   try {
     const [valveCount] = await db.select({ c: count() }).from(valvesTable);
     const [sourceCount] = await db.select({ c: count() }).from(sourcesTable);

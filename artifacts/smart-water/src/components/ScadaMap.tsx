@@ -60,6 +60,7 @@ export interface ScadaMapProps {
   pressureHistory?: PressureRecord[];
   showHeatmap: boolean;
   pipelineWeight?: number;
+  pipelineColor?: string;
 }
 
 // ─── Inner: Map click handler ────────────────────────────────────────────────
@@ -221,6 +222,7 @@ export function ScadaMap({
   pressureHistory = [],
   showHeatmap,
   pipelineWeight = 5,
+  pipelineColor = "#38bdf8",
 }: ScadaMapProps) {
   const queryClient = useQueryClient();
   const createValve = useCreateValve();
@@ -390,7 +392,7 @@ export function ScadaMap({
               key={feature.properties.id}
               positions={positions}
               pathOptions={{
-                color: "#38bdf8",
+                color: pipelineColor,
                 weight: pipelineWeight,
                 opacity: 0.95,
                 className: "pipeline-animated",

@@ -27,6 +27,7 @@ export default function Home() {
   const [selectedCoords, setSelectedCoords] = useState<SelectedCoords | null>(null);
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [pipelineWeight, setPipelineWeight] = useState(5);
+  const [pipelineColor, setPipelineColor] = useState("#38bdf8");
   const [currentTime, setCurrentTime] = useState(new Date());
 
   // Live clock
@@ -116,11 +117,12 @@ export default function Home() {
             pressureHistory={Array.isArray(pressureHistory) ? pressureHistory : []}
             showHeatmap={showHeatmap}
             pipelineWeight={pipelineWeight}
+            pipelineColor={pipelineColor}
           />
         </div>
 
-        {/* ── Top right: Telemetry button (repositioned, no overlap) ── */}
-        <div className="absolute right-4 top-4 z-[1000] flex flex-col items-end gap-2">
+        {/* ── Top Left (beside sidebar): Telemetry button (repositioned, no overlap) ── */}
+        <div className="absolute left-[340px] top-4 z-[1000] flex flex-col items-start gap-2">
           {telemetryOpen ? (
             <div className="w-80 space-y-4">
               <TelemetryPanel valves={safeValves} onClose={() => setTelemetryOpen(false)} />
@@ -165,25 +167,38 @@ export default function Home() {
           )}
         </div>
 
-        {/* ── Pipeline weight control (bottom right, above zoom) ── */}
-        <div className="absolute bottom-20 right-3 z-[1000] rounded-xl border border-slate-200 bg-white/95 px-3 py-2.5 shadow-lg backdrop-blur-sm">
-          <div className="flex items-center gap-2 mb-1.5">
-            <Layers className="h-3.5 w-3.5 text-blue-600" />
-            <span className="text-xs font-semibold text-slate-600">Ketebalan Pipa</span>
+        {/* ── Pipeline Control (bottom right, above zoom) ── */}
+        <div className="absolute bottom-20 right-3 z-[1000] rounded-xl border border-slate-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur-sm w-48">
+          <div className="flex justify-between items-center mb-3 border-b border-slate-100 pb-2">
+            <div className="flex items-center gap-2">
+              <Layers className="h-3.5 w-3.5 text-blue-600" />
+              <span className="text-xs font-semibold text-slate-600">Garis Distribusi</span>
+            </div>
+            {/* Color Picker */}
+            <input
+              type="color"
+              value={pipelineColor}
+              onChange={(e) => setPipelineColor(e.target.value)}
+              className="h-6 w-6 cursor-pointer border-0 p-0 bg-transparent rounded-sm overflow-hidden"
+              title="Warna Utama"
+            />
           </div>
-          <input
-            type="range"
-            min={2}
-            max={14}
-            step={1}
-            value={pipelineWeight}
-            onChange={(e) => setPipelineWeight(Number(e.target.value))}
-            className="h-1.5 w-28 cursor-pointer accent-blue-600"
-          />
-          <div className="mt-1 flex justify-between text-[10px] text-slate-400">
-            <span>Tipis</span>
-            <span className="font-medium text-blue-600">{pipelineWeight}px</span>
-            <span>Tebal</span>
+          
+          <div>
+            <span className="text-[10px] font-medium text-slate-500 mb-1 block">Ketebalan: {pipelineWeight}px</span>
+            <input
+              type="range"
+              min={2}
+              max={15}
+              step={1}
+              value={pipelineWeight}
+              onChange={(e) => setPipelineWeight(Number(e.target.value))}
+              className="h-1.5 w-full cursor-pointer accent-blue-600"
+            />
+            <div className="mt-1 flex justify-between text-[10px] text-slate-400">
+              <span>Tipis</span>
+              <span>Tebal</span>
+            </div>
           </div>
         </div>
       </main>
