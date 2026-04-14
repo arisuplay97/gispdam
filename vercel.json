@@ -1,8 +1,18 @@
 {
   "version": 2,
-  "buildCommand": "pnpm install --no-frozen-lockfile && cd artifacts/smart-water && pnpm run build",
+  "installCommand": "pnpm install --no-frozen-lockfile",
+  "buildCommand": "cd artifacts/smart-water && pnpm run build",
   "outputDirectory": "artifacts/smart-water/dist/public",
+  "functions": {
+    "api/index.ts": {
+      "maxDuration": 10
+    }
+  },
   "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.ts"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
