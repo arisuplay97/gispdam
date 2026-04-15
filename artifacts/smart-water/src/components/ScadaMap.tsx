@@ -154,6 +154,31 @@ function ValvePopupContent({
             {valve.pressure.toFixed(2)} bar
           </span>
         </p>
+        
+        {/* New Metadata Rows from QGIS Import */}
+        {((valve as any).diameter || (valve as any).installYear || (valve as any).condition) && (
+          <div className="grid grid-cols-2 gap-x-2 gap-y-1 my-2 text-[11px] bg-slate-50 p-2 rounded border border-slate-100">
+            {(valve as any).diameter && (
+              <>
+                <span className="text-slate-500">Diameter:</span>
+                <span className="font-medium">{(valve as any).diameter} mm</span>
+              </>
+            )}
+            {(valve as any).installYear && (
+              <>
+                <span className="text-slate-500">Thn Pasang:</span>
+                <span className="font-medium">{(valve as any).installYear}</span>
+              </>
+            )}
+            {(valve as any).condition && (
+              <>
+                <span className="text-slate-500">Kondisi:</span>
+                <span className="font-medium">{(valve as any).condition}</span>
+              </>
+            )}
+          </div>
+        )}
+
         <p className="text-xs text-slate-400">
           Lat: {valve.lat.toFixed(6)}&nbsp;&nbsp;Lng: {valve.lng.toFixed(6)}
         </p>
@@ -463,8 +488,28 @@ export function ScadaMap({
             <Popup>
               <div style={{ minWidth: 180 }} className="text-slate-800">
                 <h3 className="font-semibold text-purple-700 text-sm">{pipe.name}</h3>
-                <p className="text-xs mt-1">Diameter: {pipe.diameter ?? "—"} mm</p>
-                <p className="text-xs mb-2">Material: {pipe.material ?? "—"}</p>
+                <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 mt-2 mb-3 text-[10px]">
+                  <span className="text-slate-500">Diameter:</span>
+                  <span className="font-medium text-slate-700">{pipe.diameter ?? "—"} mm</span>
+                  
+                  <span className="text-slate-500">Material:</span>
+                  <span className="font-medium text-slate-700">{pipe.material ?? "—"}</span>
+                  
+                  {(pipe as any).zone && (
+                    <>
+                      <span className="text-slate-500">Zona:</span>
+                      <span className="font-medium text-slate-700">{(pipe as any).zone}</span>
+                    </>
+                  )}
+                  
+                  {(pipe as any).spam && (
+                    <>
+                      <span className="text-slate-500">SPAM:</span>
+                      <span className="font-medium text-slate-700">{(pipe as any).spam}</span>
+                    </>
+                  )}
+                </div>
+
                 {editMode && (
                   <button
                     className="w-full rounded bg-red-600 py-1.5 text-xs font-medium text-white shadow hover:bg-red-700 transition"

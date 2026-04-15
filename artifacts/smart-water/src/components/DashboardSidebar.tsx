@@ -241,8 +241,10 @@ export function DashboardSidebar({
               <Droplets className="h-6 w-6 text-blue-700" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-slate-900">Tiara smart Gis</h1>
-              <p className="text-sm text-slate-500">TIARA GIS · SPAM Aiq Bone</p>
+              <h1 className="text-xl font-bold tracking-tight text-slate-900">TIARA GIS</h1>
+              <p className="text-[11px] font-medium uppercase tracking-wider text-slate-500">
+                SCADA & WebGIS PDAM
+              </p>
             </div>
           </div>
           <Button variant="ghost" size="icon" onClick={() => setMinimized(true)} title="Minimalkan sidebar">
