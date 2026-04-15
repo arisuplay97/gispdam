@@ -32,6 +32,11 @@ const valvesTable = pgTable("valves", {
   name: text("name").notNull(),
   lat: doublePrecision("lat").notNull(),
   lng: doublePrecision("lng").notNull(),
+  diameter: doublePrecision("diameter"),
+  installYear: doublePrecision("install_year"),
+  condition: text("condition"),
+  functionStatus: text("function_status"),
+  description: text("description"),
   pressure: doublePrecision("pressure").notNull().default(0),
   status: text("status").notNull().default("normal"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -41,9 +46,15 @@ const valvesTable = pgTable("valves", {
 const pipesTable = pgTable("pipes", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  coordinates: jsonb("coordinates").notNull().$type<[number, number][]>(),
+  coordinates: jsonb("coordinates").notNull().$type<number[][]>(),
   diameter: doublePrecision("diameter"),
   material: text("material"),
+  networkType: text("network_type"),
+  installYear: doublePrecision("install_year"),
+  condition: text("condition"),
+  length: doublePrecision("length"),
+  zone: text("zone"),
+  spam: text("spam"),
   fromNode: text("from_node"),
   toNode: text("to_node"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -371,6 +382,68 @@ app.delete("/api/customers/:id", async (req: any, res: any) => {
   }
 });
 
+// ─── GeoJSON Import ──────────────────────────────────────────────────────────
+app.post("/api/import/geojson", async (req: any, res: any) => {
+  try {
+    const geojson = req.body.data;
+    if (!geojson || geojson.type !== "FeatureCollection") {
+      return res.status(400).json({ error: "Invalid GeoJSON FeatureCollection" });
+    }
+
+    let valvesImported = 0;
+    let pipesImported = 0;
+
+    for (const feature of geojson.features) {
+      const props = feature.properties || {};
+      const geometry = feature.geometry;
+
+      if (geometry.type === "Point") {
+        // Import as Valve
+        const [lng, lat] = geometry.coordinates;
+        const valveId = `V-IMP-${props.fid || Math.floor(Math.random() * 100000)}`;
+        
+        await db.insert(valvesTable).values({
+          valveId,
+          name: props.jns_valve || props.nama || `Valve ${props.fid || valvesImported}`,
+          lat: Number(lat),
+          lng: Number(lng),
+          diameter: props.diameter ? Number(props.diameter) : null,
+          installYear: props.thn_psng ? Number(props.thn_psng) : null,
+          condition: props.kondisi ? String(props.kondisi) : null,
+          functionStatus: props.fungsi ? String(props.fungsi) : null,
+          description: props.keterangan ? String(props.keterangan) : null,
+          pressure: 5.0,
+          status: "normal",
+        }).onConflictDoNothing();
+        valvesImported++;
+      } else if (geometry.type === "LineString") {
+        // Import as Pipe
+        const coords = geometry.coordinates; // [[lng, lat], ...]
+        const diamStr = String(props.diameter || "").replace(",", ".");
+        const diamFloat = parseFloat(diamStr);
+
+        await db.insert(pipesTable).values({
+          name: `Pipa ${props.jns_pipa || ""} ${props.fid || pipesImported}`,
+          coordinates: coords,
+          diameter: isNaN(diamFloat) ? null : diamFloat,
+          material: props.jns_pipa ? String(props.jns_pipa) : null,
+          networkType: props.jaringan ? String(props.jaringan) : null,
+          installYear: props.thn_pasang ? Number(props.thn_pasang) : null,
+          condition: props.kondisi ? String(props.kondisi) : null,
+          length: props.panjang ? Number(props.panjang) : null,
+          zone: props.zona ? String(props.zona) : null,
+          spam: props.spam ? String(props.spam) : null,
+        });
+        pipesImported++;
+      }
+    }
+
+    res.json({ success: true, valvesImported, pipesImported });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ─── Seed Demo Data (auto-seeds if DB empty) ──────────────────────────────────
 const DEMO_VALVES = [
   { valveId: "V-1001", name: "Valve Utara A", lat: -8.630, lng: 116.295, pressure: 7.2 },
@@ -405,6 +478,23 @@ app.all("/api/seed-demo", async (_req: any, res: any) => {
     // 1. SETUP POSTGIS & FIX SCHEMA
     try {
       await db.execute(sql`CREATE EXTENSION IF NOT EXISTS postgis;`);
+      
+      // Fix Valves columns
+      await db.execute(sql`ALTER TABLE valves ADD COLUMN IF NOT EXISTS diameter DOUBLE PRECISION;`);
+      await db.execute(sql`ALTER TABLE valves ADD COLUMN IF NOT EXISTS install_year DOUBLE PRECISION;`);
+      await db.execute(sql`ALTER TABLE valves ADD COLUMN IF NOT EXISTS condition TEXT;`);
+      await db.execute(sql`ALTER TABLE valves ADD COLUMN IF NOT EXISTS function_status TEXT;`);
+      await db.execute(sql`ALTER TABLE valves ADD COLUMN IF NOT EXISTS description TEXT;`);
+
+      // Fix Pipes columns
+      await db.execute(sql`ALTER TABLE pipes ADD COLUMN IF NOT EXISTS network_type TEXT;`);
+      await db.execute(sql`ALTER TABLE pipes ADD COLUMN IF NOT EXISTS install_year DOUBLE PRECISION;`);
+      await db.execute(sql`ALTER TABLE pipes ADD COLUMN IF NOT EXISTS condition TEXT;`);
+      await db.execute(sql`ALTER TABLE pipes ADD COLUMN IF NOT EXISTS length DOUBLE PRECISION;`);
+      await db.execute(sql`ALTER TABLE pipes ADD COLUMN IF NOT EXISTS zone TEXT;`);
+      await db.execute(sql`ALTER TABLE pipes ADD COLUMN IF NOT EXISTS spam TEXT;`);
+
+      // Fix Sources
       await db.execute(sql`ALTER TABLE sources ADD COLUMN IF NOT EXISTS capacity DOUBLE PRECISION;`);
       await db.execute(sql`ALTER TABLE sources ADD COLUMN IF NOT EXISTS type TEXT;`);
       
