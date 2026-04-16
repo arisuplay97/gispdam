@@ -403,6 +403,8 @@ app.post("/api/import/geojson", async (req: any, res: any) => {
       const props = feature.properties || {};
       const geometry = feature.geometry;
 
+      if (!geometry) continue;
+
       if (geometry.type === "Point") {
         const [lng, lat] = geometry.coordinates;
         
