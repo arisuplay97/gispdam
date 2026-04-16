@@ -397,30 +397,75 @@ app.post("/api/import/geojson", async (req: any, res: any) => {
 
     let valvesImported = 0;
     let pipesImported = 0;
+    let sourcesImported = 0;
 
     for (const feature of geojson.features) {
       const props = feature.properties || {};
       const geometry = feature.geometry;
 
       if (geometry.type === "Point") {
-        // Import as Valve
         const [lng, lat] = geometry.coordinates;
-        const valveId = `V-IMP-${props.fid || Math.floor(Math.random() * 100000)}`;
         
-        await db.insert(valvesTable).values({
-          valveId,
-          name: props.jns_valve || props.nama || `Valve ${props.fid || valvesImported}`,
-          lat: Number(lat),
-          lng: Number(lng),
-          diameter: props.diameter ? Number(props.diameter) : null,
-          installYear: props.thn_psng ? Number(props.thn_psng) : null,
-          condition: props.kondisi ? String(props.kondisi) : null,
-          functionStatus: props.fungsi ? String(props.fungsi) : null,
-          description: props.keterangan ? String(props.keterangan) : null,
-          pressure: 5.0,
-          status: "normal",
-        }).onConflictDoNothing();
-        valvesImported++;
+        // 1. Cek apakah ini Sumber Air (Air Baku, Reservoir, BPT)
+        const isAirBaku = !!props.jns_smbr;
+        const isRsvOrBPT = props.nama && (String(props.nama).includes("Rsv.") || String(props.nama).includes("BPT.") || String(props.nama).includes("BPT "));
+        
+        // Cek juga dari tipe GeoJSON apabila ada properti yang sangat spesifik
+        if (isAirBaku || isRsvOrBPT) {
+          // Import sebagai Sources
+          let srcType = "Sumber Air";
+          if (isAirBaku) srcType = String(props.jns_smbr);
+          else if (String(props.nama).includes("Rsv.")) srcType = "Reservoir";
+          else if (String(props.nama).includes("BPT.") || String(props.nama).includes("BPT ")) srcType = "BPT";
+          
+          const capacity = props.kpsts_trpsng || props.kpsts_trpsg || 0;
+          
+          await db.insert(sourcesTable).values({
+            name: props.nama || `Source ${props.fid || sourcesImported}`,
+            lat: Number(lat),
+            lng: Number(lng),
+            capacity: Number(capacity),
+            type: srcType,
+          });
+          sourcesImported++;
+        } else {
+          // 2. Import sebagai Valve / Air Valve / Washout
+          const valveId = `V-IMP-${props.fid || Math.floor(Math.random() * 100000)}`;
+          
+          let valveName = props.jns_valve || props.nama || `Valve ${props.fid || valvesImported}`;
+          let diameter = props.diameter || props.dimensi_av || props.dimensi_pipa || null;
+          
+          // Deteksi Air Valve (dari airvale.geojson yang biasanya punya props.jenis dan tanpa jns_valve/dimensi)
+          if (props.jenis !== undefined && props.dimensi === undefined && props.jns_valve === undefined && !props.nama) {
+             const jns = props.jenis ? String(props.jenis).trim() : "";
+             valveName = jns ? `Air Valve ${jns} ${props.fid || valvesImported}` : `Air Valve ${props.fid || valvesImported}`;
+          }
+          // Deteksi Washout (dari washout.geojson yang biasanya hanya punya atribut "dimensi" dan "fid")
+          else if (props.dimensi !== undefined && props.jns_valve === undefined && !props.nama) {
+             valveName = `Washout ${props.fid || valvesImported}`;
+             diameter = props.dimensi;
+          }
+          
+          // Pastikan diameter bisa di-parse (replace comma to dot)
+          if (diameter && typeof diameter === 'string') {
+            diameter = parseFloat(diameter.replace(',', '.'));
+          }
+
+          await db.insert(valvesTable).values({
+            valveId,
+            name: valveName,
+            lat: Number(lat),
+            lng: Number(lng),
+            diameter: diameter ? Number(diameter) : null,
+            installYear: props.thn_psng ? Number(props.thn_psng) : null,
+            condition: props.kondisi ? String(props.kondisi) : null,
+            functionStatus: props.fungsi ? String(props.fungsi) : null,
+            description: props.keterangan ? String(props.keterangan) : null,
+            pressure: 5.0,
+            status: "normal",
+          }).onConflictDoNothing();
+          valvesImported++;
+        }
       } else if (geometry.type === "LineString") {
         // Import as Pipe
         const coords = geometry.coordinates; // [[lng, lat], ...]
@@ -443,7 +488,7 @@ app.post("/api/import/geojson", async (req: any, res: any) => {
       }
     }
 
-    res.json({ success: true, valvesImported, pipesImported });
+    res.json({ success: true, valvesImported, pipesImported, sourcesImported });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
