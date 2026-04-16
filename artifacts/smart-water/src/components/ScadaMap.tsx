@@ -704,16 +704,27 @@ function CustomersLayer({
   highlighted?: boolean;
   serviceLineHighlighted?: boolean;
 }) {
-  const customerIcon = L.divIcon({
-    className: "custom-customer-icon",
-    html: `
-      <div style="background:${highlighted ? '#059669' : '#10b981'};border:${highlighted ? '3px' : '2px'} solid white;border-radius:50%;width:${highlighted ? '26' : '22'}px;height:${highlighted ? '26' : '22'}px;display:flex;align-items:center;justify-content:center;box-shadow:${highlighted ? '0 0 12px rgba(16,185,129,0.7),0 4px 6px rgba(0,0,0,0.3)' : '0 4px 6px rgba(0,0,0,0.3)'};transition:all 0.2s;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      </div>
-    `,
-    iconSize: [highlighted ? 26 : 22, highlighted ? 26 : 22],
-    iconAnchor: [highlighted ? 13 : 11, highlighted ? 13 : 11],
-  });
+  const createCustomerIcon = (c: any) => {
+    const isUnpaid = c.piutang && c.piutang > 0;
+    const bgNormal = isUnpaid ? '#ef4444' : '#10b981';
+    const bgHighlight = isUnpaid ? '#dc2626' : '#059669';
+    const shadowColor = isUnpaid ? 'rgba(239,68,68,0.7)' : 'rgba(16,185,129,0.7)';
+    const bg = highlighted ? bgHighlight : bgNormal;
+    const size = highlighted ? 26 : 22;
+    const shBorder = highlighted ? '3px' : '2px';
+    const shadow = highlighted ? `0 0 12px ${shadowColor},0 4px 6px rgba(0,0,0,0.3)` : '0 4px 6px rgba(0,0,0,0.3)';
+
+    return L.divIcon({
+      className: "custom-customer-icon",
+      html: `
+        <div style="background:${bg};border:${shBorder} solid white;border-radius:50%;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;box-shadow:${shadow};transition:all 0.2s;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </div>
+      `,
+      iconSize: [size, size],
+      iconAnchor: [size/2, size/2],
+    });
+  };
 
   const createClusterCustomIcon = function (cluster: any) {
     return L.divIcon({
@@ -777,12 +788,13 @@ function CustomersLayer({
       >
         {customers.map((c: any) => {
           if (!c.lat || !c.lng) return null;
+          const isUnpaid = c.piutang && c.piutang > 0;
           return (
-            <Marker key={`marker-${c.id}`} position={[Number(c.lat), Number(c.lng)]} icon={customerIcon}>
+            <Marker key={`marker-${c.id}`} position={[Number(c.lat), Number(c.lng)]} icon={createCustomerIcon(c)}>
               <Popup className="custom-popup">
                 <div className="p-1" style={{ minWidth: 210 }}>
                   <div className="flex items-center gap-2 mb-2 border-b pb-2">
-                    <div style={{ background: "#d1fae5", padding: 6, borderRadius: "50%", color: "#059669" }}>
+                    <div style={{ background: isUnpaid ? "#fee2e2" : "#d1fae5", padding: 6, borderRadius: "50%", color: isUnpaid ? "#dc2626" : "#059669" }}>
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                     </div>
                     <div>
@@ -792,6 +804,7 @@ function CustomersLayer({
                   </div>
                   <table style={{ fontSize: 11, width: "100%" }}>
                     <tbody>
+                      <tr><td style={{ color: "#94a3b8", paddingRight: 8, paddingBottom: 4 }}>Status</td><td style={{ fontWeight: 600, paddingBottom: 4, color: isUnpaid ? "#dc2626" : "#059669" }}>{isUnpaid ? `Belum Bayar (Rp ${c.piutang.toLocaleString('id-ID')})` : "Lunas"}</td></tr>
                       <tr><td style={{ color: "#94a3b8", paddingRight: 8 }}>Alamat</td><td style={{ fontWeight: 500 }}>{c.alamat}</td></tr>
                       <tr><td style={{ color: "#94a3b8" }}>Elevasi</td><td style={{ fontWeight: 600, color: "#059669" }}>{c.elevasi_m} m</td></tr>
                       <tr><td style={{ color: "#94a3b8" }}>SPAM</td><td>{c.spam_name}</td></tr>

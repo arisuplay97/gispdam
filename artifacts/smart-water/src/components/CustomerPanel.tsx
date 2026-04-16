@@ -33,6 +33,7 @@ export function CustomerPanel({ onClose, onActivateMapSelect, onDeactivateMapSel
     alamat: "",
     elevasi_m: 0,
     spam_name: "SPAM Aiq Bone",
+    piutang: 0,
     lat: 0,
     lng: 0,
   });
@@ -56,6 +57,7 @@ export function CustomerPanel({ onClose, onActivateMapSelect, onDeactivateMapSel
       alamat: "",
       elevasi_m: 0,
       spam_name: "SPAM Aiq Bone",
+      piutang: 0,
       lat: -8.65,
       lng: 116.32,
     });
@@ -183,6 +185,7 @@ export function CustomerPanel({ onClose, onActivateMapSelect, onDeactivateMapSel
                         <th className="px-4 py-3 font-semibold">Nama</th>
                         <th className="px-4 py-3 font-semibold">Alamat</th>
                         <th className="px-4 py-3 font-semibold">Elev (m)</th>
+                        <th className="px-4 py-3 font-semibold">Status Piutang</th>
                         <th className="px-4 py-3 font-semibold text-center">Aksi</th>
                       </tr>
                     </thead>
@@ -193,6 +196,17 @@ export function CustomerPanel({ onClose, onActivateMapSelect, onDeactivateMapSel
                           <td className="px-4 py-3 font-semibold text-slate-800">{c.nama_pelanggan}</td>
                           <td className="px-4 py-3 min-w-[200px] truncate">{c.alamat}</td>
                           <td className="px-4 py-3">{c.elevasi_m}</td>
+                          <td className="px-4 py-3">
+                            {c.piutang && c.piutang > 0 ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-red-50 text-red-700 font-semibold text-xs border border-red-200">
+                                Rp {c.piutang.toLocaleString('id-ID')}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-green-50 text-green-700 font-semibold text-xs border border-green-200">
+                                Lunas
+                              </span>
+                            )}
+                          </td>
                           <td className="px-4 py-3">
                             <div className="flex justify-center gap-2">
                               <button onClick={() => handleEdit(c)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded"><Edit2 className="h-4 w-4" /></button>
@@ -234,12 +248,20 @@ export function CustomerPanel({ onClose, onActivateMapSelect, onDeactivateMapSel
                             value={formData.alamat} onChange={(e) => setFormData({...formData, alamat: e.target.value})}></textarea>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-600 mb-1.5">Elevasi (meter)</label>
                     <input type="number" className="w-full rounded-lg border-slate-300 shadow-sm sm:text-sm px-3 py-2 bg-white" 
-                           value={formData.elevasi_m} onChange={(e) => setFormData({...formData, elevasi_m: parseFloat(e.target.value)})} />
+                           value={formData.elevasi_m} onChange={(e) => setFormData({...formData, elevasi_m: parseFloat(e.target.value) || 0})} />
                   </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">Nominal Piutang (Rp)</label>
+                    <input type="number" className="w-full rounded-lg border-slate-300 shadow-sm sm:text-sm px-3 py-2 bg-white" 
+                           value={formData.piutang} onChange={(e) => setFormData({...formData, piutang: parseFloat(e.target.value) || 0})} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-600 mb-1.5">Latitude</label>
                     <input type="number" step="any" className="w-full rounded-lg border-slate-300 shadow-sm sm:text-sm px-3 py-2 bg-slate-100 text-slate-500" 

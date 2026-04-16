@@ -10,6 +10,7 @@ export interface Customer {
   alamat: string;
   elevasi_m: number;
   spam_name: string;
+  piutang: number;
   lat: number;
   lng: number;
   created_at?: string;

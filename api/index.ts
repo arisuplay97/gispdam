@@ -95,6 +95,7 @@ const customersTable = pgTable("customers", {
   alamat: text("alamat"),
   elevasi_m: doublePrecision("elevasi_m"),
   spam_name: text("spam_name").notNull().default("SPAM Aiq Bone"),
+  piutang: doublePrecision("piutang").notNull().default(0),
   // Instead of querying raw PostGIS purely, we store lat/lng for easy Node serialization, 
   // and maintain geom via trigger/sync or write it manually. To keep it rock solid in Drizzle:
   geom: geometryPoint("geom"),
@@ -307,7 +308,7 @@ app.get("/api/customers", async (_req: any, res: any) => {
     // We use raw SQL to easily extract ST_X and ST_Y from geom
     const result = await db.execute(sql`
       SELECT 
-        id, nama_pelanggan, id_pelanggan, alamat, elevasi_m, spam_name, created_at,
+        id, nama_pelanggan, id_pelanggan, alamat, elevasi_m, spam_name, piutang, created_at,
         ST_X(geom) as lng, ST_Y(geom) as lat
       FROM customers
       ORDER BY created_at DESC
@@ -323,20 +324,22 @@ app.get("/api/customers", async (_req: any, res: any) => {
 
 app.post("/api/customers", async (req: any, res: any) => {
   try {
-    const { nama_pelanggan, id_pelanggan, alamat, elevasi_m, spam_name, lat, lng } = req.body;
+    const { nama_pelanggan, id_pelanggan, alamat, elevasi_m, spam_name, piutang, lat, lng } = req.body;
+    const p = piutang || 0;
     
     // Using raw SQL for precise PostGIS insertion
     const query = sql`
-      INSERT INTO customers (nama_pelanggan, id_pelanggan, alamat, elevasi_m, spam_name, geom)
+      INSERT INTO customers (nama_pelanggan, id_pelanggan, alamat, elevasi_m, spam_name, piutang, geom)
       VALUES (
         ${nama_pelanggan}, 
         ${id_pelanggan}, 
         ${alamat}, 
         ${elevasi_m}, 
         ${spam_name || 'SPAM Aiq Bone'}, 
+        ${p},
         ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)
       )
-      RETURNING id, nama_pelanggan, id_pelanggan, alamat, elevasi_m, spam_name, created_at, ST_X(geom) as lng, ST_Y(geom) as lat
+      RETURNING id, nama_pelanggan, id_pelanggan, alamat, elevasi_m, spam_name, piutang, created_at, ST_X(geom) as lng, ST_Y(geom) as lat
     `;
     
     const result = await db.execute(query);
@@ -349,7 +352,8 @@ app.post("/api/customers", async (req: any, res: any) => {
 app.put("/api/customers/:id", async (req: any, res: any) => {
   try {
     const { id } = req.params;
-    const { nama_pelanggan, id_pelanggan, alamat, elevasi_m, spam_name, lat, lng } = req.body;
+    const { nama_pelanggan, id_pelanggan, alamat, elevasi_m, spam_name, piutang, lat, lng } = req.body;
+    const p = piutang || 0;
     
     const query = sql`
       UPDATE customers 
@@ -359,9 +363,10 @@ app.put("/api/customers/:id", async (req: any, res: any) => {
         alamat = ${alamat},
         elevasi_m = ${elevasi_m},
         spam_name = ${spam_name || 'SPAM Aiq Bone'},
+        piutang = ${p},
         geom = ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)
       WHERE id = ${id}
-      RETURNING id, nama_pelanggan, id_pelanggan, alamat, elevasi_m, spam_name, created_at, ST_X(geom) as lng, ST_Y(geom) as lat
+      RETURNING id, nama_pelanggan, id_pelanggan, alamat, elevasi_m, spam_name, piutang, created_at, ST_X(geom) as lng, ST_Y(geom) as lat
     `;
     
     const result = await db.execute(query);
@@ -461,16 +466,16 @@ const DEMO_SOURCES = [
 ];
 
 const CUSTOMER_SEEDS = [
-  { nama_pelanggan: "Arya Taofan", id_pelanggan: "AQB-001", alamat: "Jl. Raya Aiq Bone No.12", elevasi_m: 85, lat: -8.6510, lng: 116.3210 },
-  { nama_pelanggan: "Doni unyu", id_pelanggan: "AQB-002", alamat: "Gg. Manggis, Aiq Bone", elevasi_m: 82, lat: -8.6525, lng: 116.3225 },
-  { nama_pelanggan: "Laloe Huda", id_pelanggan: "AQB-003", alamat: "Perum Bumi Asri Blok A", elevasi_m: 80, lat: -8.6530, lng: 116.3205 },
-  { nama_pelanggan: "Rima Mozarella", id_pelanggan: "AQB-004", alamat: "Jl. Merdeka Barat", elevasi_m: 78, lat: -8.6545, lng: 116.3240 },
-  { nama_pelanggan: "Ari Baskara", id_pelanggan: "AQB-005", alamat: "Pasar Lama Aiq Bone", elevasi_m: 75, lat: -8.6560, lng: 116.3255 },
-  { nama_pelanggan: "Jang Don", id_pelanggan: "AQB-006", alamat: "Jl. Diponegoro Gg. 3", elevasi_m: 74, lat: -8.6575, lng: 116.3230 },
-  { nama_pelanggan: "Erwin Guntara", id_pelanggan: "AQB-007", alamat: "Komplek PDAM", elevasi_m: 70, lat: -8.6590, lng: 116.3215 },
-  { nama_pelanggan: "Stanley Hao", id_pelanggan: "AQB-008", alamat: "Jl. Sudirman", elevasi_m: 68, lat: -8.6605, lng: 116.3260 },
-  { nama_pelanggan: "Thari pingpong", id_pelanggan: "AQB-009", alamat: "Desa Sukamaju RT 01", elevasi_m: 65, lat: -8.6620, lng: 116.3280 },
-  { nama_pelanggan: "Faras desya", id_pelanggan: "AQB-010", alamat: "Desa Sukamaju RT 03", elevasi_m: 62, lat: -8.6635, lng: 116.3295 }
+  { nama_pelanggan: "Arya Taofan", id_pelanggan: "AQB-001", alamat: "Jl. Raya Aiq Bone No.12", elevasi_m: 85, piutang: 0, lat: -8.6510, lng: 116.3210 },
+  { nama_pelanggan: "Doni unyu", id_pelanggan: "AQB-002", alamat: "Gg. Manggis, Aiq Bone", elevasi_m: 82, piutang: 54000, lat: -8.6525, lng: 116.3225 },
+  { nama_pelanggan: "Laloe Huda", id_pelanggan: "AQB-003", alamat: "Perum Bumi Asri Blok A", elevasi_m: 80, piutang: 0, lat: -8.6530, lng: 116.3205 },
+  { nama_pelanggan: "Rima Mozarella", id_pelanggan: "AQB-004", alamat: "Jl. Merdeka Barat", elevasi_m: 78, piutang: 120000, lat: -8.6545, lng: 116.3240 },
+  { nama_pelanggan: "Ari Baskara", id_pelanggan: "AQB-005", alamat: "Pasar Lama Aiq Bone", elevasi_m: 75, piutang: 0, lat: -8.6560, lng: 116.3255 },
+  { nama_pelanggan: "Jang Don", id_pelanggan: "AQB-006", alamat: "Jl. Diponegoro Gg. 3", elevasi_m: 74, piutang: 0, lat: -8.6575, lng: 116.3230 },
+  { nama_pelanggan: "Erwin Guntara", id_pelanggan: "AQB-007", alamat: "Komplek PDAM", elevasi_m: 70, piutang: 15500, lat: -8.6590, lng: 116.3215 },
+  { nama_pelanggan: "Stanley Hao", id_pelanggan: "AQB-008", alamat: "Jl. Sudirman", elevasi_m: 68, piutang: 0, lat: -8.6605, lng: 116.3260 },
+  { nama_pelanggan: "Thari pingpong", id_pelanggan: "AQB-009", alamat: "Desa Sukamaju RT 01", elevasi_m: 65, piutang: 85500, lat: -8.6620, lng: 116.3280 },
+  { nama_pelanggan: "Faras desya", id_pelanggan: "AQB-010", alamat: "Desa Sukamaju RT 03", elevasi_m: 62, piutang: 0, lat: -8.6635, lng: 116.3295 }
 ];
 
 app.all("/api/seed-demo", async (_req: any, res: any) => {
@@ -498,6 +503,9 @@ app.all("/api/seed-demo", async (_req: any, res: any) => {
       await db.execute(sql`ALTER TABLE sources ADD COLUMN IF NOT EXISTS capacity DOUBLE PRECISION;`);
       await db.execute(sql`ALTER TABLE sources ADD COLUMN IF NOT EXISTS type TEXT;`);
       
+      // Fix Customers
+      await db.execute(sql`ALTER TABLE customers ADD COLUMN IF NOT EXISTS piutang DOUBLE PRECISION DEFAULT 0;`);
+      
       await db.execute(sql`
         CREATE TABLE IF NOT EXISTS customers (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -506,6 +514,7 @@ app.all("/api/seed-demo", async (_req: any, res: any) => {
           alamat TEXT,
           elevasi_m DOUBLE PRECISION,
           spam_name TEXT DEFAULT 'SPAM Aiq Bone',
+          piutang DOUBLE PRECISION DEFAULT 0,
           geom GEOMETRY(Point, 4326),
           created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
@@ -541,8 +550,8 @@ app.all("/api/seed-demo", async (_req: any, res: any) => {
     if (custCount === 0) {
       for (const c of CUSTOMER_SEEDS) {
         await db.execute(sql`
-          INSERT INTO customers (nama_pelanggan, id_pelanggan, alamat, elevasi_m, spam_name, geom)
-          VALUES (${c.nama_pelanggan}, ${c.id_pelanggan}, ${c.alamat}, ${c.elevasi_m}, 'SPAM Aiq Bone', ST_SetSRID(ST_MakePoint(${c.lng}, ${c.lat}), 4326))
+          INSERT INTO customers (nama_pelanggan, id_pelanggan, alamat, elevasi_m, spam_name, piutang, geom)
+          VALUES (${c.nama_pelanggan}, ${c.id_pelanggan}, ${c.alamat}, ${c.elevasi_m}, 'SPAM Aiq Bone', ${c.piutang}, ST_SetSRID(ST_MakePoint(${c.lng}, ${c.lat}), 4326))
           ON CONFLICT (id_pelanggan) DO NOTHING;
         `);
       }
