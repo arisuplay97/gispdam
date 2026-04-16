@@ -440,7 +440,7 @@ app.delete("/api/customers/:id", async (req: any, res: any) => {
 // Handler utama — dipanggil oleh kedua route
 async function handleGeoJsonImport(req: any, res: any) {
   try {
-    const geojson = req.body.data;
+    const geojson = req.body.data || req.body;
     if (!geojson || geojson.type !== "FeatureCollection") {
       return res.status(400).json({ error: "Invalid GeoJSON FeatureCollection" });
     }
