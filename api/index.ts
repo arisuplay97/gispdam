@@ -437,7 +437,8 @@ app.delete("/api/customers/:id", async (req: any, res: any) => {
 });
 
 // ─── GeoJSON Import ──────────────────────────────────────────────────────────
-app.post("/api/import/geojson", async (req: any, res: any) => {
+// Handler utama — dipanggil oleh kedua route
+async function handleGeoJsonImport(req: any, res: any) {
   try {
     const geojson = req.body.data;
     if (!geojson || geojson.type !== "FeatureCollection") {
@@ -543,7 +544,12 @@ app.post("/api/import/geojson", async (req: any, res: any) => {
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
-});
+}
+
+// Kedua route alias — sesuai generated API client (/api/import-geojson)
+// dan legacy path (/api/import/geojson)
+app.post("/api/import-geojson", handleGeoJsonImport);
+app.post("/api/import/geojson", handleGeoJsonImport);
 
 // ─── Seed Demo Data (auto-seeds if DB empty) ──────────────────────────────────
 const DEMO_VALVES = [
