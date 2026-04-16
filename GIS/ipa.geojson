@@ -1,0 +1,10 @@
+{
+"type": "FeatureCollection",
+"name": "ipa",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "fid": 1, "kode": null, "nama": "IPA. Sade", "desa": "Barabali", "kec": "Batukliang", "kab": "Lombok Tengah", "x": -8.6368392774579696, "y": 116.30702360437493, "elevasi": 328.0, "thn_pmbgn": null, "tp_pnglhn": null, "jns_kstrks": null, "kpsts_awal": null, "kondisi": "Tidak Berfungsi" }, "geometry": { "type": "Point", "coordinates": [ 116.307023604374933, -8.63683927745797 ] } },
+{ "type": "Feature", "properties": { "fid": 2, "kode": null, "nama": "IPA. Penujak", "desa": "Penujak", "kec": "Praya Barat", "kab": "Lombok Tengah", "x": -8.7457733539579721, "y": 116.2439142457699, "elevasi": 82.0, "thn_pmbgn": null, "tp_pnglhn": null, "jns_kstrks": null, "kpsts_awal": null, "kondisi": "Berfungsi" }, "geometry": { "type": "Point", "coordinates": [ 116.243914245769901, -8.745773353957972 ] } },
+{ "type": "Feature", "properties": { "fid": 3, "kode": null, "nama": "IPA. Mandalika", "desa": "Dadap", "kec": "Pujut", "kab": "Lombok Tengah", "x": -8.8568530560490224, "y": 116.33012539421003, "elevasi": 171.0, "thn_pmbgn": null, "tp_pnglhn": null, "jns_kstrks": null, "kpsts_awal": null, "kondisi": null }, "geometry": { "type": "Point", "coordinates": [ 116.330125394210029, -8.856853056049022 ] } }
+]
+}

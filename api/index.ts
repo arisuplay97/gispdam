@@ -105,7 +105,56 @@ const customersTable = pgTable("customers", {
 // ─── Express App ────────────────────────────────────────────────────────────
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+// ─── Auto-init customers table ──────────────────────────────────────────────
+(async () => {
+  try {
+    await db.execute(sql`CREATE EXTENSION IF NOT EXISTS postgis;`);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS customers (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        nama_pelanggan TEXT NOT NULL,
+        id_pelanggan TEXT UNIQUE NOT NULL,
+        alamat TEXT,
+        elevasi_m DOUBLE PRECISION,
+        spam_name TEXT DEFAULT 'SPAM Aiq Bone',
+        piutang DOUBLE PRECISION DEFAULT 0,
+        geom GEOMETRY(Point, 4326),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+    `);
+    await db.execute(sql`ALTER TABLE customers ADD COLUMN IF NOT EXISTS piutang DOUBLE PRECISION DEFAULT 0;`);
+    // Seed pelanggan dummy jika kosong
+    const custRes = await db.execute(sql`SELECT count(*) as c FROM customers`);
+    if (Number((custRes.rows[0] as any).c) === 0) {
+      const seeds = [
+        { nama: "Arya Taofan",    id: "AQB-001", alamat: "Jl. Raya Aiq Bone No.12",    elev: 85, piutang: 0,      lat: -8.6510, lng: 116.3210 },
+        { nama: "Doni Unyu",      id: "AQB-002", alamat: "Gg. Manggis, Aiq Bone",      elev: 82, piutang: 54000, lat: -8.6525, lng: 116.3225 },
+        { nama: "Laloe Huda",     id: "AQB-003", alamat: "Perum Bumi Asri Blok A",    elev: 80, piutang: 0,      lat: -8.6530, lng: 116.3205 },
+        { nama: "Rima Mozarella", id: "AQB-004", alamat: "Jl. Merdeka Barat",          elev: 78, piutang: 120000,lat: -8.6545, lng: 116.3240 },
+        { nama: "Ari Baskara",    id: "AQB-005", alamat: "Pasar Lama Aiq Bone",       elev: 75, piutang: 0,      lat: -8.6560, lng: 116.3255 },
+        { nama: "Jang Don",       id: "AQB-006", alamat: "Jl. Diponegoro Gg. 3",      elev: 74, piutang: 0,      lat: -8.6575, lng: 116.3230 },
+        { nama: "Erwin Guntara",  id: "AQB-007", alamat: "Komplek PDAM",               elev: 70, piutang: 15500, lat: -8.6590, lng: 116.3215 },
+        { nama: "Stanley Hao",    id: "AQB-008", alamat: "Jl. Sudirman",               elev: 68, piutang: 0,      lat: -8.6605, lng: 116.3260 },
+        { nama: "Thari Pingpong", id: "AQB-009", alamat: "Desa Sukamaju RT 01",       elev: 65, piutang: 85500, lat: -8.6620, lng: 116.3280 },
+        { nama: "Faras Desya",    id: "AQB-010", alamat: "Desa Sukamaju RT 03",       elev: 62, piutang: 0,      lat: -8.6635, lng: 116.3295 },
+      ];
+      for (const c of seeds) {
+        await db.execute(sql`
+          INSERT INTO customers (nama_pelanggan, id_pelanggan, alamat, elevasi_m, spam_name, piutang, geom)
+          VALUES (${c.nama}, ${c.id}, ${c.alamat}, ${c.elev}, 'SPAM Aiq Bone', ${c.piutang},
+                  ST_SetSRID(ST_MakePoint(${c.lng}, ${c.lat}), 4326))
+          ON CONFLICT (id_pelanggan) DO NOTHING;
+        `);
+      }
+    }
+  } catch (e: any) {
+    console.error("[startup] auto-init error:", e.message);
+  }
+})();
+
 
 function getStatus(pressure: number): string {
   if (pressure > 5) return "normal";

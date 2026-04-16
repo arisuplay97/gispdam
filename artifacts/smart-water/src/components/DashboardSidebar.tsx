@@ -133,13 +133,14 @@ export function DashboardSidebar({
           { data: json },
           {
             onSuccess: (res) => {
-              toast.success(`Berhasil impor ${res.valvesImported} valve dan ${res.pipesImported} pipa`);
+              const msg = `Berhasil impor: ${res.valvesImported ?? 0} valve, ${res.pipesImported ?? 0} pipa, ${res.sourcesImported ?? 0} sumber air`;
+              toast.success(msg);
               queryClient.invalidateQueries({ queryKey: getListValvesQueryKey() });
               queryClient.invalidateQueries({ queryKey: getListPipesQueryKey() });
               queryClient.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() });
               queryClient.invalidateQueries({ queryKey: ["pipelines-geojson"] });
             },
-            onError: () => toast.error("Gagal mengimpor GeoJSON"),
+            onError: (err: any) => toast.error(`Gagal mengimpor: ${err?.message || "Unknown error"}`),
           }
         );
       } catch {
@@ -218,8 +219,8 @@ export function DashboardSidebar({
         <Button variant="ghost" size="icon" onClick={() => setMinimized(false)} title="Buka sidebar">
           <PanelLeftOpen className="h-5 w-5 text-slate-700" />
         </Button>
-        <div className="mt-5 flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-blue-50">
-          <Droplets className="h-5 w-5 text-blue-700" />
+        <div className="mt-5 flex h-10 w-10 items-center justify-center">
+          <img src="/logo.png" alt="Tiara GIS" className="h-10 w-10 object-contain" />
         </div>
         <div className="mt-6 flex flex-col gap-4 text-slate-500">
           <Activity className="h-5 w-5" />
@@ -237,13 +238,11 @@ export function DashboardSidebar({
       <div className="border-b border-slate-200 bg-white p-5">
         <div className="mb-2 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-blue-50">
-              <Droplets className="h-6 w-6 text-blue-700" />
-            </div>
+            <img src="/logo.png" alt="Tiara GIS" className="h-10 w-10 object-contain" />
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-slate-900">TIARA GIS</h1>
+              <h1 className="text-xl font-bold tracking-tight text-slate-900">Tiara GIS</h1>
               <p className="text-[11px] font-medium uppercase tracking-wider text-slate-500">
-                SCADA & WebGIS PDAM
+                SCADA &amp; WebGIS PDAM
               </p>
             </div>
           </div>
