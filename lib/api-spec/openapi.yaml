@@ -1,0 +1,649 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: Smart Water System SCADA + WebGIS API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: valves
+    description: Valve management
+  - name: pipes
+    description: Pipe management
+  - name: pipelines
+    description: Pipeline GeoJSON layer
+  - name: sources
+    description: Water source management
+  - name: import-export
+    description: GIS data import/export
+  - name: telemetry
+    description: Live telemetry data
+  - name: dashboard
+    description: Dashboard statistics
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /valves:
+    get:
+      operationId: listValves
+      tags: [valves]
+      summary: List all valves
+      responses:
+        "200":
+          description: List of valves
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Valve"
+    post:
+      operationId: createValve
+      tags: [valves]
+      summary: Create a new valve
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateValveBody"
+      responses:
+        "201":
+          description: Valve created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Valve"
+
+  /valves/{id}:
+    get:
+      operationId: getValve
+      tags: [valves]
+      summary: Get valve by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Valve details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Valve"
+    put:
+      operationId: updateValve
+      tags: [valves]
+      summary: Update a valve
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateValveBody"
+      responses:
+        "200":
+          description: Valve updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Valve"
+    delete:
+      operationId: deleteValve
+      tags: [valves]
+      summary: Delete a valve
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Valve deleted
+
+  /pipes:
+    get:
+      operationId: listPipes
+      tags: [pipes]
+      summary: List all pipes
+      responses:
+        "200":
+          description: List of pipes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Pipe"
+    post:
+      operationId: createPipe
+      tags: [pipes]
+      summary: Create a new pipe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePipeBody"
+      responses:
+        "201":
+          description: Pipe created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pipe"
+
+  /pipes/{id}:
+    get:
+      operationId: getPipe
+      tags: [pipes]
+      summary: Get pipe by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Pipe details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pipe"
+    put:
+      operationId: updatePipe
+      tags: [pipes]
+      summary: Update a pipe
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePipeBody"
+      responses:
+        "200":
+          description: Pipe updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pipe"
+    delete:
+      operationId: deletePipe
+      tags: [pipes]
+      summary: Delete a pipe
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Pipe deleted
+
+  /pipelines/geojson:
+    get:
+      operationId: getPipelinesGeoJson
+      tags: [pipelines]
+      summary: Get radial pipeline network as GeoJSON
+      responses:
+        "200":
+          description: Radial pipeline GeoJSON feature collection
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /sources:
+    get:
+      operationId: listSources
+      tags: [sources]
+      summary: List all water sources
+      responses:
+        "200":
+          description: List of sources
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WaterSource"
+    post:
+      operationId: createSource
+      tags: [sources]
+      summary: Create a new water source
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSourceBody"
+      responses:
+        "201":
+          description: Source created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WaterSource"
+
+  /sources/{id}:
+    delete:
+      operationId: deleteSource
+      tags: [sources]
+      summary: Delete a water source
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Source deleted
+
+  /import-geojson:
+    post:
+      operationId: importGeoJson
+      tags: [import-export]
+      summary: Import GeoJSON data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GeoJsonImport"
+      responses:
+        "200":
+          description: Import result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportResult"
+
+  /export/geojson:
+    get:
+      operationId: exportGeoJson
+      tags: [import-export]
+      summary: Export all data as GeoJSON
+      responses:
+        "200":
+          description: GeoJSON feature collection
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /export/csv:
+    get:
+      operationId: exportCsv
+      tags: [import-export]
+      summary: Export valve data as CSV
+      responses:
+        "200":
+          description: CSV data
+          content:
+            text/csv:
+              schema:
+                type: string
+
+  /telemetry:
+    post:
+      operationId: postTelemetry
+      tags: [telemetry]
+      summary: Post telemetry data from sensor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TelemetryData"
+      responses:
+        "200":
+          description: Telemetry received
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TelemetryResponse"
+
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get dashboard statistics
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/pressure-history:
+    get:
+      operationId: getPressureHistory
+      tags: [dashboard]
+      summary: Get pressure history for charts
+      responses:
+        "200":
+          description: Pressure history data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PressureRecord"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    Valve:
+      type: object
+      properties:
+        id:
+          type: integer
+        valveId:
+          type: string
+        name:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+        pressure:
+          type: number
+        status:
+          type: string
+          enum: [normal, warning, critical]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - valveId
+        - name
+        - lat
+        - lng
+        - pressure
+        - status
+
+    CreateValveBody:
+      type: object
+      properties:
+        valveId:
+          type: string
+        name:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+        pressure:
+          type: number
+      required:
+        - valveId
+        - name
+        - lat
+        - lng
+        - pressure
+
+    UpdateValveBody:
+      type: object
+      properties:
+        name:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+        pressure:
+          type: number
+
+    Pipe:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        diameter:
+          type: number
+          nullable: true
+        material:
+          type: string
+          nullable: true
+        fromNode:
+          type: string
+          nullable: true
+        toNode:
+          type: string
+          nullable: true
+        coordinates:
+          type: array
+          items:
+            type: array
+            items:
+              type: number
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - coordinates
+
+    CreatePipeBody:
+      type: object
+      properties:
+        name:
+          type: string
+        diameter:
+          type: number
+        material:
+          type: string
+        fromNode:
+          type: string
+        toNode:
+          type: string
+        coordinates:
+          type: array
+          items:
+            type: array
+            items:
+              type: number
+      required:
+        - name
+        - coordinates
+
+    UpdatePipeBody:
+      type: object
+      properties:
+        name:
+          type: string
+        diameter:
+          type: number
+        material:
+          type: string
+        fromNode:
+          type: string
+        toNode:
+          type: string
+        coordinates:
+          type: array
+          items:
+            type: array
+            items:
+              type: number
+
+    WaterSource:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - lat
+        - lng
+
+    CreateSourceBody:
+      type: object
+      properties:
+        name:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+      required:
+        - name
+        - lat
+        - lng
+
+    GeoJsonImport:
+      type: object
+      properties:
+        type:
+          type: string
+        features:
+          type: array
+          items:
+            type: object
+      required:
+        - type
+        - features
+
+    ImportResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        valvesImported:
+          type: integer
+        pipesImported:
+          type: integer
+        message:
+          type: string
+      required:
+        - success
+        - valvesImported
+        - pipesImported
+        - message
+
+    TelemetryData:
+      type: object
+      properties:
+        valveId:
+          type: string
+        pressure:
+          type: number
+      required:
+        - valveId
+        - pressure
+
+    TelemetryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        valve:
+          $ref: "#/components/schemas/Valve"
+      required:
+        - success
+
+    DashboardStats:
+      type: object
+      properties:
+        totalValves:
+          type: integer
+        totalPipes:
+          type: integer
+        totalSources:
+          type: integer
+        avgPressure:
+          type: number
+        normalCount:
+          type: integer
+        warningCount:
+          type: integer
+        criticalCount:
+          type: integer
+      required:
+        - totalValves
+        - totalPipes
+        - totalSources
+        - avgPressure
+        - normalCount
+        - warningCount
+        - criticalCount
+
+    PressureRecord:
+      type: object
+      properties:
+        valveId:
+          type: string
+        name:
+          type: string
+        pressure:
+          type: number
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - valveId
+        - name
+        - pressure
+        - timestamp

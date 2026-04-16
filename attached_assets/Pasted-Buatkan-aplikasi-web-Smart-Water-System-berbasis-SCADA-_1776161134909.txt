@@ -1,0 +1,262 @@
+Buatkan aplikasi web Smart Water System berbasis SCADA + WebGIS untuk monitoring dan manajemen distribusi air PDAM, dengan kemampuan digitasi jaringan, import data GIS, dan export ke format standar.
+
+⸻
+
+🎯 TUJUAN SISTEM
+
+Membangun sistem yang:
+	•	memonitor kondisi distribusi air (tekanan, status)
+	•	menampilkan jaringan pipa dari sumber ke pelanggan
+	•	memungkinkan edit/digitasi jaringan langsung di peta
+	•	dapat import data dari GIS (QGIS)
+	•	menjadi fondasi SCADA penuh (real-time + kontrol)
+
+⸻
+
+🧱 STACK TEKNOLOGI
+
+Frontend:
+	•	React.js
+	•	Leaflet.js
+
+Backend:
+	•	Node.js + Express
+
+Database:
+	•	PostgreSQL + PostGIS
+
+Integrasi:
+	•	Socket.IO (realtime)
+	•	REST API
+
+⸻
+
+📊 DATA DUMMY (AWAL)
+
+Valve:
+[
+{ “id”: “V-01”, “name”: “Zona Tinggi”, “lat”: -8.65, “lng”: 116.30, “pressure”: 8 },
+{ “id”: “V-02”, “name”: “Zona Tengah”, “lat”: -8.66, “lng”: 116.32, “pressure”: 4 },
+{ “id”: “V-03”, “name”: “Zona Rendah”, “lat”: -8.67, “lng”: 116.34, “pressure”: 1 }
+]
+
+Sumber:
+{
+“name”: “SPAM Aiq Bone”,
+“lat”: -8.64,
+“lng”: 116.29
+}
+
+Pipeline:
+[
+{
+“name”: “Main Pipe”,
+“coordinates”: [
+[116.29, -8.64],
+[116.30, -8.65],
+[116.32, -8.66],
+[116.34, -8.67]
+]
+}
+]
+
+⸻
+
+🗺️ FITUR MAP (WAJIB)
+	•	tampilkan base map (Mapbox / ArcGIS)
+	•	tampilkan:
+	•	marker valve (warna tekanan)
+	•	marker sumber
+	•	garis pipeline
+
+Warna:
+	•	hijau >5 bar
+	•	kuning 2–5 bar
+	•	merah <2 bar
+
+⸻
+
+✏️ WEBGIS EDIT MODE (FITUR UTAMA)
+
+Mode:
+	•	VIEW MODE
+	•	EDIT MODE
+
+Di EDIT MODE:
+	•	tambah valve (klik map → POINT)
+	•	gambar pipa (polyline → LINESTRING)
+	•	edit posisi node
+	•	hapus data
+
+Gunakan:
+	•	Leaflet Draw
+
+⸻
+
+🧲 SNAP FEATURE (PENTING – SEPERTI GAMBAR)
+
+Saat gambar pipa:
+	•	otomatis menempel ke node atau garis terdekat
+
+Gunakan:
+	•	leaflet-snap plugin
+
+⸻
+
+💾 SIMPAN DATA KE DATABASE
+
+Gunakan PostGIS:
+
+Tabel:
+
+valves:
+	•	id
+	•	name
+	•	pressure
+	•	geom (POINT)
+
+pipes:
+	•	id
+	•	name
+	•	diameter
+	•	material
+	•	geom (LINESTRING)
+
+⸻
+
+🔄 RELASI JARINGAN
+
+Setiap pipa punya:
+	•	from_node
+	•	to_node
+
+⸻
+
+📥 FITUR IMPORT DARI GIS (WAJIB)
+
+User bisa upload file dari QGIS
+
+Format:
+	•	GeoJSON (utama)
+	•	Shapefile (opsional)
+
+⸻
+
+Alur Import:
+	1.	User upload file GeoJSON
+	2.	Backend parse file
+	3.	Simpan ke database (PostGIS)
+	4.	Tampilkan otomatis di map
+
+⸻
+
+Contoh endpoint:
+
+POST /api/import-geojson
+
+⸻
+
+Contoh parsing:
+	•	jika geometry = Point → masuk ke tabel valve
+	•	jika geometry = LineString → masuk ke tabel pipe
+
+⸻
+
+📤 FITUR EXPORT
+
+1. Export GeoJSON
+	•	semua data (valve + pipe)
+
+2. Export CSV
+	•	data valve
+
+⸻
+
+📊 DASHBOARD SCADA
+
+Tampilkan:
+	•	total valve
+	•	tekanan rata-rata
+	•	status:
+	•	normal
+	•	warning
+	•	kritis
+
+⸻
+
+📡 LIVE TELEMETRY
+
+Endpoint:
+
+POST /api/telemetry
+
+{
+“valve_id”: “V-01”,
+“pressure”: 4.5
+}
+
+⸻
+
+🗺️ LEGEND (WAJIB)
+
+Tampilkan di map:
+	•	hijau = normal
+	•	kuning = warning
+	•	merah = kritis
+	•	garis = pipa
+	•	kotak = sumber
+
+⸻
+
+🎨 VISUAL ENHANCEMENT
+	•	dark theme SCADA
+	•	marker glow
+	•	pipeline warna dinamis
+	•	animasi arah aliran (opsional)
+
+⸻
+
+🔗 KOMPATIBILITAS GIS
+
+Pastikan data bisa dibuka di:
+	•	QGIS
+	•	ArcGIS
+
+⸻
+
+🚀 FUTURE READY
+
+Siap untuk:
+	•	ESP32 (sensor tekanan)
+	•	MQTT
+	•	integrasi ke Node-RED
+
+⸻
+
+📦 OUTPUT YANG DIMINTA
+	•	kode lengkap frontend + backend
+	•	implementasi Leaflet + Draw + Snap
+	•	struktur database SQL
+	•	fitur import GeoJSON
+	•	fitur export
+	•	instruksi running
+
+⸻
+
+⚠️ CATATAN
+	•	gunakan dummy data dulu
+	•	fokus ke integrasi SCADA + WebGIS
+	•	sistem harus scalable ke implementasi nyata
+
+⸻
+
+💥 HASIL AKHIR YANG KAMU DAPAT
+
+Dengan prompt ini, sistem kamu jadi:
+
+👉 bukan cuma dashboard
+👉 bukan cuma peta
+
+tapi:
+
+🔥 PLATFORM MANAJEMEN DISTRIBUSI AIR (SCADA + WEBGIS + GIS IMPORT)
