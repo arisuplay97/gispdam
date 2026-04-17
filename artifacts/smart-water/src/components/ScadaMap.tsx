@@ -448,10 +448,11 @@ export function ScadaMap({
             />
           </LayersControl.BaseLayer>
 
-          <LayersControl.BaseLayer name="⛰ OpenTopoMap (Topografi)">
+          <LayersControl.BaseLayer name="🌑 Peta Gelap (Dark Mode)">
             <TileLayer
-              url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
-              attribution='Map data: &copy; OpenStreetMap contributors, SRTM | &copy; OpenTopoMap (CC-BY-SA)'
+              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+              maxZoom={20}
             />
           </LayersControl.BaseLayer>
         </LayersControl>
@@ -497,7 +498,6 @@ export function ScadaMap({
               color: pipeColor,
               weight: Math.max(2, pipeWeight),
               opacity: visibleLayers.pipes ? (hoveredLegendLayer === "pipes" ? 1 : 0.85) : 0,
-              dashArray: "8 5",
               className: "pipeline-animated",
             }}
           >

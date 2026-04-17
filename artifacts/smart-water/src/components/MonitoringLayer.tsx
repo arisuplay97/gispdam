@@ -28,11 +28,11 @@ export interface MonitoringData {
 
 // ─── Lokasi titik monitoring (sementara) ────────────────────────────────────
 export const MONITORING_POINTS: MonitoringPoint[] = [
-  { id: "MON-01", name: "Reservoir Induk (IPA)",    lat: -8.6830, lng: 116.2980 },
-  { id: "MON-02", name: "BPT Airvale",              lat: -8.6700, lng: 116.3120 },
-  { id: "MON-03", name: "Reservoir Airbaku",        lat: -8.7050, lng: 116.3280 },
-  { id: "MON-04", name: "BPT Montong Terep",        lat: -8.6550, lng: 116.3450 },
-  { id: "MON-05", name: "Reservoir Pagesangan",     lat: -8.7350, lng: 116.3050 },
+  { id: "MON-01", name: "Reservoir Induk (IPA)",    lat: -8.6650, lng: 116.3150 },
+  { id: "MON-02", name: "BPT Airvale",              lat: -8.6720, lng: 116.3080 },
+  { id: "MON-03", name: "Reservoir Airbaku",        lat: -8.6590, lng: 116.3220 },
+  { id: "MON-04", name: "BPT Montong Terep",        lat: -8.6680, lng: 116.3000 },
+  { id: "MON-05", name: "Reservoir Pagesangan",     lat: -8.6750, lng: 116.3300 },
 ];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
