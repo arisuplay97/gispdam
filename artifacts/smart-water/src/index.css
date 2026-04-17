@@ -162,14 +162,14 @@
    Applies to the SVG <path> element via pathOptions.className
 ─────────────────────────────────────────── */
 .pipeline-animated {
-  stroke-dasharray: 18, 9;
-  animation: pipelineFlow 1.4s linear infinite;
-  stroke-linecap: round;
+  stroke-dasharray: 12, 12 !important;
+  animation: pipelineFlow 1s linear infinite !important;
+  stroke-linecap: round !important;
 }
 
 @keyframes pipelineFlow {
   from {
-    stroke-dashoffset: 54;
+    stroke-dashoffset: 24;
   }
   to {
     stroke-dashoffset: 0;

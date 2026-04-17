@@ -470,6 +470,7 @@ export function ScadaMap({
                 color: pipelineColor,
                 weight: hoveredLegendLayer === "pipelines" ? pipelineWeight + 3 : pipelineWeight,
                 opacity: visibleLayers.pipelines ? (hoveredLegendLayer === "pipelines" ? 1 : 0.95) : 0,
+                dashArray: "12 12",
                 className: "pipeline-animated",
               }}
             >
@@ -498,6 +499,7 @@ export function ScadaMap({
               color: pipeColor,
               weight: Math.max(2, pipeWeight),
               opacity: visibleLayers.pipes ? (hoveredLegendLayer === "pipes" ? 1 : 0.85) : 0,
+              dashArray: "12 12",
               className: "pipeline-animated",
             }}
           >
