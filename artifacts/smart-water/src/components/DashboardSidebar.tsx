@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { DashboardStats, Pipe, PressureRecord, Valve } from "@workspace/api-client-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import {
@@ -21,6 +22,7 @@ import {
   Users,
   Trash2,
   ExternalLink,
+  Link as LinkIcon,
 } from "lucide-react";
 import {
   useImportGeoJson,
@@ -58,6 +60,8 @@ interface DashboardSidebarProps {
   // Panel Pelanggan
   showCustomerPanel: boolean;
   setShowCustomerPanel: (v: boolean) => void;
+  macroUrl: string;
+  setMacroUrl: (v: string) => void;
 }
 
 export function DashboardSidebar({
@@ -77,6 +81,8 @@ export function DashboardSidebar({
   setShowHeatmap,
   showCustomerPanel,
   setShowCustomerPanel,
+  macroUrl,
+  setMacroUrl,
 }: DashboardSidebarProps) {
   const [minimized, setMinimized] = useState(false);
   const queryClient = useQueryClient();
@@ -572,7 +578,22 @@ export function DashboardSidebar({
 
             <div className="h-px w-full bg-slate-200" />
 
-            {/* Import / Export */}
+            {/* URL Google Apps Script */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <LinkIcon className="h-4 w-4 text-blue-500" />
+                Google Apps Script URL
+              </Label>
+              <Input
+                placeholder="https://script.google.com/macros/s/.../exec"
+                value={macroUrl}
+                onChange={(e) => setMacroUrl(e.target.value)}
+                className="text-xs font-mono bg-slate-50 border-slate-300 placeholder:text-slate-400 focus-visible:ring-blue-500"
+              />
+            </div>
+
+            <div className="h-px w-full bg-slate-200" />
+
             {/* Data Pelanggan Toggle */}
             <button
               onClick={() => setShowCustomerPanel(!showCustomerPanel)}

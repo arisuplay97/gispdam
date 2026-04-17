@@ -80,6 +80,7 @@ export interface ScadaMapProps {
   // Monitoring
   monitoringData: Record<string, MonitoringData>;
   onMonitoringSave: (id: string, data: MonitoringData) => void;
+  macroUrl: string;
 }
 
 // ─── Inner: Map click handler ────────────────────────────────────────────────
@@ -106,6 +107,7 @@ function ValvePopupContent({
   pressureHistory,
   editMode,
   onDelete,
+  onUpdatePressure,
 }: {
   valve: Valve;
   pressureHistory: PressureRecord[];
@@ -274,6 +276,7 @@ export function ScadaMap({
   onToggleLayer,
   monitoringData,
   onMonitoringSave,
+  macroUrl,
 }: ScadaMapProps) {
   const queryClient = useQueryClient();
   const createValve = useCreateValve();
@@ -636,7 +639,13 @@ export function ScadaMap({
         )}
 
         {/* ── Monitoring Markers (Reservoir + Makrometer) ─────────────── */}
-        {visibleLayers.monitoring && <MonitoringLayer data={monitoringData} onSave={onMonitoringSave} />}
+        {visibleLayers.monitoring && (
+          <MonitoringLayer
+            data={monitoringData}
+            onSave={onMonitoringSave}
+            macroUrl={macroUrl}
+          />
+        )}
       </MapContainer>
 
       {/* ── Interactive Legend (click to toggle, hover to highlight) */}

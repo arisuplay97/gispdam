@@ -4,7 +4,7 @@
  * Data disimpan di localStorage sampai backend tersedia.
  */
 import React, { useState } from "react";
-import { Marker, Popup } from "react-leaflet";
+import { Marker, Tooltip } from "react-leaflet";
 import L from "leaflet";
 import { X, Send, Droplets, Gauge } from "lucide-react";
 
@@ -63,36 +63,25 @@ function createMonitoringIcon(status: "empty" | "partial" | "complete") {
     className: "bg-transparent",
     html: `
       <div style="
-        position:relative;
-        width:38px;height:42px;
-        display:flex;flex-direction:column;
-        align-items:center;
+        width: 36px; height: 36px;
+        border-radius: 50% 50% 50% 0;
+        transform: rotate(-45deg);
+        background: ${color};
+        border: 2px solid white;
+        box-shadow: ${glow};
+        display: flex; align-items: center; justify-content: center;
       ">
-        <!-- pin body -->
-        <div style="
-          width:34px;height:34px;
-          border-radius:50% 50% 50% 0;
-          transform:rotate(-45deg);
-          background:${color};
-          border:3px solid white;
-          box-shadow:${glow};
-          display:flex;align-items:center;justify-content:center;
-        ">
-          <!-- house icon centered (rotate back) -->
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-               viewBox="0 0 24 24" fill="none" stroke="white"
-               stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-               style="transform:rotate(45deg)">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-            <polyline points="9 22 9 12 15 12 15 22"/>
-          </svg>
-        </div>
-        <!-- pin tail -->
-        <div style="width:3px;height:8px;background:${color};border-radius:0 0 2px 2px;margin-top:-1px;opacity:.8;"></div>
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+             viewBox="0 0 24 24" fill="none" stroke="white"
+             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+             style="transform: rotate(45deg)">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
       </div>
     `,
-    iconSize:   [38, 42],
-    iconAnchor: [19, 42],
+    iconSize:   [36, 36],
+    iconAnchor: [18, 36],
   });
 }
 
@@ -102,11 +91,13 @@ interface ModalProps {
   initial?: MonitoringData;
   onSave:  (id: string, data: MonitoringData) => void;
   onClose: () => void;
+  macroUrl?: string;
 }
 
-function MonitoringModal({ point, initial, onSave, onClose }: ModalProps) {
+function MonitoringModal({ point, initial, onSave, onClose, macroUrl }: ModalProps) {
   const [activeTab, setActiveTab] = useState<"reservoir" | "makrometer">("reservoir");
   const [sesi,      setSesi]      = useState<"pagi" | "sore">("pagi");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form fields — keduanya (reservoir + makrometer) dalam satu sesi
   const [tinggiAir,  setTinggiAir]  = useState<string>(String(initial?.[sesi]?.tinggiAir  ?? ""));
@@ -119,7 +110,7 @@ function MonitoringModal({ point, initial, onSave, onClose }: ModalProps) {
     setTekanan(   String(initial?.[s]?.tekanan    ?? ""));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const updated: MonitoringData = {
       ...initial,
       [sesi]: {
@@ -128,6 +119,28 @@ function MonitoringModal({ point, initial, onSave, onClose }: ModalProps) {
         tekanan:    tekanan    !== "" ? Number(tekanan)    : undefined,
       },
     };
+
+    if (macroUrl && macroUrl.trim().startsWith("https://script.google.com/")) {
+      setIsSubmitting(true);
+      try {
+        await fetch(macroUrl.trim(), {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({
+            lokasi: point.name,
+            sesi: sesi,
+            tinggiAir: updated[sesi]?.tinggiAir ?? "",
+            tekanan: updated[sesi]?.tekanan ?? "",
+          })
+        });
+      } catch (err: any) {
+        console.error("Error to Google Sheet:", err);
+        alert("Gagal mengirim ke Spreadsheet: " + err.message);
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+
     onSave(point.id, updated);
     onClose();
   };
@@ -270,18 +283,25 @@ function MonitoringModal({ point, initial, onSave, onClose }: ModalProps) {
         <div style={{ padding: "0 20px 20px" }}>
           <button
             onClick={handleSubmit}
+            disabled={isSubmitting}
             style={{
-              width: "100%", height: 48, border: "none", borderRadius: 14, cursor: "pointer",
-              background: "linear-gradient(135deg,#1e40af,#0ea5e9)",
+              width: "100%", height: 48, border: "none", borderRadius: 14, cursor: isSubmitting ? "wait" : "pointer",
+              background: isSubmitting ? "#94a3b8" : "linear-gradient(135deg,#1e40af,#0ea5e9)",
               color: "white", fontWeight: 700, fontSize: 15,
               display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              boxShadow: "0 4px 15px rgba(14,165,233,0.4)",
+              boxShadow: isSubmitting ? "none" : "0 4px 15px rgba(14,165,233,0.4)",
               transition: "transform .1s, box-shadow .1s",
             }}
-            onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.97)")}
-            onMouseUp={(e)   => (e.currentTarget.style.transform = "scale(1)")}
+            onMouseDown={(e) => (!isSubmitting && (e.currentTarget.style.transform = "scale(0.97)"))}
+            onMouseUp={(e)   => (!isSubmitting && (e.currentTarget.style.transform = "scale(1)"))}
           >
-            <Send size={17} /> Kirim Semua
+            {isSubmitting ? (
+              <span style={{ fontSize: 14 }}>Sedang Mengirim...</span>
+            ) : (
+              <>
+                <Send size={17} /> Kirim Semua
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -293,9 +313,10 @@ function MonitoringModal({ point, initial, onSave, onClose }: ModalProps) {
 interface MonitoringLayerProps {
   data:    Record<string, MonitoringData>;
   onSave:  (id: string, data: MonitoringData) => void;
+  macroUrl?: string;
 }
 
-export function MonitoringLayer({ data, onSave }: MonitoringLayerProps) {
+export function MonitoringLayer({ data, onSave, macroUrl }: MonitoringLayerProps) {
   const [openModal, setOpenModal] = useState<string | null>(null);
 
   return (
@@ -311,29 +332,22 @@ export function MonitoringLayer({ data, onSave }: MonitoringLayerProps) {
               click: () => setOpenModal(point.id),
             }}
           >
-            <Popup>
-              <div style={{ minWidth: 160 }}>
-                <p style={{ fontWeight: 700, color: STATUS_COLORS[status], marginBottom: 4 }}>
-                  ● {point.name}
+            <Tooltip direction="top" offset={[0, -36]} opacity={1}>
+              <div style={{ textAlign: "center", padding: "2px 4px" }}>
+                <p style={{ fontWeight: 700, margin: "0 0 4px 0", color: "#1e293b", fontSize: 13 }}>
+                  {point.name}
                 </p>
-                <p style={{ fontSize: 11, color: "#64748b" }}>
+                <p style={{ margin: 0, fontSize: 11, color: "#64748b" }}>
                   Status:{" "}
-                  <b>
+                  <span style={{ color: STATUS_COLORS[status], fontWeight: "bold" }}>
                     {status === "complete" ? "✅ Lengkap" : status === "partial" ? "⚠️ Sebagian" : "❌ Belum Diisi"}
-                  </b>
+                  </span>
                 </p>
-                <button
-                  onClick={() => setOpenModal(point.id)}
-                  style={{
-                    marginTop: 10, width: "100%", height: 34, background: "#1e40af",
-                    color: "white", border: "none", borderRadius: 8, cursor: "pointer",
-                    fontWeight: 600, fontSize: 12,
-                  }}
-                >
-                  📝 Input Data
-                </button>
+                <p style={{ margin: "6px 0 0 0", fontSize: 10, color: "#94a3b8", fontStyle: "italic" }}>
+                  (Klik untuk input data)
+                </p>
               </div>
-            </Popup>
+            </Tooltip>
           </Marker>
         );
       })}
@@ -345,6 +359,7 @@ export function MonitoringLayer({ data, onSave }: MonitoringLayerProps) {
           initial={data[openModal]}
           onSave={onSave}
           onClose={() => setOpenModal(null)}
+          macroUrl={macroUrl}
         />
       )}
     </>

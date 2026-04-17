@@ -42,6 +42,7 @@ export default function Home() {
     "gis-monitoring-data",
     {}
   );
+  const [macroUrl, setMacroUrl] = useLocalStorage<string>("gis-macro-url", "");
 
   const handleMonitoringSave = (id: string, data: MonitoringData) => {
     setMonitoringData((prev) => ({ ...prev, [id]: data }));
@@ -137,6 +138,8 @@ export default function Home() {
         setShowHeatmap={setShowHeatmap}
         showCustomerPanel={showCustomerPanel}
         setShowCustomerPanel={setShowCustomerPanel}
+        macroUrl={macroUrl}
+        setMacroUrl={setMacroUrl}
       />
 
       <main className="relative flex-1">
@@ -157,6 +160,7 @@ export default function Home() {
             onToggleLayer={(key) => toggleLayer(key as keyof typeof visibleLayers)}
             monitoringData={monitoringData}
             onMonitoringSave={handleMonitoringSave}
+            macroUrl={macroUrl}
           />
         </div>
 
