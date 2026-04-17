@@ -145,68 +145,52 @@ function MonitoringModal({ point, initial, onSave, onClose, macroUrl }: ModalPro
     onClose();
   };
 
-  const inputCls = "w-full h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 outline-none focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100 transition";
-  const labelCls = "block text-xs font-semibold text-slate-500 mb-1.5";
+  const inputCls = "w-full h-11 bg-transparent border-b-2 border-slate-200 px-1 text-sm text-slate-800 outline-none focus:border-slate-900 transition-colors placeholder:text-slate-300";
+  const labelCls = "block text-[10px] font-bold tracking-widest text-slate-400 uppercase mb-1";
 
   return (
-    <div
-      style={{
-        position: "fixed", inset: 0, zIndex: 99999,
-        background: "rgba(15,23,42,0.55)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        backdropFilter: "blur(4px)",
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          background: "white", borderRadius: 20, width: 380, maxWidth: "95vw",
-          boxShadow: "0 25px 60px rgba(0,0,0,0.3)",
-          overflow: "hidden",
-        }}
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm" onClick={onClose}>
+      <div 
+        className="w-[400px] max-w-[95vw] bg-white rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div style={{
-          background: "linear-gradient(135deg,#1e40af,#0ea5e9)",
-          padding: "18px 20px 14px",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-        }}>
+        <div className="px-6 pt-6 pb-4 flex items-start justify-between">
           <div>
-            <p style={{ color: "rgba(255,255,255,.7)", fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>
+            <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase mb-1">
               Titik Monitoring
             </p>
-            <h2 style={{ color: "white", fontSize: 17, fontWeight: 700, margin: 0 }}>{point.name}</h2>
+            <h2 className="text-xl font-bold text-slate-900 tracking-tight">{point.name}</h2>
           </div>
-          <button
+          <button 
             onClick={onClose}
-            style={{ background: "rgba(255,255,255,.15)", border: "none", borderRadius: 9999, padding: 6, cursor: "pointer", color: "white", display: "flex" }}
+            className="p-1.5 rounded-full text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors"
           >
-            <X size={16} />
+            <X size={18} />
           </button>
         </div>
 
-        {/* Sesi Selector */}
-        <div style={{ display: "flex", gap: 8, padding: "14px 20px 0" }}>
-          {(["pagi", "sore"] as const).map((s) => (
-            <button
-              key={s}
-              onClick={() => handleSesiChange(s)}
-              style={{
-                flex: 1, height: 36, borderRadius: 10, border: "none", cursor: "pointer",
-                fontWeight: 700, fontSize: 13, letterSpacing: 0.5,
-                background: sesi === s ? "#1e40af" : "#f1f5f9",
-                color: sesi === s ? "white" : "#64748b",
-                transition: "all .2s",
-              }}
-            >
-              {s === "pagi" ? "🌅 Pagi" : "🌇 Sore"}
-            </button>
-          ))}
+        {/* Sesi Toggle (Pill style) */}
+        <div className="px-6 pb-4">
+          <div className="p-1 bg-slate-100 rounded-lg flex">
+            {(["pagi", "sore"] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => handleSesiChange(s)}
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 ${
+                  sesi === s 
+                    ? "bg-white text-slate-900 shadow-sm" 
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                {s === "pagi" ? "Sesi Pagi" : "Sesi Sore"}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Tab Selector */}
-        <div style={{ display: "flex", gap: 0, padding: "12px 20px 0" }}>
+        {/* Tabs */}
+        <div className="px-6 flex gap-6 border-b border-slate-100">
           {([
             { key: "reservoir",  label: "Reservoir",  Icon: Droplets },
             { key: "makrometer", label: "Makrometer", Icon: Gauge    },
@@ -214,30 +198,27 @@ function MonitoringModal({ point, initial, onSave, onClose, macroUrl }: ModalPro
             <button
               key={key}
               onClick={() => setActiveTab(key)}
-              style={{
-                flex: 1, height: 40, border: "none", cursor: "pointer",
-                fontWeight: 600, fontSize: 13,
-                borderBottom: activeTab === key ? "3px solid #0ea5e9" : "3px solid #e2e8f0",
-                background: "transparent",
-                color: activeTab === key ? "#0ea5e9" : "#94a3b8",
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                transition: "all .2s",
-              }}
+              className={`pb-3 text-xs font-semibold flex items-center gap-2 transition-colors relative ${
+                activeTab === key ? "text-slate-900" : "text-slate-400 hover:text-slate-600"
+              }`}
             >
-              <Icon size={15} /> {label}
+              <Icon size={14} /> {label}
+              {activeTab === key && (
+                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-slate-900 rounded-t-full" />
+              )}
             </button>
           ))}
         </div>
 
-        {/* Form Fields */}
-        <div style={{ padding: "18px 20px" }}>
+        {/* Form Content */}
+        <div className="p-6">
           {activeTab === "reservoir" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div className="space-y-5 animate-in slide-in-from-right-2 duration-300">
               <div>
                 <label className={labelCls}>Tinggi Air (cm)</label>
                 <input
                   type="number" min="0" max="999" step="0.1"
-                  placeholder="cth: 180.5"
+                  placeholder="0.0"
                   value={tinggiAir}
                   onChange={(e) => setTinggiAir(e.target.value)}
                   className={inputCls}
@@ -246,12 +227,12 @@ function MonitoringModal({ point, initial, onSave, onClose, macroUrl }: ModalPro
             </div>
           )}
           {activeTab === "makrometer" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div className="space-y-5 animate-in slide-in-from-right-2 duration-300">
               <div>
                 <label className={labelCls}>Tekanan (Bar)</label>
                 <input
                   type="number" min="0" max="20" step="0.01"
-                  placeholder="cth: 3.5"
+                  placeholder="0.00"
                   value={tekanan}
                   onChange={(e) => setTekanan(e.target.value)}
                   className={inputCls}
@@ -261,49 +242,45 @@ function MonitoringModal({ point, initial, onSave, onClose, macroUrl }: ModalPro
           )}
         </div>
 
-        {/* Ring kasan data sesi saat ini */}
-        <div style={{ margin: "0 20px 14px", padding: "10px 14px", background: "#f8fafc", borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12 }}>
-          <p style={{ fontWeight: 700, color: "#475569", marginBottom: 6, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5 }}>
+        {/* Ringkasan */}
+        <div className="mx-6 mb-6 p-4 bg-slate-50 rounded-xl border border-slate-100/50">
+          <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase mb-3">
             Ringkasan Sesi {sesi === "pagi" ? "Pagi" : "Sore"}
           </p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "4px 0" }}>
-            {[
-              { label: "Tinggi Air", value: tinggiAir  !== "" ? `${tinggiAir} cm`  : "—" },
-              { label: "Tekanan",    value: tekanan    !== "" ? `${tekanan} bar`   : "—" },
-            ].map(({ label, value }) => (
-              <div key={label}>
-                <span style={{ color: "#94a3b8" }}>{label}: </span>
-                <span style={{ fontWeight: 600, color: "#1e293b" }}>{value}</span>
-              </div>
-            ))}
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex flex-col gap-1.5">
+              <span className="text-slate-500 font-medium">Tinggi Air</span>
+              <span className="font-semibold text-slate-900">{tinggiAir !== "" ? `${tinggiAir} cm` : "—"}</span>
+            </div>
+            <div className="h-6 w-px bg-slate-200" />
+            <div className="flex flex-col gap-1.5">
+              <span className="text-slate-500 font-medium">Tekanan</span>
+              <span className="font-semibold text-slate-900">{tekanan !== "" ? `${tekanan} Bar` : "—"}</span>
+            </div>
           </div>
         </div>
 
-        {/* Submit Button */}
-        <div style={{ padding: "0 20px 20px" }}>
+        {/* Footer */}
+        <div className="px-6 pb-6 mt-2">
           <button
             onClick={handleSubmit}
             disabled={isSubmitting}
-            style={{
-              width: "100%", height: 48, border: "none", borderRadius: 14, cursor: isSubmitting ? "wait" : "pointer",
-              background: isSubmitting ? "#94a3b8" : "linear-gradient(135deg,#1e40af,#0ea5e9)",
-              color: "white", fontWeight: 700, fontSize: 15,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              boxShadow: isSubmitting ? "none" : "0 4px 15px rgba(14,165,233,0.4)",
-              transition: "transform .1s, box-shadow .1s",
-            }}
-            onMouseDown={(e) => (!isSubmitting && (e.currentTarget.style.transform = "scale(0.97)"))}
-            onMouseUp={(e)   => (!isSubmitting && (e.currentTarget.style.transform = "scale(1)"))}
+            className={`w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${
+              isSubmitting 
+                ? "bg-slate-100 text-slate-400 cursor-wait" 
+                : "bg-slate-900 text-white hover:bg-slate-800 hover:shadow-lg hover:shadow-slate-900/20 active:scale-[0.98]"
+            }`}
           >
             {isSubmitting ? (
-              <span style={{ fontSize: 14 }}>Sedang Mengirim...</span>
+              <span>Menyimpan...</span>
             ) : (
               <>
-                <Send size={17} /> Kirim Semua
+                <Send size={15} /> Simpan Data
               </>
             )}
           </button>
         </div>
+
       </div>
     </div>
   );
