@@ -44,6 +44,8 @@ export default function Home() {
     "gis-monitoring-data",
     {}
   );
+  const [monitoringDate, setMonitoringDate] = useLocalStorage<string>("gis-monitoring-date", "");
+
   const [macroUrl, setMacroUrl] = useLocalStorage<string>("gis-macro-url", "");
   const [spreadsheetUrl, setSpreadsheetUrl] = useLocalStorage<string>("gis-spreadsheet-url", "https://docs.google.com/spreadsheets/d/1BKrBd0DaX5pohahUeUxsiTptFyYA9XXaKFqWLX2FKHE/");
 
@@ -68,6 +70,22 @@ export default function Home() {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // 6 AM Daily Reset for Monitoring Data
+  useEffect(() => {
+    const d = new Date(currentTime);
+    if (d.getHours() < 6) {
+      d.setDate(d.getDate() - 1);
+    }
+    // Convert to local YYYY-MM-DD
+    const offset = d.getTimezoneOffset() * 60000;
+    const currentMonitoringDay = new Date(d.getTime() - offset).toISOString().split("T")[0];
+
+    if (monitoringDate !== currentMonitoringDay) {
+      setMonitoringData({});
+      setMonitoringDate(currentMonitoringDay);
+    }
+  }, [currentTime, monitoringDate, setMonitoringData, setMonitoringDate]);
 
   // Data queries
   const { data: valves } = useListValves();
