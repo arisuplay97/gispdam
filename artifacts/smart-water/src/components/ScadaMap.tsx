@@ -67,6 +67,8 @@ export interface ScadaMapProps {
   showHeatmap: boolean;
   pipelineWeight?: number;
   pipelineColor?: string;
+  pipeWeight?: number;
+  pipeColor?: string;
   visibleLayers?: {
     valves: boolean;
     pipelines: boolean;
@@ -269,6 +271,8 @@ export function ScadaMap({
   showHeatmap,
   pipelineWeight = 5,
   pipelineColor = "#38bdf8",
+  pipeWeight = 3,
+  pipeColor = "#a855f7",
   visibleLayers = {
     valves: true, pipelines: true, customers: true,
     serviceLines: true, sources: true, pipes: true, monitoring: true,
@@ -490,10 +494,11 @@ export function ScadaMap({
             key={`pipe-${pipe.id}`}
             positions={pipe.coordinates.map((c) => [c[1], c[0]] as [number, number])}
             pathOptions={{
-              color: "#a855f7",
-              weight: Math.max(2, pipelineWeight - 2),
-              opacity: 0.8,
+              color: pipeColor,
+              weight: Math.max(2, pipeWeight),
+              opacity: visibleLayers.pipes ? (hoveredLegendLayer === "pipes" ? 1 : 0.85) : 0,
               dashArray: "8 5",
+              className: "pipeline-animated",
             }}
           >
             <Popup>
@@ -673,7 +678,7 @@ export function ScadaMap({
               { key: "valves",       label: "Valve",                swatch: <span className="flex gap-0.5"><span className="h-3 w-3 rounded-full bg-green-600 border border-white shadow" /><span className="h-3 w-3 rounded-full bg-amber-500 border border-white shadow" /><span className="h-3 w-3 rounded-full bg-red-500 border border-white shadow" /></span> },
               { key: "sources",      label: "Sumber Air",           swatch: <span className="h-3.5 w-3.5 rotate-45 border-2 border-white bg-blue-700 shadow inline-block relative"><span className="absolute inset-[-4px] rounded-full border border-blue-400 opacity-50 animate-ping"></span></span> },
               { key: "pipelines",    label: "Pipa Utama",           swatch: <span className="h-[3px] w-5 rounded inline-block" style={{ background: `repeating-linear-gradient(90deg,${pipelineColor} 0,${pipelineColor} 5px,transparent 5px,transparent 9px)` }} /> },
-              { key: "pipes",        label: "Pipa Tambahan",        swatch: <span className="h-[3px] w-5 rounded inline-block" style={{ background: "repeating-linear-gradient(90deg,#a855f7 0,#a855f7 4px,transparent 4px,transparent 8px)" }} /> },
+              { key: "pipes",        label: "Pipa Tambahan",        swatch: <span className="h-[3px] w-5 rounded inline-block" style={{ background: `repeating-linear-gradient(90deg,${pipeColor} 0,${pipeColor} 4px,transparent 4px,transparent 8px)` }} /> },
               { key: "customers",    label: "Pelanggan",            swatch: <span className="h-4 w-4 rounded-full border-2 border-white bg-emerald-500 shadow inline-flex items-center justify-center shrink-0"><svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span> },
               { key: "serviceLines", label: "Sambungan Pelanggan",  swatch: <span className="h-[2px] w-5 inline-block" style={{ background: "repeating-linear-gradient(90deg,#0ea5e9 0,#0ea5e9 4px,transparent 4px,transparent 7px)" }} /> },
               { key: "monitoring",   label: "Titik Monitoring",     swatch: <span className="h-5 w-5 rounded-full border-2 border-white bg-red-500 shadow inline-flex items-center justify-center shrink-0"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span> },

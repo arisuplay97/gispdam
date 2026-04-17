@@ -36,6 +36,8 @@ export default function Home() {
   // ── Persistent settings (localStorage) ─────────────────────────────────
   const [pipelineWeight, setPipelineWeight] = useLocalStorage<number>("gis-pipeline-weight", 5);
   const [pipelineColor,  setPipelineColor]  = useLocalStorage<string>("gis-pipeline-color",  "#38bdf8");
+  const [pipeWeight, setPipeWeight] = useLocalStorage<number>("gis-db-pipe-weight", 3);
+  const [pipeColor, setPipeColor] = useLocalStorage<string>("gis-db-pipe-color", "#a855f7");
 
   const [monitoringData, setMonitoringData] = useLocalStorage<Record<string, MonitoringData>>(
     "gis-monitoring-data",
@@ -158,6 +160,8 @@ export default function Home() {
             showHeatmap={showHeatmap}
             pipelineWeight={pipelineWeight}
             pipelineColor={pipelineColor}
+            pipeWeight={pipeWeight}
+            pipeColor={pipeColor}
             visibleLayers={visibleLayers}
             onToggleLayer={(key) => toggleLayer(key as keyof typeof visibleLayers)}
             monitoringData={monitoringData}
@@ -222,38 +226,60 @@ export default function Home() {
         </div>
 
         {/* ── Pipeline Control (bottom right, above zoom) ── */}
-        <div className="absolute bottom-20 right-3 z-[1000] rounded-xl border border-slate-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur-sm w-48">
-          <div className="flex justify-between items-center mb-3 border-b border-slate-100 pb-2">
-            <div className="flex items-center gap-2">
-              <Layers className="h-3.5 w-3.5 text-blue-600" />
-              <span className="text-xs font-semibold text-slate-600">Garis Distribusi</span>
+        <div className="absolute bottom-20 right-3 z-[1000] rounded-xl border border-slate-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur-sm w-56 flex flex-col gap-4">
+          
+          {/* Pipa Utama */}
+          <div>
+            <div className="flex justify-between items-center mb-2 border-b border-slate-100 pb-1">
+              <div className="flex items-center gap-2">
+                <Layers className="h-3.5 w-3.5 text-blue-600" />
+                <span className="text-xs font-semibold text-slate-600">Pipa Utama</span>
+              </div>
+              <input
+                type="color"
+                value={pipelineColor}
+                onChange={(e) => setPipelineColor(e.target.value)}
+                className="h-6 w-6 cursor-pointer border-0 p-0 bg-transparent rounded-sm overflow-hidden"
+                title="Warna Pipa Utama"
+              />
             </div>
-            {/* Color Picker */}
-            <input
-              type="color"
-              value={pipelineColor}
-              onChange={(e) => setPipelineColor(e.target.value)}
-              className="h-6 w-6 cursor-pointer border-0 p-0 bg-transparent rounded-sm overflow-hidden"
-              title="Warna Utama"
-            />
+            <div>
+              <span className="text-[10px] font-medium text-slate-500 mb-1 block">Ketebalan: {pipelineWeight}px</span>
+              <input
+                type="range" min={2} max={15} step={1}
+                value={pipelineWeight}
+                onChange={(e) => setPipelineWeight(Number(e.target.value))}
+                className="h-1.5 w-full cursor-pointer accent-blue-600"
+              />
+            </div>
           </div>
 
+          {/* Pipa Tambahan (Database) */}
           <div>
-            <span className="text-[10px] font-medium text-slate-500 mb-1 block">Ketebalan: {pipelineWeight}px</span>
-            <input
-              type="range"
-              min={2}
-              max={15}
-              step={1}
-              value={pipelineWeight}
-              onChange={(e) => setPipelineWeight(Number(e.target.value))}
-              className="h-1.5 w-full cursor-pointer accent-blue-600"
-            />
-            <div className="mt-1 flex justify-between text-[10px] text-slate-400">
-              <span>Tipis</span>
-              <span>Tebal</span>
+            <div className="flex justify-between items-center mb-2 border-b border-slate-100 pb-1">
+              <div className="flex items-center gap-2">
+                <Layers className="h-3.5 w-3.5 text-purple-600" />
+                <span className="text-xs font-semibold text-slate-600">Pipa Tambahan</span>
+              </div>
+              <input
+                type="color"
+                value={pipeColor}
+                onChange={(e) => setPipeColor(e.target.value)}
+                className="h-6 w-6 cursor-pointer border-0 p-0 bg-transparent rounded-sm overflow-hidden"
+                title="Warna Pipa Tambahan"
+              />
+            </div>
+            <div>
+              <span className="text-[10px] font-medium text-slate-500 mb-1 block">Ketebalan: {pipeWeight}px</span>
+              <input
+                type="range" min={2} max={15} step={1}
+                value={pipeWeight}
+                onChange={(e) => setPipeWeight(Number(e.target.value))}
+                className="h-1.5 w-full cursor-pointer accent-purple-600"
+              />
             </div>
           </div>
+
         </div>
       </main>
     </div>
