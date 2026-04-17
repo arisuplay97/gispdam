@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { RadioReceiver, Layers, Activity, Clock, ChevronDown, ChevronUp } from "lucide-react";
+import { RadioReceiver, Layers, Activity, Clock, ChevronDown, ChevronUp, Menu, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 import {
@@ -33,7 +33,8 @@ export default function Home() {
   const [showCustomerPanel, setShowCustomerPanel] = useState(false);
   const [mapSelectCustomerCallback, setMapSelectCustomerCallback] = useState<((lat: number, lng: number) => void) | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [showPipeControl, setShowPipeControl] = useState(true);
+  const [showPipeControl, setShowPipeControl] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // ── Persistent settings (localStorage) ─────────────────────────────────
   const [pipelineWeight, setPipelineWeight] = useLocalStorage<number>("gis-pipeline-weight", 5);
@@ -143,30 +144,48 @@ export default function Home() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-slate-50 text-slate-900">
-      <DashboardSidebar
-        stats={stats}
-        pressureHistory={Array.isArray(pressureHistory) ? pressureHistory : []}
-        editMode={editMode}
-        setEditMode={setEditMode}
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        valves={safeValves}
-        pipes={safePipes}
-        addValveMode={addValveMode}
-        setAddValveMode={setAddValveMode}
-        addSourceMode={addSourceMode}
-        setAddSourceMode={setAddSourceMode}
-        selectedCoords={selectedCoords}
-        setSelectedCoords={setSelectedCoords}
-        showHeatmap={showHeatmap}
-        setShowHeatmap={setShowHeatmap}
-        showCustomerPanel={showCustomerPanel}
-        setShowCustomerPanel={setShowCustomerPanel}
-        macroUrl={macroUrl}
-        setMacroUrl={setMacroUrl}
-        spreadsheetUrl={spreadsheetUrl}
-        setSpreadsheetUrl={setSpreadsheetUrl}
-      />
+
+      {/* ── Mobile Sidebar Backdrop ── */}
+      {mobileSidebarOpen && (
+        <div
+          className="fixed inset-0 z-[90] bg-black/50 md:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
+      {/* ── Sidebar: desktop = inline, mobile = slide-in drawer ── */}
+      <div className={`
+        fixed inset-y-0 left-0 z-[100] h-full
+        transform transition-transform duration-300 ease-in-out
+        md:relative md:translate-x-0 md:z-20
+        ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `}>
+        <DashboardSidebar
+          stats={stats}
+          pressureHistory={Array.isArray(pressureHistory) ? pressureHistory : []}
+          editMode={editMode}
+          setEditMode={setEditMode}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          valves={safeValves}
+          pipes={safePipes}
+          addValveMode={addValveMode}
+          setAddValveMode={setAddValveMode}
+          addSourceMode={addSourceMode}
+          setAddSourceMode={setAddSourceMode}
+          selectedCoords={selectedCoords}
+          setSelectedCoords={setSelectedCoords}
+          showHeatmap={showHeatmap}
+          setShowHeatmap={setShowHeatmap}
+          showCustomerPanel={showCustomerPanel}
+          setShowCustomerPanel={setShowCustomerPanel}
+          macroUrl={macroUrl}
+          setMacroUrl={setMacroUrl}
+          spreadsheetUrl={spreadsheetUrl}
+          setSpreadsheetUrl={setSpreadsheetUrl}
+          onMobileClose={() => setMobileSidebarOpen(false)}
+        />
+      </div>
 
       <main className="relative flex-1">
         <div className="absolute inset-0 z-0">
@@ -202,10 +221,19 @@ export default function Home() {
           />
         )}
 
-        {/* ── Top Left (beside sidebar): Telemetry button ── */}
-        <div className="absolute left-4 top-4 z-[1000] flex flex-col items-start gap-2">
+        {/* ── Mobile: Hamburger button (top-left on mobile, hidden on desktop) ── */}
+        <button
+          onClick={() => setMobileSidebarOpen(true)}
+          className="absolute left-2 top-2 z-[1001] flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white/95 shadow-md backdrop-blur-sm md:hidden"
+          aria-label="Buka Menu"
+        >
+          <Menu className="h-5 w-5 text-slate-700" />
+        </button>
+
+        {/* ── Top Left (beside sidebar): Telemetry button — hidden on mobile ── */}
+        <div className="absolute left-4 top-4 z-[1000] hidden md:flex flex-col items-start gap-2">
           {telemetryOpen ? (
-            <div className="w-80 space-y-4">
+            <div className="w-72 space-y-4">
               <TelemetryPanel valves={safeValves} onClose={() => setTelemetryOpen(false)} />
             </div>
           ) : (
@@ -221,35 +249,35 @@ export default function Home() {
         </div>
 
         {/* ── Status bar top center ── */}
-        <div className="absolute top-3 left-1/2 z-[999] -translate-x-1/2 flex items-center gap-3 rounded-full border border-white/30 bg-slate-900/80 px-4 py-1.5 text-xs font-medium text-white shadow-lg backdrop-blur-sm">
-          <Clock className="h-3.5 w-3.5 text-blue-400" />
-          <span className="text-slate-300">
+        <div className="absolute top-3 left-1/2 z-[999] -translate-x-1/2 flex items-center gap-1.5 rounded-full border border-white/30 bg-slate-900/80 px-3 py-1.5 text-[10px] md:text-xs font-medium text-white shadow-lg backdrop-blur-sm max-w-[90vw] overflow-hidden">
+          <Clock className="h-3 w-3 md:h-3.5 md:w-3.5 text-blue-400 shrink-0" />
+          <span className="text-slate-300 hidden sm:inline">
             {currentTime.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}
           </span>
           <span className="text-white font-mono">
             {currentTime.toLocaleTimeString("id-ID")}
           </span>
-          <span className="mx-1 h-3 w-px bg-white/20" />
-          <span className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.8)]" />
+          <span className="mx-0.5 h-3 w-px bg-white/20" />
+          <span className="flex items-center gap-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.8)]" />
             <span>{statusCounts.normal} Normal</span>
           </span>
           {statusCounts.warning > 0 && (
-            <span className="flex items-center gap-1.5 text-amber-300">
-              <span className="h-2 w-2 rounded-full bg-amber-400" />
-              {statusCounts.warning} Peringatan
+            <span className="flex items-center gap-1 text-amber-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+              {statusCounts.warning}
             </span>
           )}
           {statusCounts.critical > 0 && (
-            <span className="flex items-center gap-1.5 text-red-300 animate-pulse">
-              <span className="h-2 w-2 rounded-full bg-red-500" />
+            <span className="flex items-center gap-1 text-red-300 animate-pulse">
+              <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
               {statusCounts.critical} Kritis!
             </span>
           )}
         </div>
 
-        {/* ── Pipeline Control (bottom right, above zoom) ── */}
-        <div className="absolute bottom-20 right-3 z-[1000] rounded-xl border border-slate-200 bg-white/95 shadow-lg backdrop-blur-sm w-56">
+        {/* ── Pipeline Control (bottom right, above zoom) — hidden on mobile ── */}
+        <div className="absolute bottom-20 right-3 z-[1000] rounded-xl border border-slate-200 bg-white/95 shadow-lg backdrop-blur-sm w-52 hidden sm:block">
 
           {/* Header (always visible) */}
           <button

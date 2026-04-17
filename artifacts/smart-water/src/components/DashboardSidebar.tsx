@@ -67,6 +67,8 @@ interface DashboardSidebarProps {
   setMacroUrl: (v: string) => void;
   spreadsheetUrl: string;
   setSpreadsheetUrl: (v: string) => void;
+  // Mobile
+  onMobileClose?: () => void;
 }
 
 export function DashboardSidebar({
@@ -92,6 +94,7 @@ export function DashboardSidebar({
   setMacroUrl,
   spreadsheetUrl,
   setSpreadsheetUrl,
+  onMobileClose,
 }: DashboardSidebarProps) {
   const [minimized, setMinimized] = useState(true);
   const queryClient = useQueryClient();
@@ -344,7 +347,7 @@ export function DashboardSidebar({
   }
 
   return (
-    <aside className="z-20 flex h-full w-[380px] flex-col overflow-y-auto border-r border-slate-200 bg-white shadow-sm">
+    <aside className="z-20 flex h-full w-screen md:w-[380px] flex-col overflow-y-auto border-r border-slate-200 bg-white shadow-sm">
       {/* ── Header ─────────────────────────────────────────────────── */}
       <div className="border-b border-slate-200 bg-white p-5">
         <div className="mb-2 flex items-center justify-between gap-3">
@@ -357,8 +360,12 @@ export function DashboardSidebar({
               </p>
             </div>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => setMinimized(true)} title="Minimalkan sidebar">
+          <Button variant="ghost" size="icon" onClick={() => setMinimized(true)} title="Minimalkan sidebar" className="hidden md:flex">
             <PanelLeftClose className="h-5 w-5 text-slate-600" />
+          </Button>
+          {/* Mobile close button */}
+          <Button variant="ghost" size="icon" onClick={onMobileClose} title="Tutup menu" className="md:hidden">
+            <X className="h-5 w-5 text-slate-600" />
           </Button>
         </div>
       </div>
