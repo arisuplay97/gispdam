@@ -88,7 +88,7 @@ export function DashboardSidebar({
   spreadsheetUrl,
   setSpreadsheetUrl,
 }: DashboardSidebarProps) {
-  const [minimized, setMinimized] = useState(false);
+  const [minimized, setMinimized] = useState(true);
   const queryClient = useQueryClient();
   const importGeoJson = useImportGeoJson();
   const createValve = useCreateValve();
@@ -285,7 +285,7 @@ export function DashboardSidebar({
             <div>
               <h1 className="text-xl font-bold tracking-tight text-slate-900">Tiara GIS</h1>
               <p className="text-[11px] font-medium uppercase tracking-wider text-slate-500">
-                SCADA &amp; WebGIS PDAM
+                Sistem Informasi Layanan Distribusi
               </p>
             </div>
           </div>
