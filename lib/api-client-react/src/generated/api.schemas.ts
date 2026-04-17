@@ -23,6 +23,11 @@ export interface Valve {
   name: string;
   lat: number;
   lng: number;
+  diameter?: number | null;
+  installYear?: number | null;
+  condition?: string | null;
+  functionStatus?: string | null;
+  description?: string | null;
   pressure: number;
   status: ValveStatus;
   createdAt?: string;
@@ -49,6 +54,12 @@ export interface Pipe {
   name: string;
   diameter?: number | null;
   material?: string | null;
+  networkType?: string | null;
+  installYear?: number | null;
+  condition?: string | null;
+  length?: number | null;
+  zone?: string | null;
+  spam?: string | null;
   fromNode?: string | null;
   toNode?: string | null;
   coordinates: number[][];
@@ -79,6 +90,10 @@ export interface WaterSource {
   name: string;
   lat: number;
   lng: number;
+  elevasi?: number | null;
+  buildYear?: number | null;
+  capacity?: string | null;
+  condition?: string | null;
   createdAt?: string;
 }
 
@@ -128,5 +143,7 @@ export interface PressureRecord {
   pressure: number;
   timestamp: string;
 }
+
+export type GetPipelinesGeoJson200 = { [key: string]: unknown };
 
 export type ExportGeoJson200 = { [key: string]: unknown };

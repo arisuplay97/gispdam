@@ -3,7 +3,7 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: Smart Water System SCADA + WebGIS API
+  description: TIARA GIS SCADA + WebGIS API
 servers:
   - url: /api
     description: Base API path
@@ -388,6 +388,21 @@ components:
           type: number
         lng:
           type: number
+        diameter:
+          type: number
+          nullable: true
+        installYear:
+          type: number
+          nullable: true
+        condition:
+          type: string
+          nullable: true
+        functionStatus:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
         pressure:
           type: number
         status:
@@ -451,6 +466,24 @@ components:
           type: number
           nullable: true
         material:
+          type: string
+          nullable: true
+        networkType:
+          type: string
+          nullable: true
+        installYear:
+          type: number
+          nullable: true
+        condition:
+          type: string
+          nullable: true
+        length:
+          type: number
+          nullable: true
+        zone:
+          type: string
+          nullable: true
+        spam:
           type: string
           nullable: true
         fromNode:
@@ -530,6 +563,18 @@ components:
           type: number
         lng:
           type: number
+        elevasi:
+          type: number
+          nullable: true
+        buildYear:
+          type: number
+          nullable: true
+        capacity:
+          type: string
+          nullable: true
+        condition:
+          type: string
+          nullable: true
         createdAt:
           type: string
           format: date-time

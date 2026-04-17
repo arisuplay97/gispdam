@@ -13,6 +13,11 @@ export interface Valve {
   name: string;
   lat: number;
   lng: number;
+  diameter?: number | null;
+  installYear?: number | null;
+  condition?: string | null;
+  functionStatus?: string | null;
+  description?: string | null;
   pressure: number;
   status: ValveStatus;
   createdAt?: Date;

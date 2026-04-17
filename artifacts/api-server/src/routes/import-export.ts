@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, valvesTable, pipesTable, sourcesTable } from "@workspace/db";
 import { ImportGeoJsonBody } from "@workspace/api-zod";
+import { notInArray, sql } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -145,6 +146,25 @@ router.get("/export/csv", async (_req, res): Promise<void> => {
   res.setHeader("Content-Type", "text/csv");
   res.setHeader("Content-Disposition", "attachment; filename=valves.csv");
   res.send(header + rows);
+});
+
+// ─── DELETE /api/clear-import ────────────────────────────────────────────────
+// Menghapus SEMUA valve, pipa, dan sumber air dari database.
+// Hati-hati: tidak dapat dibatalkan.
+router.delete("/clear-import", async (_req, res): Promise<void> => {
+  try {
+    // Hapus semua data dari tabel (tanpa WHERE = hapus semua baris)
+    await db.delete(pipesTable).where(sql`1=1`);
+    await db.delete(valvesTable).where(sql`1=1`);
+    await db.delete(sourcesTable).where(sql`1=1`);
+
+    res.json({
+      success: true,
+      message: "Semua data valve, pipa, dan sumber air telah dihapus.",
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message ?? "Unknown error" });
+  }
 });
 
 export default router;

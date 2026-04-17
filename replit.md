@@ -1,8 +1,8 @@
-# Smart Water System - SCADA + WebGIS
+# TIARA GIS - SCADA & WebGIS
 
 ## Overview
 
-Smart Water System is a SCADA-based water distribution monitoring and management platform for PDAM (Indonesian water utility). It combines real-time monitoring, interactive WebGIS mapping, and GIS data import/export capabilities.
+TIARA GIS is a SCADA-based water distribution monitoring and management platform for PDAM (Indonesian water utility). It combines real-time monitoring, interactive WebGIS mapping, and GIS data import/export capabilities.
 
 ## Stack
 

@@ -23,6 +23,7 @@ import type {
   DashboardStats,
   ExportGeoJson200,
   GeoJsonImport,
+  GetPipelinesGeoJson200,
   HealthStatus,
   ImportResult,
   Pipe,
@@ -932,6 +933,81 @@ export const useDeletePipe = <
 > => {
   return useMutation(getDeletePipeMutationOptions(options));
 };
+
+/**
+ * @summary Get radial pipeline network as GeoJSON
+ */
+export const getGetPipelinesGeoJsonUrl = () => {
+  return `/api/pipelines/geojson`;
+};
+
+export const getPipelinesGeoJson = async (
+  options?: RequestInit,
+): Promise<GetPipelinesGeoJson200> => {
+  return customFetch<GetPipelinesGeoJson200>(getGetPipelinesGeoJsonUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPipelinesGeoJsonQueryKey = () => {
+  return [`/api/pipelines/geojson`] as const;
+};
+
+export const getGetPipelinesGeoJsonQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPipelinesGeoJson>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getPipelinesGeoJson>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetPipelinesGeoJsonQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getPipelinesGeoJson>>
+  > = ({ signal }) => getPipelinesGeoJson({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPipelinesGeoJson>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetPipelinesGeoJsonQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPipelinesGeoJson>>
+>;
+export type GetPipelinesGeoJsonQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get radial pipeline network as GeoJSON
+ */
+
+export function useGetPipelinesGeoJson<
+  TData = Awaited<ReturnType<typeof getPipelinesGeoJson>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getPipelinesGeoJson>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPipelinesGeoJsonQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary List all water sources

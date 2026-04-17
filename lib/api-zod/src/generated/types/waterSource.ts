@@ -11,5 +11,9 @@ export interface WaterSource {
   name: string;
   lat: number;
   lng: number;
+  elevasi?: number | null;
+  buildYear?: number | null;
+  capacity?: string | null;
+  condition?: string | null;
   createdAt?: Date;
 }

@@ -23,6 +23,11 @@ export const ListValvesResponseItem = zod.object({
   name: zod.string(),
   lat: zod.number(),
   lng: zod.number(),
+  diameter: zod.number().nullish(),
+  installYear: zod.number().nullish(),
+  condition: zod.string().nullish(),
+  functionStatus: zod.string().nullish(),
+  description: zod.string().nullish(),
   pressure: zod.number(),
   status: zod.enum(["normal", "warning", "critical"]),
   createdAt: zod.coerce.date().optional(),
@@ -54,6 +59,11 @@ export const GetValveResponse = zod.object({
   name: zod.string(),
   lat: zod.number(),
   lng: zod.number(),
+  diameter: zod.number().nullish(),
+  installYear: zod.number().nullish(),
+  condition: zod.string().nullish(),
+  functionStatus: zod.string().nullish(),
+  description: zod.string().nullish(),
   pressure: zod.number(),
   status: zod.enum(["normal", "warning", "critical"]),
   createdAt: zod.coerce.date().optional(),
@@ -80,6 +90,11 @@ export const UpdateValveResponse = zod.object({
   name: zod.string(),
   lat: zod.number(),
   lng: zod.number(),
+  diameter: zod.number().nullish(),
+  installYear: zod.number().nullish(),
+  condition: zod.string().nullish(),
+  functionStatus: zod.string().nullish(),
+  description: zod.string().nullish(),
   pressure: zod.number(),
   status: zod.enum(["normal", "warning", "critical"]),
   createdAt: zod.coerce.date().optional(),
@@ -101,6 +116,12 @@ export const ListPipesResponseItem = zod.object({
   name: zod.string(),
   diameter: zod.number().nullish(),
   material: zod.string().nullish(),
+  networkType: zod.string().nullish(),
+  installYear: zod.number().nullish(),
+  condition: zod.string().nullish(),
+  length: zod.number().nullish(),
+  zone: zod.string().nullish(),
+  spam: zod.string().nullish(),
   fromNode: zod.string().nullish(),
   toNode: zod.string().nullish(),
   coordinates: zod.array(zod.array(zod.number())),
@@ -133,6 +154,12 @@ export const GetPipeResponse = zod.object({
   name: zod.string(),
   diameter: zod.number().nullish(),
   material: zod.string().nullish(),
+  networkType: zod.string().nullish(),
+  installYear: zod.number().nullish(),
+  condition: zod.string().nullish(),
+  length: zod.number().nullish(),
+  zone: zod.string().nullish(),
+  spam: zod.string().nullish(),
   fromNode: zod.string().nullish(),
   toNode: zod.string().nullish(),
   coordinates: zod.array(zod.array(zod.number())),
@@ -161,6 +188,12 @@ export const UpdatePipeResponse = zod.object({
   name: zod.string(),
   diameter: zod.number().nullish(),
   material: zod.string().nullish(),
+  networkType: zod.string().nullish(),
+  installYear: zod.number().nullish(),
+  condition: zod.string().nullish(),
+  length: zod.number().nullish(),
+  zone: zod.string().nullish(),
+  spam: zod.string().nullish(),
   fromNode: zod.string().nullish(),
   toNode: zod.string().nullish(),
   coordinates: zod.array(zod.array(zod.number())),
@@ -176,6 +209,11 @@ export const DeletePipeParams = zod.object({
 });
 
 /**
+ * @summary Get radial pipeline network as GeoJSON
+ */
+export const GetPipelinesGeoJsonResponse = zod.object({}).passthrough();
+
+/**
  * @summary List all water sources
  */
 export const ListSourcesResponseItem = zod.object({
@@ -183,6 +221,10 @@ export const ListSourcesResponseItem = zod.object({
   name: zod.string(),
   lat: zod.number(),
   lng: zod.number(),
+  elevasi: zod.number().nullish(),
+  buildYear: zod.number().nullish(),
+  capacity: zod.string().nullish(),
+  condition: zod.string().nullish(),
   createdAt: zod.coerce.date().optional(),
 });
 export const ListSourcesResponse = zod.array(ListSourcesResponseItem);
@@ -240,6 +282,11 @@ export const PostTelemetryResponse = zod.object({
       name: zod.string(),
       lat: zod.number(),
       lng: zod.number(),
+      diameter: zod.number().nullish(),
+      installYear: zod.number().nullish(),
+      condition: zod.string().nullish(),
+      functionStatus: zod.string().nullish(),
+      description: zod.string().nullish(),
       pressure: zod.number(),
       status: zod.enum(["normal", "warning", "critical"]),
       createdAt: zod.coerce.date().optional(),

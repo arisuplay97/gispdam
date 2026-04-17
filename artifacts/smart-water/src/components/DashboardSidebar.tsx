@@ -19,6 +19,8 @@ import {
   Plus,
   X,
   Users,
+  Trash2,
+  ExternalLink,
 } from "lucide-react";
 import {
   useImportGeoJson,
@@ -152,6 +154,37 @@ export function DashboardSidebar({
 
   const handleExportGeoJson = () => window.open("/api/export/geojson", "_blank");
   const handleExportCsv = () => window.open("/api/export/csv", "_blank");
+
+  // ── Clear Import ───────────────────────────────────────────────────
+  const [clearConfirm, setClearConfirm] = React.useState(false);
+  const [isClearing,   setIsClearing]   = React.useState(false);
+
+  const handleClearImport = async () => {
+    if (!clearConfirm) {
+      setClearConfirm(true);
+      setTimeout(() => setClearConfirm(false), 4000); // auto reset
+      return;
+    }
+    setIsClearing(true);
+    try {
+      const res = await fetch("/api/clear-import", { method: "DELETE" });
+      const json = await res.json();
+      if (json.success) {
+        toast.success("Semua data import berhasil dihapus");
+        queryClient.invalidateQueries({ queryKey: getListValvesQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getListPipesQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() });
+        queryClient.invalidateQueries({ queryKey: ["pipelines-geojson"] });
+      } else {
+        toast.error(json.error ?? "Gagal menghapus");
+      }
+    } catch (e: any) {
+      toast.error("Gagal menghubungi server");
+    } finally {
+      setIsClearing(false);
+      setClearConfirm(false);
+    }
+  };
 
   const handleToggleAddValve = () => {
     const next = !addValveMode;
@@ -578,6 +611,33 @@ export function DashboardSidebar({
             <Button variant="outline" onClick={handleExportCsv} className="w-full text-sm">
               <Download className="mr-2 h-4 w-4" /> Ekspor CSV
             </Button>
+
+            {/* Hapus Import */}
+            <button
+              onClick={handleClearImport}
+              disabled={isClearing}
+              className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-semibold transition-all disabled:opacity-50 ${
+                clearConfirm
+                  ? 'bg-red-600 border-red-600 text-white shadow-md animate-pulse'
+                  : 'bg-white border-red-200 text-red-600 hover:bg-red-50'
+              }`}
+            >
+              <Trash2 className="h-4 w-4" />
+              {isClearing ? "Menghapus..." : clearConfirm ? "⚠️ Klik lagi untuk konfirmasi" : "Hapus Semua Import"}
+            </button>
+
+            <div className="h-px w-full bg-slate-200" />
+
+            {/* Link Spreadsheet */}
+            <a
+              href="https://docs.google.com/spreadsheets/d/1BKrBd0DaX5pohahUeUxsiTptFyYA9XXaKFqWLX2FKHE/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 text-sm font-semibold hover:bg-emerald-100 transition-all shadow-sm"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Buka Data Spreadsheet
+            </a>
           </div>
         </section>
       </div>

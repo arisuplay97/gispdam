@@ -13,6 +13,7 @@ export * from "./dashboardStats";
 export * from "./exportGeoJson200";
 export * from "./geoJsonImport";
 export * from "./geoJsonImportFeaturesItem";
+export * from "./getPipelinesGeoJson200";
 export * from "./healthStatus";
 export * from "./importResult";
 export * from "./pipe";

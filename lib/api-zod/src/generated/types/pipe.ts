@@ -11,6 +11,12 @@ export interface Pipe {
   name: string;
   diameter?: number | null;
   material?: string | null;
+  networkType?: string | null;
+  installYear?: number | null;
+  condition?: string | null;
+  length?: number | null;
+  zone?: string | null;
+  spam?: string | null;
   fromNode?: string | null;
   toNode?: string | null;
   coordinates: number[][];

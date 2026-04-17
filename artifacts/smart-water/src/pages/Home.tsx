@@ -14,6 +14,8 @@ import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { ScadaMap } from "@/components/ScadaMap";
 import { TelemetryPanel } from "@/components/TelemetryPanel";
 import { CustomerPanel } from "@/components/CustomerPanel";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import type { MonitoringData } from "@/components/MonitoringLayer";
 
 interface SelectedCoords {
   lat: number;
@@ -27,11 +29,24 @@ export default function Home() {
   const [addValveMode, setAddValveMode] = useState(false);
   const [selectedCoords, setSelectedCoords] = useState<SelectedCoords | null>(null);
   const [showHeatmap, setShowHeatmap] = useState(false);
-  const [pipelineWeight, setPipelineWeight] = useState(5);
-  const [pipelineColor, setPipelineColor] = useState("#38bdf8");
   const [showCustomerPanel, setShowCustomerPanel] = useState(false);
   const [mapSelectCustomerCallback, setMapSelectCustomerCallback] = useState<((lat: number, lng: number) => void) | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  // ── Persistent settings (localStorage) ─────────────────────────────────
+  const [pipelineWeight, setPipelineWeight] = useLocalStorage<number>("gis-pipeline-weight", 5);
+  const [pipelineColor,  setPipelineColor]  = useLocalStorage<string>("gis-pipeline-color",  "#38bdf8");
+
+  // ── Monitoring data (localStorage) ──────────────────────────────────────
+  const [monitoringData, setMonitoringData] = useLocalStorage<Record<string, MonitoringData>>(
+    "gis-monitoring-data",
+    {}
+  );
+
+  const handleMonitoringSave = (id: string, data: MonitoringData) => {
+    setMonitoringData((prev) => ({ ...prev, [id]: data }));
+  };
+
   const [visibleLayers, setVisibleLayers] = useState({
     valves: true,
     pipelines: true,
@@ -39,6 +54,7 @@ export default function Home() {
     serviceLines: true,
     sources: true,
     pipes: true,
+    monitoring: true,
   });
   const toggleLayer = (key: keyof typeof visibleLayers) =>
     setVisibleLayers((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -97,8 +113,8 @@ export default function Home() {
   });
 
   const statusCounts = {
-    normal: safeValves.filter((v) => v.status === "normal").length,
-    warning: safeValves.filter((v) => v.status === "warning").length,
+    normal:   safeValves.filter((v) => v.status === "normal").length,
+    warning:  safeValves.filter((v) => v.status === "warning").length,
     critical: safeValves.filter((v) => v.status === "critical").length,
   };
 
@@ -139,12 +155,14 @@ export default function Home() {
             pipelineColor={pipelineColor}
             visibleLayers={visibleLayers}
             onToggleLayer={(key) => toggleLayer(key as keyof typeof visibleLayers)}
+            monitoringData={monitoringData}
+            onMonitoringSave={handleMonitoringSave}
           />
         </div>
 
         {/* ── Customer Panel Floating Overlay ── */}
         {showCustomerPanel && (
-          <CustomerPanel 
+          <CustomerPanel
             onClose={() => setShowCustomerPanel(false)}
             onActivateMapSelect={(cb) => setMapSelectCustomerCallback(() => cb)}
             onDeactivateMapSelect={() => setMapSelectCustomerCallback(null)}
@@ -213,7 +231,7 @@ export default function Home() {
               title="Warna Utama"
             />
           </div>
-          
+
           <div>
             <span className="text-[10px] font-medium text-slate-500 mb-1 block">Ketebalan: {pipelineWeight}px</span>
             <input

@@ -17,6 +17,7 @@ import { EditControl } from "react-leaflet-draw";
 import "leaflet-draw/dist/leaflet.draw.css";
 import { LineChart, Line, Tooltip as RechartsTooltip, YAxis } from "recharts";
 import MarkerClusterGroup from "react-leaflet-cluster";
+import { MonitoringLayer, type MonitoringData } from "./MonitoringLayer";
 
 import {
   useCreateValve,
@@ -73,8 +74,12 @@ export interface ScadaMapProps {
     serviceLines: boolean;
     sources: boolean;
     pipes: boolean;
+    monitoring: boolean;
   };
   onToggleLayer?: (key: string) => void;
+  // Monitoring
+  monitoringData: Record<string, MonitoringData>;
+  onMonitoringSave: (id: string, data: MonitoringData) => void;
 }
 
 // ─── Inner: Map click handler ────────────────────────────────────────────────
@@ -264,9 +269,11 @@ export function ScadaMap({
   pipelineColor = "#38bdf8",
   visibleLayers = {
     valves: true, pipelines: true, customers: true,
-    serviceLines: true, sources: true, pipes: true,
+    serviceLines: true, sources: true, pipes: true, monitoring: true,
   },
   onToggleLayer,
+  monitoringData,
+  onMonitoringSave,
 }: ScadaMapProps) {
   const queryClient = useQueryClient();
   const createValve = useCreateValve();
@@ -627,6 +634,9 @@ export function ScadaMap({
             />
           </FeatureGroup>
         )}
+
+        {/* ── Monitoring Markers (Reservoir + Makrometer) ─────────────── */}
+        {visibleLayers.monitoring && <MonitoringLayer data={monitoringData} onSave={onMonitoringSave} />}
       </MapContainer>
 
       {/* ── Interactive Legend (click to toggle, hover to highlight) */}
@@ -642,6 +652,7 @@ export function ScadaMap({
             { key: "pipes",        label: "Pipa Tambahan",        swatch: <span className="h-[3px] w-5 rounded inline-block" style={{ background: "repeating-linear-gradient(90deg,#a855f7 0,#a855f7 4px,transparent 4px,transparent 8px)" }} /> },
             { key: "customers",    label: "Pelanggan",            swatch: <span className="h-4 w-4 rounded-full border-2 border-white bg-emerald-500 shadow inline-flex items-center justify-center shrink-0"><svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span> },
             { key: "serviceLines", label: "Sambungan Pelanggan",  swatch: <span className="h-[2px] w-5 inline-block" style={{ background: "repeating-linear-gradient(90deg,#0ea5e9 0,#0ea5e9 4px,transparent 4px,transparent 7px)" }} /> },
+            { key: "monitoring",   label: "Titik Monitoring",     swatch: <span className="flex gap-0.5"><span className="h-3 w-3 rounded-full bg-red-500 border border-white shadow" /><span className="h-3 w-3 rounded-full bg-amber-500 border border-white shadow" /><span className="h-3 w-3 rounded-full bg-green-500 border border-white shadow" /></span> },
           ] as Array<{ key: keyof typeof visibleLayers; label: string; swatch: React.ReactNode }>).map(({ key, label, swatch }) => {
             const isVisible = visibleLayers[key];
             const isHov = hoveredLegendLayer === key;
