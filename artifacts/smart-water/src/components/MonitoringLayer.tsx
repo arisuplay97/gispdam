@@ -35,28 +35,58 @@ export const MONITORING_POINTS: MonitoringPoint[] = [
   { id: "MON-05", name: "Reservoir Pagesangan",     lat: -8.6750, lng: 116.3300 },
 ];
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-function getCompletionStatus(data?: MonitoringData): "empty" | "partial" | "complete" {
+type AnalysisStatus = "empty" | "normal" | "warning" | "critical";
+
+function getAnalysisStatus(data?: MonitoringData): AnalysisStatus {
   if (!data) return "empty";
-  const pagiOk = !!(data.pagi?.tinggiAir != null && data.pagi?.tekanan != null);
-  const soreOk  = !!(data.sore?.tinggiAir != null && data.sore?.tekanan  != null);
-  if (pagiOk && soreOk) return "complete";
-  if (pagiOk || soreOk) return "partial";
-  return "empty";
+  
+  // Ambil data terbaru (Sore jika ada, kalau tidak ada Pagi)
+  const latest = (data.sore?.tinggiAir || data.sore?.tekanan) ? data.sore : data.pagi;
+  
+  if (!latest) return "empty";
+  if (latest.tinggiAir == null && latest.tekanan == null) return "empty";
+
+  let isCritical = false;
+  let isWarning = false;
+
+  // Analisa Tekanan (Bar)
+  if (latest.tekanan !== undefined && latest.tekanan !== null) {
+    if (latest.tekanan < 0.5) isCritical = true;
+    else if (latest.tekanan < 1.0) isWarning = true;
+  }
+
+  // Analisa Tinggi Air (cm)
+  if (latest.tinggiAir !== undefined && latest.tinggiAir !== null) {
+    if (latest.tinggiAir < 50) isCritical = true;
+    else if (latest.tinggiAir < 100) isWarning = true;
+  }
+
+  // Analisa Anomali Tinggi Air (Penurunan Ekstrem)
+  if (data.pagi?.tinggiAir != null && data.sore?.tinggiAir != null) {
+    const drop = data.pagi.tinggiAir - data.sore.tinggiAir;
+    if (drop > 100) isWarning = true; // Drop > 1 meter dalam setengah hari = Indikasi Bocor
+  }
+
+  if (isCritical) return "critical";
+  if (isWarning) return "warning";
+  return "normal";
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  empty:    "#ef4444", // merah
-  partial:  "#f59e0b", // kuning
-  complete: "#16a34a", // hijau
-};
-const STATUS_GLOW: Record<string, string> = {
-  empty:    "0 0 10px rgba(239,68,68,0.8), 0 0 0 4px rgba(239,68,68,0.2)",
-  partial:  "0 0 10px rgba(245,158,11,0.8), 0 0 0 4px rgba(245,158,11,0.2)",
-  complete: "0 0 10px rgba(22,163,74,0.8),  0 0 0 4px rgba(22,163,74,0.2)",
+  empty:    "#94a3b8", // Abu-abu salju (Belum Input)
+  normal:   "#10b981", // Hijau (Aman)
+  warning:  "#f59e0b", // Kuning (Waspada/Tekanan Mulai Turun)
+  critical: "#ef4444", // Merah (Bahaya/Bocor Besar/Tekanan Drop)
 };
 
-function createMonitoringIcon(status: "empty" | "partial" | "complete") {
+const STATUS_GLOW: Record<string, string> = {
+  empty:    "0 4px 6px rgba(148,163,184,0.3), 0 0 0 3px rgba(148,163,184,0.15)",
+  normal:   "0 0 12px rgba(16,185,129,0.9), 0 0 0 4px rgba(16,185,129,0.3)",
+  warning:  "0 0 12px rgba(245,158,11,0.9), 0 0 0 4px rgba(245,158,11,0.3)",
+  critical: "0 0 15px rgba(239,68,68,1), 0 0 0 5px rgba(239,68,68,0.4)",
+};
+
+function createMonitoringIcon(status: AnalysisStatus) {
   const color = STATUS_COLORS[status];
   const glow  = STATUS_GLOW[status];
   return L.divIcon({
@@ -298,31 +328,33 @@ export function MonitoringLayer({ data, onSave, macroUrl }: MonitoringLayerProps
 
   return (
     <>
-      {MONITORING_POINTS.map((point) => {
-        const status = getCompletionStatus(data[point.id]);
+      {MONITORING_POINTS.map((pt) => {
+        const ptData = data[pt.id];
+        const status = getAnalysisStatus(ptData);
+
         return (
           <Marker
-            key={point.id}
-            position={[point.lat, point.lng]}
+            key={pt.id}
+            position={[pt.lat, pt.lng]}
             icon={createMonitoringIcon(status)}
             eventHandlers={{
-              click: () => setOpenModal(point.id),
+              click: () => setOpenModal(pt.id),
             }}
           >
-            <Tooltip direction="top" offset={[0, -36]} opacity={1}>
-              <div style={{ textAlign: "center", padding: "2px 4px" }}>
-                <p style={{ fontWeight: 700, margin: "0 0 4px 0", color: "#1e293b", fontSize: 13 }}>
-                  {point.name}
-                </p>
-                <p style={{ margin: 0, fontSize: 11, color: "#64748b" }}>
-                  Status:{" "}
-                  <span style={{ color: STATUS_COLORS[status], fontWeight: "bold" }}>
-                    {status === "complete" ? "✅ Lengkap" : status === "partial" ? "⚠️ Sebagian" : "❌ Belum Diisi"}
+            <Tooltip direction="top" offset={[0, -20]} opacity={1} className="font-sans font-medium text-slate-800 shadow-xl rounded-lg">
+              <div className="flex flex-col gap-1 text-center p-1">
+                <span className="font-bold text-sm tracking-tight">{pt.name}</span>
+                {status === "empty" ? (
+                  <span className="text-xs text-slate-400 italic">Belum ada input</span>
+                ) : (
+                  <span className={`text-xs font-semibold ${
+                    status === "normal" ? "text-emerald-600" :
+                    status === "warning" ? "text-amber-600" : "text-red-600"
+                  }`}>
+                    Status: {status.toUpperCase()}
                   </span>
-                </p>
-                <p style={{ margin: "6px 0 0 0", fontSize: 10, color: "#94a3b8", fontStyle: "italic" }}>
-                  (Klik untuk input data)
-                </p>
+                )}
+                <span className="text-[10px] text-slate-400 mt-1">(Klik untuk input)</span>
               </div>
             </Tooltip>
           </Marker>
