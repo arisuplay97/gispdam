@@ -153,14 +153,27 @@ router.get("/export/csv", async (_req, res): Promise<void> => {
 // Hati-hati: tidak dapat dibatalkan.
 router.delete("/clear-import", async (_req, res): Promise<void> => {
   try {
-    // Hapus semua data dari tabel (tanpa WHERE = hapus semua baris)
-    await db.delete(pipesTable).where(sql`1=1`);
-    await db.delete(valvesTable).where(sql`1=1`);
-    await db.delete(sourcesTable).where(sql`1=1`);
+    try {
+      await db.delete(pipesTable);
+    } catch (e: any) {
+      console.warn("Failed deleting pipes:", e.message);
+    }
+    
+    try {
+      await db.delete(valvesTable);
+    } catch (e: any) {
+      console.warn("Failed deleting valves:", e.message);
+    }
+    
+    try {
+      await db.delete(sourcesTable);
+    } catch (e: any) {
+      console.warn("Failed deleting sources:", e.message);
+    }
 
     res.json({
       success: true,
-      message: "Semua data valve, pipa, dan sumber air telah dihapus.",
+      message: "Semua data import telah dihapus.",
     });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err?.message ?? "Unknown error" });

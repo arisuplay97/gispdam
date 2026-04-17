@@ -37,12 +37,12 @@ export default function Home() {
   const [pipelineWeight, setPipelineWeight] = useLocalStorage<number>("gis-pipeline-weight", 5);
   const [pipelineColor,  setPipelineColor]  = useLocalStorage<string>("gis-pipeline-color",  "#38bdf8");
 
-  // ── Monitoring data (localStorage) ──────────────────────────────────────
   const [monitoringData, setMonitoringData] = useLocalStorage<Record<string, MonitoringData>>(
     "gis-monitoring-data",
     {}
   );
   const [macroUrl, setMacroUrl] = useLocalStorage<string>("gis-macro-url", "");
+  const [spreadsheetUrl, setSpreadsheetUrl] = useLocalStorage<string>("gis-spreadsheet-url", "https://docs.google.com/spreadsheets/d/1BKrBd0DaX5pohahUeUxsiTptFyYA9XXaKFqWLX2FKHE/");
 
   const handleMonitoringSave = (id: string, data: MonitoringData) => {
     setMonitoringData((prev) => ({ ...prev, [id]: data }));
@@ -140,6 +140,8 @@ export default function Home() {
         setShowCustomerPanel={setShowCustomerPanel}
         macroUrl={macroUrl}
         setMacroUrl={setMacroUrl}
+        spreadsheetUrl={spreadsheetUrl}
+        setSpreadsheetUrl={setSpreadsheetUrl}
       />
 
       <main className="relative flex-1">

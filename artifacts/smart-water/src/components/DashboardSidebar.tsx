@@ -62,6 +62,8 @@ interface DashboardSidebarProps {
   setShowCustomerPanel: (v: boolean) => void;
   macroUrl: string;
   setMacroUrl: (v: string) => void;
+  spreadsheetUrl: string;
+  setSpreadsheetUrl: (v: string) => void;
 }
 
 export function DashboardSidebar({
@@ -83,6 +85,8 @@ export function DashboardSidebar({
   setShowCustomerPanel,
   macroUrl,
   setMacroUrl,
+  spreadsheetUrl,
+  setSpreadsheetUrl,
 }: DashboardSidebarProps) {
   const [minimized, setMinimized] = useState(false);
   const queryClient = useQueryClient();
@@ -578,18 +582,51 @@ export function DashboardSidebar({
 
             <div className="h-px w-full bg-slate-200" />
 
-            {/* URL Google Apps Script */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium flex items-center gap-2">
-                <LinkIcon className="h-4 w-4 text-blue-500" />
-                Google Apps Script URL
-              </Label>
-              <Input
-                placeholder="https://script.google.com/macros/s/.../exec"
-                value={macroUrl}
-                onChange={(e) => setMacroUrl(e.target.value)}
-                className="text-xs font-mono bg-slate-50 border-slate-300 placeholder:text-slate-400 focus-visible:ring-blue-500"
-              />
+            {/* URL Google Apps Script & Spreadsheet */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <LinkIcon className="h-4 w-4 text-blue-500" />
+                  Google Apps Script URL
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="https://script.google.com/macros/s/.../exec"
+                    value={macroUrl}
+                    onChange={(e) => setMacroUrl(e.target.value)}
+                    className="text-xs font-mono bg-slate-50 border-slate-300 placeholder:text-slate-400 focus-visible:ring-blue-500"
+                  />
+                  <Button 
+                    size="sm" 
+                    className="bg-blue-600 hover:bg-blue-700 text-white shrink-0 px-3"
+                    onClick={() => toast.success("URL Google Script Tersimpan!")}
+                  >
+                    Simpan
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <LinkIcon className="h-4 w-4 text-green-500" />
+                  Link Spreadsheet Google
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="https://docs.google.com/spreadsheets/d/..."
+                    value={spreadsheetUrl}
+                    onChange={(e) => setSpreadsheetUrl(e.target.value)}
+                    className="text-xs font-mono bg-slate-50 border-slate-300 placeholder:text-slate-400 focus-visible:ring-blue-500"
+                  />
+                  <Button 
+                    size="sm" 
+                    className="bg-green-600 hover:bg-green-700 text-white shrink-0 px-3"
+                    onClick={() => toast.success("Link Spreadsheet Tersimpan!")}
+                  >
+                    Simpan
+                  </Button>
+                </div>
+              </div>
             </div>
 
             <div className="h-px w-full bg-slate-200" />
@@ -651,7 +688,7 @@ export function DashboardSidebar({
 
             {/* Link Spreadsheet */}
             <a
-              href="https://docs.google.com/spreadsheets/d/1BKrBd0DaX5pohahUeUxsiTptFyYA9XXaKFqWLX2FKHE/"
+              href={spreadsheetUrl || "#"}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 text-sm font-semibold hover:bg-emerald-100 transition-all shadow-sm"
