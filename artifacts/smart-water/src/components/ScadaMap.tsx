@@ -33,7 +33,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Valve, Pipe, WaterSource, PressureRecord } from "@workspace/api-client-react";
 import { useListCustomers } from "../hooks/useCustomers";
-import React from "react";
+import { useUpdateSource } from "../hooks/useSources";
+import React, { useState, useRef, useMemo } from "react";
 
 // ─── Fix default Leaflet icon URLs ─────────────────────────────────────────
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -42,6 +43,90 @@ L.Icon.Default.mergeOptions({
   iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
+
+function SourceMarker({ source, editMode, queryClient }: { source: WaterSource, editMode: boolean, queryClient: any }) {
+  const [formName, setFormName] = useState(source.name);
+  const updateSource = useUpdateSource();
+  const markerRef = useRef<L.Marker>(null);
+
+  const handleDragEnd = () => {
+    const marker = markerRef.current;
+    if (marker) {
+      const latLng = marker.getLatLng();
+      updateSource.mutate({
+        id: source.id,
+        data: { lat: latLng.lat, lng: latLng.lng }
+      }, {
+        onSuccess: () => {
+          toast.success("Lokasi Sumber Air diperbarui");
+          queryClient.invalidateQueries({ queryKey: ["/api/sources"] });
+        },
+        onError: () => {
+          toast.error("Gagal memperbarui lokasi");
+        }
+      });
+    }
+  };
+
+  const handleUpdateName = () => {
+    if (!formName.trim()) return;
+    updateSource.mutate({
+      id: source.id,
+      data: { name: formName }
+    }, {
+      onSuccess: () => {
+        toast.success("Nama Sumber Air diperbarui");
+        queryClient.invalidateQueries({ queryKey: ["/api/sources"] });
+      },
+      onError: () => {
+        toast.error("Gagal memperbarui nama");
+      }
+    });
+  };
+
+  const icon = useMemo(() => createSourceIcon(), []);
+
+  return (
+    <Marker
+      position={[source.lat, source.lng]}
+      icon={icon}
+      draggable={editMode}
+      eventHandlers={{ dragend: handleDragEnd }}
+      ref={markerRef}
+    >
+      <Popup>
+        <div style={{ minWidth: 160 }} className="text-slate-800">
+          {!editMode ? (
+            <>
+              <h3 className="font-semibold text-blue-700">{source.name}</h3>
+              <p className="mt-1 text-sm text-slate-500">💧 Sumber Air PDAM</p>
+            </>
+          ) : (
+            <div className="space-y-2 mt-1">
+              <label className="text-xs font-semibold text-slate-600 block">Ubah Nama:</label>
+              <input
+                type="text"
+                value={formName}
+                onChange={(e) => setFormName(e.target.value)}
+                className="w-full border border-slate-300 rounded px-2 py-1 text-sm"
+              />
+              <button
+                onClick={handleUpdateName}
+                disabled={updateSource.isPending}
+                className="w-full bg-blue-600 text-white text-xs font-semibold py-1.5 rounded hover:bg-blue-700 transition"
+              >
+                {updateSource.isPending ? "Menyimpan..." : "Simpan Perbaikan"}
+              </button>
+            </div>
+          )}
+          <p className="text-xs text-slate-400 mt-2 border-t border-slate-100 pt-1">
+            {source.lat.toFixed(6)}, {source.lng.toFixed(6)}
+          </p>
+        </div>
+      </Popup>
+    </Marker>
+  );
+}
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface PipelineFeature {
@@ -71,6 +156,7 @@ export interface ScadaMapProps {
   sources: WaterSource[];
   editMode: boolean;
   addValveMode: boolean;
+  addSourceMode?: boolean;
   onMapClick?: (lat: number, lng: number) => void;
   pipelineGeoJSON?: PipelineGeoJSON;
   pressureHistory?: PressureRecord[];
@@ -275,6 +361,7 @@ export function ScadaMap({
   sources,
   editMode,
   addValveMode,
+  addSourceMode,
   onMapClick,
   pipelineGeoJSON,
   pressureHistory = [],
@@ -414,8 +501,8 @@ export function ScadaMap({
         {/* Zoom control moved to bottom-right */}
         <ZoomControl position="bottomright" />
 
-        {/* Map click handler for "Add Valve" mode */}
-        <MapClickHandler active={addValveMode} onMapClick={onMapClick} />
+        {/* Map click handler for "Add Valve" / "Add Source" mode */}
+        <MapClickHandler active={addValveMode || Boolean(addSourceMode)} onMapClick={onMapClick} />
 
         {/* ── Layer Control: Updated Basemaps with Google Maps 2025 ── */}
         <LayersControl position="topright">
@@ -627,21 +714,12 @@ export function ScadaMap({
 
         {/* ── Water source markers ───────────────────────────────────── */}
         {visibleLayers.sources && sources.map((source) => (
-          <Marker
+          <SourceMarker
             key={`source-${source.id}`}
-            position={[source.lat, source.lng]}
-            icon={createSourceIcon()}
-          >
-            <Popup>
-              <div style={{ minWidth: 160 }} className="text-slate-800">
-                <h3 className="font-semibold text-blue-700">{source.name}</h3>
-                <p className="mt-1 text-sm text-slate-500">💧 Sumber Air PDAM</p>
-                <p className="text-xs text-slate-400 mt-1">
-                  {source.lat.toFixed(6)}, {source.lng.toFixed(6)}
-                </p>
-              </div>
-            </Popup>
-          </Marker>
+            source={source}
+            editMode={editMode}
+            queryClient={queryClient}
+          />
         ))}
 
         {/* ── Valve markers with mini chart popup ─────────────────────── */}

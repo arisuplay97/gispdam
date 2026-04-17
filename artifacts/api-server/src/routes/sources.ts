@@ -1,10 +1,13 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { db, sourcesTable } from "@workspace/db";
+import { db, sourcesTable, insertSourceSchema } from "@workspace/db";
+import { z } from "zod";
 import {
   CreateSourceBody,
   DeleteSourceParams,
 } from "@workspace/api-zod";
+
+const UpdateSourceBody = insertSourceSchema.partial();
 
 const router: IRouter = Router();
 
@@ -46,6 +49,33 @@ router.delete("/sources/:id", async (req, res): Promise<void> => {
   }
 
   res.sendStatus(204);
+});
+
+router.put("/sources/:id", async (req, res): Promise<void> => {
+  const params = DeleteSourceParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const parsed = UpdateSourceBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [source] = await db
+    .update(sourcesTable)
+    .set(parsed.data)
+    .where(eq(sourcesTable.id, params.data.id))
+    .returning();
+
+  if (!source) {
+    res.status(404).json({ error: "Source not found" });
+    return;
+  }
+
+  res.json(source);
 });
 
 export default router;

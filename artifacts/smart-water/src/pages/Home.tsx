@@ -27,6 +27,7 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState("");
   const [telemetryOpen, setTelemetryOpen] = useState(false);
   const [addValveMode, setAddValveMode] = useState(false);
+  const [addSourceMode, setAddSourceMode] = useState(false);
   const [selectedCoords, setSelectedCoords] = useState<SelectedCoords | null>(null);
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [showCustomerPanel, setShowCustomerPanel] = useState(false);
@@ -153,6 +154,8 @@ export default function Home() {
         pipes={safePipes}
         addValveMode={addValveMode}
         setAddValveMode={setAddValveMode}
+        addSourceMode={addSourceMode}
+        setAddSourceMode={setAddSourceMode}
         selectedCoords={selectedCoords}
         setSelectedCoords={setSelectedCoords}
         showHeatmap={showHeatmap}
@@ -173,6 +176,7 @@ export default function Home() {
             sources={Array.isArray(sources) ? sources : []}
             editMode={editMode}
             addValveMode={addValveMode}
+            addSourceMode={addSourceMode}
             onMapClick={handleMapClick}
             pipelineGeoJSON={pipelineGeoJSON}
             pressureHistory={Array.isArray(pressureHistory) ? pressureHistory : []}
