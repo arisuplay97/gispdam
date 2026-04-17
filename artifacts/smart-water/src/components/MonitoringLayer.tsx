@@ -155,6 +155,27 @@ function MonitoringModal({ point, initial, onSave, onClose, macroUrl }: ModalPro
     return data;
   });
 
+  const getInsightAnalysis = () => {
+    if (trendData.length < 2) return "Data tidak cukup untuk analisa historis.";
+    const today = trendData[trendData.length - 1];
+    const prev = trendData[trendData.length - 2];
+    
+    // Average pressure past 6 days
+    const avgTekanan = trendData.slice(0, 6).reduce((a, b) => a + Number(b.Tekanan), 0) / 6;
+
+    if (Number(today.Tekanan) < 0.5) {
+      return "⚠️ KRITIS: Tekanan darurat sangat lemah (< 0.5 Bar). Harap segera cek Valve utama atau kebocoran massif pipa.";
+    }
+    if (Number(today.Tekanan) < Number(prev.Tekanan) - 0.4 && Number(today.Tekanan) < avgTekanan * 0.7) {
+      return "⚠️ WASPADA: Terdeteksi tren penurunan tekanan yang curam kemarin ke hari ini. Cek indikasi hilangnya air (NRW).";
+    }
+    if (Number(today["Tinggi Air"]) < 80) {
+      return "⚠️ WASPADA: Cadangan volume Tinggi Air sangat tipis. Risiko sedot udara / kavitasi pompa bertekanan.";
+    }
+
+    return "✓ STABIL: Fluktuasi tekanan dan ketersediaan tinggi fluida air berada dalam batas normal sepanjang minggu.";
+  };
+
   // Form fields — keduanya (reservoir + makrometer) dalam satu sesi
   const [tinggiAir,  setTinggiAir]  = useState<string>(String(initial?.[sesi]?.tinggiAir  ?? ""));
   const [tekanan,    setTekanan]    = useState<string>(String(initial?.[sesi]?.tekanan    ?? ""));
@@ -268,7 +289,7 @@ function MonitoringModal({ point, initial, onSave, onClose, macroUrl }: ModalPro
         </div>
 
         {/* Form Content / Chart View */}
-        <div className="p-6 h-[120px] relative">
+        <div className="p-6 h-[175px] relative">
           {activeTab === "reservoir" && (
             <div className="absolute inset-0 p-6 space-y-5 animate-in slide-in-from-left-2 duration-300">
               <div>
@@ -298,8 +319,8 @@ function MonitoringModal({ point, initial, onSave, onClose, macroUrl }: ModalPro
             </div>
           )}
           {activeTab === "tren" && (
-            <div className="absolute inset-0 p-4 -ml-4 animate-in fade-in zoom-in-95 duration-500">
-              <ResponsiveContainer width="100%" height={110}>
+            <div className="absolute inset-0 p-4 -ml-2 -mt-1 animate-in fade-in zoom-in-95 duration-500 flex flex-col">
+              <ResponsiveContainer width="100%" height={105}>
                 <AreaChart data={trendData} margin={{ top: 5, right: 10, left: -25, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorTinggi" x1="0" y1="0" x2="0" y2="1">
@@ -323,6 +344,11 @@ function MonitoringModal({ point, initial, onSave, onClose, macroUrl }: ModalPro
                   <Area yAxisId="right" type="monotone" dataKey="Tekanan" stroke="#f59e0b" strokeWidth={2.5} fillOpacity={1} fill="url(#colorTekanan)" activeDot={{ r: 4, strokeWidth: 0, fill: '#f59e0b' }} />
                 </AreaChart>
               </ResponsiveContainer>
+              <div className="mt-2 bg-slate-50 border border-slate-100 rounded-lg p-2.5 mx-2 shadow-sm">
+                <p className="text-[10px] font-bold text-slate-800 leading-snug">
+                  {getInsightAnalysis()}
+                </p>
+              </div>
             </div>
           )}
         </div>
