@@ -517,7 +517,7 @@ export function ScadaMap({
             />
           </LayersControl.BaseLayer>
 
-          <LayersControl.BaseLayer checked name="🌍 Google Satellite">
+          <LayersControl.BaseLayer name="🌍 Google Satellite">
             <TileLayer
               url="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
               attribution='&copy; <a href="https://maps.google.com">Google Maps</a>'
@@ -548,7 +548,7 @@ export function ScadaMap({
             />
           </LayersControl.BaseLayer>
 
-          <LayersControl.BaseLayer name="✨ Clean Smooth Light">
+          <LayersControl.BaseLayer checked name="✨ Clean Smooth Light">
             <TileLayer
               url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
