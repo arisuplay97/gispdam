@@ -47,7 +47,17 @@ L.Icon.Default.mergeOptions({
 interface PipelineFeature {
   type: "Feature";
   geometry: { type: "LineString"; coordinates: [number, number][] };
-  properties: { id: string; name: string; targetValveId?: string; from_name?: string; to_name?: string };
+  properties: {
+    id: string;
+    dbId?: number;
+    name: string;
+    targetValveId?: string;
+    from_name?: string;
+    to_name?: string;
+    diameter_mm?: number | null;
+    material?: string | null;
+    topology?: string;
+  };
 }
 
 interface PipelineGeoJSON {
@@ -474,15 +484,44 @@ export function ScadaMap({
               }}
             >
               <Popup>
-                <div style={{ minWidth: 180 }} className="text-slate-800">
-                  <h3 className="font-semibold text-blue-700 text-sm">{feature.properties.name}</h3>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Dari: <strong>{feature.properties.from_name ?? "Reservoir"}</strong>
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    Ke: <strong>{feature.properties.to_name ?? "Valve"}</strong>
-                  </p>
-                  <p className="text-xs text-slate-400 mt-1">Topologi Radial • Animasi Aliran Aktif</p>
+                <div style={{ minWidth: 190 }} className="text-slate-800">
+                  <h3 className="font-semibold text-blue-700 text-sm mb-2">{feature.properties.name}</h3>
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[11px] mb-2">
+                    <span className="text-slate-500">Dari:</span>
+                    <span className="font-medium">{feature.properties.from_name ?? "Reservoir"}</span>
+                    <span className="text-slate-500">Ke:</span>
+                    <span className="font-medium">{feature.properties.to_name ?? "Valve"}</span>
+                    {feature.properties.diameter_mm && (
+                      <>
+                        <span className="text-slate-500">Diameter:</span>
+                        <span className="font-medium">{feature.properties.diameter_mm} mm</span>
+                      </>
+                    )}
+                    {feature.properties.material && (
+                      <>
+                        <span className="text-slate-500">Material:</span>
+                        <span className="font-medium">{feature.properties.material}</span>
+                      </>
+                    )}
+                  </div>
+                  {editMode && feature.properties.dbId && (
+                    <button
+                      className="mt-1 w-full rounded bg-red-600 py-1.5 text-xs font-medium text-white shadow hover:bg-red-700 transition"
+                      onClick={() => {
+                        deletePipe.mutate({ id: feature.properties.dbId! }, {
+                          onSuccess: () => {
+                            queryClient.invalidateQueries({ queryKey: getListPipesQueryKey() });
+                            queryClient.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() });
+                            queryClient.invalidateQueries({ queryKey: ["pipelines-geojson"] });
+                            toast.success("Pipa berhasil dihapus");
+                          },
+                          onError: () => toast.error("Gagal menghapus pipa"),
+                        });
+                      }}
+                    >
+                      🗑 Hapus Pipa
+                    </button>
+                  )}
                 </div>
               </Popup>
             </Polyline>

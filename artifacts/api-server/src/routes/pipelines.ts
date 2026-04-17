@@ -20,6 +20,7 @@ router.get("/pipelines/geojson", async (_req, res): Promise<void> => {
       },
       properties: {
         id: `PIPE-DB-${String(index + 1).padStart(2, "0")}`,
+        dbId: pipe.id,
         name: pipe.name,
         from_node: pipe.fromNode ?? undefined,
         from_name: pipe.fromNode ?? "Start",
