@@ -509,7 +509,7 @@ export function ScadaMap({
 
         {/* ── Layer Control: Updated Basemaps with Google Maps 2025 ── */}
         <LayersControl position="topright">
-          <LayersControl.BaseLayer checked name="🛰 Google Hybrid (2025)">
+          <LayersControl.BaseLayer name="🛰 Google Hybrid (2025)">
             <TileLayer
               url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
               attribution='&copy; <a href="https://maps.google.com">Google Maps</a> 2025'
@@ -517,7 +517,7 @@ export function ScadaMap({
             />
           </LayersControl.BaseLayer>
 
-          <LayersControl.BaseLayer name="🌍 Google Satellite">
+          <LayersControl.BaseLayer checked name="🌍 Google Satellite">
             <TileLayer
               url="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
               attribution='&copy; <a href="https://maps.google.com">Google Maps</a>'
