@@ -6,7 +6,8 @@
 import React, { useState } from "react";
 import { Marker, Tooltip } from "react-leaflet";
 import L from "leaflet";
-import { X, Send, Droplets, Gauge } from "lucide-react";
+import { X, Send, Droplets, Gauge, TrendingUp } from "lucide-react";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts";
 
 // ─── Tipe Data ──────────────────────────────────────────────────────────────
 export interface MonitoringPoint {
@@ -125,9 +126,34 @@ interface ModalProps {
 }
 
 function MonitoringModal({ point, initial, onSave, onClose, macroUrl }: ModalProps) {
-  const [activeTab, setActiveTab] = useState<"reservoir" | "makrometer">("reservoir");
+  const [activeTab, setActiveTab] = useState<"reservoir" | "makrometer" | "tren">("reservoir");
   const [sesi,      setSesi]      = useState<"pagi" | "sore">("pagi");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Generate 7-day dummy data for the premium trend chart
+  const [trendData] = useState(() => {
+    const data = [];
+    const now = new Date();
+    const baseTinggi = Number(initial?.sore?.tinggiAir) || Number(initial?.pagi?.tinggiAir) || 180;
+    const baseTekanan = Number(initial?.sore?.tekanan) || Number(initial?.pagi?.tekanan) || 2.1;
+
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(now.getDate() - i);
+      const dayName = d.toLocaleDateString("id-ID", { weekday: 'short' });
+      
+      const noise = Math.sin(i) * 1.5; 
+      const tnggi = Math.max(0, baseTinggi + (Math.random() * 30 - 15) + noise * 10);
+      const tknan = Math.max(0, baseTekanan + (Math.random() * 0.5 - 0.25) + noise * 0.2);
+      
+      data.push({
+        name: dayName,
+        "Tinggi Air": Number(tnggi.toFixed(1)),
+        "Tekanan": Number(tknan.toFixed(2)),
+      });
+    }
+    return data;
+  });
 
   // Form fields — keduanya (reservoir + makrometer) dalam satu sesi
   const [tinggiAir,  setTinggiAir]  = useState<string>(String(initial?.[sesi]?.tinggiAir  ?? ""));
@@ -220,15 +246,16 @@ function MonitoringModal({ point, initial, onSave, onClose, macroUrl }: ModalPro
         </div>
 
         {/* Tabs */}
-        <div className="px-6 flex gap-6 border-b border-slate-100">
+        <div className="px-6 flex gap-6 border-b border-slate-100 mt-2">
           {([
             { key: "reservoir",  label: "Reservoir",  Icon: Droplets },
             { key: "makrometer", label: "Makrometer", Icon: Gauge    },
+            { key: "tren",       label: "Tren Data",  Icon: TrendingUp },
           ] as const).map(({ key, label, Icon }) => (
             <button
               key={key}
               onClick={() => setActiveTab(key)}
-              className={`pb-3 text-xs font-semibold flex items-center gap-2 transition-colors relative ${
+              className={`pb-3 text-xs font-semibold flex items-center gap-1.5 transition-colors relative ${
                 activeTab === key ? "text-slate-900" : "text-slate-400 hover:text-slate-600"
               }`}
             >
@@ -240,10 +267,10 @@ function MonitoringModal({ point, initial, onSave, onClose, macroUrl }: ModalPro
           ))}
         </div>
 
-        {/* Form Content */}
-        <div className="p-6">
+        {/* Form Content / Chart View */}
+        <div className="p-6 h-[120px] relative">
           {activeTab === "reservoir" && (
-            <div className="space-y-5 animate-in slide-in-from-right-2 duration-300">
+            <div className="absolute inset-0 p-6 space-y-5 animate-in slide-in-from-left-2 duration-300">
               <div>
                 <label className={labelCls}>Tinggi Air (cm)</label>
                 <input
@@ -257,7 +284,7 @@ function MonitoringModal({ point, initial, onSave, onClose, macroUrl }: ModalPro
             </div>
           )}
           {activeTab === "makrometer" && (
-            <div className="space-y-5 animate-in slide-in-from-right-2 duration-300">
+            <div className="absolute inset-0 p-6 space-y-5 animate-in slide-in-from-right-2 duration-300">
               <div>
                 <label className={labelCls}>Tekanan (Bar)</label>
                 <input
@@ -270,46 +297,80 @@ function MonitoringModal({ point, initial, onSave, onClose, macroUrl }: ModalPro
               </div>
             </div>
           )}
+          {activeTab === "tren" && (
+            <div className="absolute inset-0 p-4 -ml-4 animate-in fade-in zoom-in-95 duration-500">
+              <ResponsiveContainer width="100%" height={110}>
+                <AreaChart data={trendData} margin={{ top: 5, right: 10, left: -25, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorTinggi" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorTekanan" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dy={5} />
+                  <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
+                  <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={false} />
+                  <RechartsTooltip 
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', fontSize: '12px', fontWeight: 600 }}
+                    cursor={{ stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4' }}
+                  />
+                  <Area yAxisId="left" type="monotone" dataKey="Tinggi Air" stroke="#0ea5e9" strokeWidth={2.5} fillOpacity={1} fill="url(#colorTinggi)" activeDot={{ r: 4, strokeWidth: 0, fill: '#0ea5e9' }} />
+                  <Area yAxisId="right" type="monotone" dataKey="Tekanan" stroke="#f59e0b" strokeWidth={2.5} fillOpacity={1} fill="url(#colorTekanan)" activeDot={{ r: 4, strokeWidth: 0, fill: '#f59e0b' }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
 
-        {/* Ringkasan */}
-        <div className="mx-6 mb-6 p-4 bg-slate-50 rounded-xl border border-slate-100/50">
-          <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase mb-3">
-            Ringkasan Sesi {sesi === "pagi" ? "Pagi" : "Sore"}
-          </p>
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex flex-col gap-1.5">
-              <span className="text-slate-500 font-medium">Tinggi Air</span>
-              <span className="font-semibold text-slate-900">{tinggiAir !== "" ? `${tinggiAir} cm` : "—"}</span>
+        {/* Ringkasan & Actions */}
+        {activeTab !== "tren" ? (
+          <>
+            <div className="mx-6 mb-6 p-4 bg-slate-50 rounded-xl border border-slate-100/50">
+              <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase mb-3">
+                Ringkasan Sesi {sesi === "pagi" ? "Pagi" : "Sore"}
+              </p>
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-slate-500 font-medium">Tinggi Air</span>
+                  <span className="font-semibold text-slate-900">{tinggiAir !== "" ? `${tinggiAir} cm` : "—"}</span>
+                </div>
+                <div className="h-6 w-px bg-slate-200" />
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-slate-500 font-medium">Tekanan</span>
+                  <span className="font-semibold text-slate-900">{tekanan !== "" ? `${tekanan} Bar` : "—"}</span>
+                </div>
+              </div>
             </div>
-            <div className="h-6 w-px bg-slate-200" />
-            <div className="flex flex-col gap-1.5">
-              <span className="text-slate-500 font-medium">Tekanan</span>
-              <span className="font-semibold text-slate-900">{tekanan !== "" ? `${tekanan} Bar` : "—"}</span>
+
+            <div className="px-6 pb-6 mt-2">
+              <button
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className={`w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${
+                  isSubmitting 
+                    ? "bg-slate-100 text-slate-400 cursor-wait" 
+                    : "bg-slate-900 text-white hover:bg-slate-800 hover:shadow-lg hover:shadow-slate-900/20 active:scale-[0.98]"
+                }`}
+              >
+                {isSubmitting ? <span>Menyimpan...</span> : <><Send size={15} /> Simpan Data</>}
+              </button>
             </div>
+          </>
+        ) : (
+          <div className="px-6 pb-6 pt-2">
+             <button
+                onClick={() => setActiveTab("reservoir")}
+                className="w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all bg-white border-2 border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98]"
+              >
+                Kembali ke Input Form
+             </button>
           </div>
-        </div>
-
-        {/* Footer */}
-        <div className="px-6 pb-6 mt-2">
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className={`w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${
-              isSubmitting 
-                ? "bg-slate-100 text-slate-400 cursor-wait" 
-                : "bg-slate-900 text-white hover:bg-slate-800 hover:shadow-lg hover:shadow-slate-900/20 active:scale-[0.98]"
-            }`}
-          >
-            {isSubmitting ? (
-              <span>Menyimpan...</span>
-            ) : (
-              <>
-                <Send size={15} /> Simpan Data
-              </>
-            )}
-          </button>
-        </div>
+        )}
 
       </div>
     </div>
