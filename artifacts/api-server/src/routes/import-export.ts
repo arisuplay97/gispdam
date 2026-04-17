@@ -18,8 +18,8 @@ router.post("/import-geojson", async (req, res): Promise<void> => {
     return;
   }
 
-  let valvesImported = 0;
-  let pipesImported = 0;
+  const valvesToInsert: any[] = [];
+  const pipesToInsert: any[] = [];
 
   const features = parsed.data.features as Array<{
     type: string;
@@ -27,17 +27,18 @@ router.post("/import-geojson", async (req, res): Promise<void> => {
     properties?: Record<string, unknown>;
   }>;
 
-  for (const feature of features) {
+  for (let i = 0; i < features.length; i++) {
+    const feature = features[i];
     if (!feature.geometry) continue;
 
     if (feature.geometry.type === "Point") {
       const coords = feature.geometry.coordinates as number[];
       const props = feature.properties || {};
       const pressure = typeof props.pressure === "number" ? props.pressure : 0;
-      const valveId = typeof props.id === "string" ? props.id : `V-IMP-${Date.now()}-${valvesImported}`;
-      const name = typeof props.name === "string" ? props.name : `Imported Valve ${valvesImported + 1}`;
+      const valveId = typeof props.id === "string" ? props.id : `V-IMP-${Date.now()}-${i}`;
+      const name = typeof props.name === "string" ? props.name : `Imported Valve ${i + 1}`;
 
-      await db.insert(valvesTable).values({
+      valvesToInsert.push({
         valveId,
         name,
         lng: coords[0],
@@ -45,17 +46,16 @@ router.post("/import-geojson", async (req, res): Promise<void> => {
         pressure,
         status: getStatus(pressure),
       });
-      valvesImported++;
     } else if (feature.geometry.type === "LineString") {
       const coords = feature.geometry.coordinates as number[][];
       const props = feature.properties || {};
-      const name = typeof props.name === "string" ? props.name : `Imported Pipe ${pipesImported + 1}`;
+      const name = typeof props.name === "string" ? props.name : `Imported Pipe ${i + 1}`;
       const diameter = typeof props.diameter === "number" ? props.diameter : undefined;
       const material = typeof props.material === "string" ? props.material : undefined;
       const fromNode = typeof props.from_node === "string" ? props.from_node : undefined;
       const toNode = typeof props.to_node === "string" ? props.to_node : undefined;
 
-      await db.insert(pipesTable).values({
+      pipesToInsert.push({
         name,
         diameter,
         material,
@@ -63,9 +63,25 @@ router.post("/import-geojson", async (req, res): Promise<void> => {
         toNode,
         coordinates: coords,
       });
-      pipesImported++;
     }
   }
+
+  const CHUNK_SIZE = 500;
+  
+  if (valvesToInsert.length > 0) {
+    for (let i = 0; i < valvesToInsert.length; i += CHUNK_SIZE) {
+      await db.insert(valvesTable).values(valvesToInsert.slice(i, i + CHUNK_SIZE));
+    }
+  }
+
+  if (pipesToInsert.length > 0) {
+    for (let i = 0; i < pipesToInsert.length; i += CHUNK_SIZE) {
+      await db.insert(pipesTable).values(pipesToInsert.slice(i, i + CHUNK_SIZE));
+    }
+  }
+
+  const valvesImported = valvesToInsert.length;
+  const pipesImported = pipesToInsert.length;
 
   res.json({
     success: true,
