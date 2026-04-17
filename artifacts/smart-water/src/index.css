@@ -158,22 +158,31 @@
 }
 
 /* ───────────────────────────────────────────
-   Pipeline Flow Animation
-   Applies to the SVG <path> element via pathOptions.className
+   Pipeline Flow Animation - PIPA UTAMA (solid flowing)
 ─────────────────────────────────────────── */
 .pipeline-animated {
-  stroke-dasharray: 12, 12 !important;
-  animation: pipelineFlow 1s linear infinite !important;
-  stroke-linecap: round !important;
+  stroke-dasharray: 14, 7;
+  animation: pipelineFlow 1.2s linear infinite;
+  stroke-linecap: round;
 }
 
 @keyframes pipelineFlow {
-  from {
-    stroke-dashoffset: 24;
-  }
-  to {
-    stroke-dashoffset: 0;
-  }
+  from { stroke-dashoffset: 21; }
+  to   { stroke-dashoffset: 0;  }
+}
+
+/* ───────────────────────────────────────────
+   Pipe DB Flow Animation - PIPA TAMBAHAN (dashed flowing)
+─────────────────────────────────────────── */
+.pipe-db-animated {
+  stroke-dasharray: 10, 10;
+  animation: pipeDbFlow 0.9s linear infinite;
+  stroke-linecap: butt;
+}
+
+@keyframes pipeDbFlow {
+  from { stroke-dashoffset: 20; }
+  to   { stroke-dashoffset: 0;  }
 }
 
 /* ───────────────────────────────────────────
