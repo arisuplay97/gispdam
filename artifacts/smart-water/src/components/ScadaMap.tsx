@@ -458,18 +458,10 @@ export function ScadaMap({
             />
           </LayersControl.BaseLayer>
 
-          <LayersControl.BaseLayer name="✨ Alidade Smooth (Stadia)">
+          <LayersControl.BaseLayer name="✨ Clean Smooth Light">
             <TileLayer
-              url="https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png"
-              attribution='&copy; <a href="https://stamen.com">Stamen Design</a> &copy; <a href="https://stadiamaps.com">Stadia Maps</a> &copy; <a href="https://openmaptiles.org">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              maxZoom={20}
-            />
-          </LayersControl.BaseLayer>
-
-          <LayersControl.BaseLayer name="🌑 Alidade Smooth Dark (Stadia)">
-            <TileLayer
-              url="https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
-              attribution='&copy; <a href="https://stadiamaps.com">Stadia Maps</a> &copy; <a href="https://openmaptiles.org">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+              url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
               maxZoom={20}
             />
           </LayersControl.BaseLayer>
