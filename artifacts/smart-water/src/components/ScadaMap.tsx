@@ -44,6 +44,18 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
+// ─── Module-level icon factories (must be outside components to be reusable) ───
+const createSourceIcon = () =>
+  L.divIcon({
+    className: "bg-transparent",
+    html: `<div style="position:relative;width:26px;height:26px">
+      <div style="position:absolute;inset:0;background:#1d4ed8;border:3px solid white;box-shadow:0 0 14px rgba(29,78,216,0.8),0 0 0 5px rgba(29,78,216,0.18);border-radius:50% 50% 0 50%;transform:rotate(45deg);"></div>
+      <div style="position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(29,78,216,0.4);animation:sourceRipple 1.8s ease-out infinite;"></div>
+    </div>`,
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
+  });
+
 function SourceMarker({ source, editMode, queryClient }: { source: WaterSource, editMode: boolean, queryClient: any }) {
   const [formName, setFormName] = useState(source.name);
   const updateSource = useUpdateSource();
@@ -443,16 +455,7 @@ export function ScadaMap({
     });
   };
 
-  const createSourceIcon = () =>
-    L.divIcon({
-      className: "bg-transparent",
-      html: `<div style="position:relative;width:26px;height:26px">
-        <div style="position:absolute;inset:0;background:#1d4ed8;border:3px solid white;box-shadow:0 0 14px rgba(29,78,216,0.8),0 0 0 5px rgba(29,78,216,0.18);border-radius:50% 50% 0 50%;transform:rotate(45deg);"></div>
-        <div style="position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(29,78,216,0.4);animation:sourceRipple 1.8s ease-out infinite;"></div>
-      </div>`,
-      iconSize: [26, 26],
-      iconAnchor: [13, 13],
-    });
+  // createSourceIcon is now at module level above
 
   // ── Leaflet-draw created handler ───────────────────────────────────────
   const onCreated = (e: any) => {
