@@ -12,7 +12,7 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Maximize, Minimize } from "lucide-react";
 import { EditControl } from "react-leaflet-draw";
 import "leaflet-draw/dist/leaflet.draw.css";
 import { LineChart, Line, Tooltip as RechartsTooltip, YAxis } from "recharts";
@@ -404,6 +404,28 @@ export function ScadaMap({
   // Hover layer highlight state
   const [hoveredLegendLayer, setHoveredLegendLayer] = React.useState<string | null>(null);
   const [showLegend, setShowLegend] = React.useState(true);
+  const [isFullscreen, setIsFullscreen] = React.useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Monitor fullscreen change (esc key, etc)
+  React.useEffect(() => {
+    const handler = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handler);
+    return () => document.removeEventListener("fullscreenchange", handler);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!containerRef.current) return;
+    if (!document.fullscreenElement) {
+      containerRef.current.requestFullscreen().catch((err) => {
+        toast.error(`Error entering fullscreen: ${err.message}`);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  };
 
   const handleUpdatePressure = (id: number, delta: number) => {
     const valve = valves.find((v) => v.id === id);
@@ -494,7 +516,10 @@ export function ScadaMap({
   };
 
   return (
-    <div className={`relative h-full w-full${addValveMode ? " map-add-valve-mode" : ""}`}>
+    <div
+      ref={containerRef}
+      className={`relative h-full w-full bg-white${addValveMode ? " map-add-valve-mode" : ""}${isFullscreen ? " is-fullscreen" : ""}`}
+    >
       <MapContainer
         center={[-8.655, 116.315]}
         zoom={14}
@@ -503,6 +528,21 @@ export function ScadaMap({
       >
         {/* Zoom control moved to bottom-right */}
         <ZoomControl position="bottomright" />
+
+        {/* ── Custom Control: Fullscreen Button ──────────────────────── */}
+        <div className="absolute bottom-[90px] right-2.5 z-[1000] flex flex-col gap-2">
+          <button
+            onClick={toggleFullscreen}
+            title={isFullscreen ? "Keluar Fullscreen" : "Layar Penuh"}
+            className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white shadow-md hover:bg-slate-50 transition-all hover:scale-105 active:scale-95"
+          >
+            {isFullscreen ? (
+              <Minimize className="h-5 w-5 text-slate-700" />
+            ) : (
+              <Maximize className="h-5 w-5 text-slate-700" />
+            )}
+          </button>
+        </div>
 
         {/* Map click handler for "Add Valve" / "Add Source" mode */}
         <MapClickHandler active={addValveMode || Boolean(addSourceMode)} onMapClick={onMapClick} />
