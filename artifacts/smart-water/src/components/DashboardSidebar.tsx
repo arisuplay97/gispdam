@@ -372,6 +372,24 @@ export function DashboardSidebar({
 
       <div className="flex-1 space-y-7 p-5">
 
+        {/* ── Dashboard Direksi Link ──────────────────────────────── */}
+        <a
+          href="/dashboard"
+          className="flex items-center gap-3 w-full rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 text-sm font-semibold text-blue-700 shadow-sm hover:from-blue-100 hover:to-indigo-100 hover:shadow-md transition-all group"
+        >
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 shadow-sm group-hover:scale-105 transition-transform">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
+            </svg>
+          </div>
+          <div>
+            <span className="block text-sm font-bold">Dashboard Direksi</span>
+            <span className="block text-[10px] font-medium text-blue-500">Monitoring, Laporan & Export</span>
+          </div>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-auto opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </a>
         {/* ── Search ─────────────────────────────────────────────── */}
         <section>
           <h2 className="mb-3 text-sm font-semibold text-slate-700">Cari Data Jaringan</h2>
