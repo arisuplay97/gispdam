@@ -119,21 +119,15 @@ export default function Home() {
     return () => clearInterval(timer);
   }, []);
 
-  // 6 AM Daily Reset for Monitoring Data
+  // Auto-update date for monitoring (used as reference for manual date display)
   useEffect(() => {
     const d = new Date(currentTime);
-    if (d.getHours() < 6) {
-      d.setDate(d.getDate() - 1);
-    }
-    // Convert to local YYYY-MM-DD
     const offset = d.getTimezoneOffset() * 60000;
     const currentMonitoringDay = new Date(d.getTime() - offset).toISOString().split("T")[0];
-
     if (monitoringDate !== currentMonitoringDay) {
-      setMonitoringData({});
       setMonitoringDate(currentMonitoringDay);
     }
-  }, [currentTime, monitoringDate, setMonitoringData, setMonitoringDate]);
+  }, [currentTime, monitoringDate, setMonitoringDate]);
 
   // Data queries
   const { data: valves } = useListValves();
