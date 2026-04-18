@@ -265,7 +265,7 @@ export default function Home() {
           {statusCounts.warning > 0 && (
             <span className="flex items-center gap-1 text-amber-300">
               <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-              {statusCounts.warning}
+              {statusCounts.warning} Waspada
             </span>
           )}
           {statusCounts.critical > 0 && (
