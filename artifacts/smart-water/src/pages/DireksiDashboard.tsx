@@ -27,14 +27,6 @@ interface PointStatus {
   tekanan?: number;
 }
 
-interface PetugasRow {
-  nama: string;
-  titik: string;
-  inputPagi: boolean;
-  inputSore: boolean;
-  kepatuhan: number;
-}
-
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const HARI = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 
@@ -199,38 +191,9 @@ function getPointStatuses(
   });
 }
 
-// ─── Petugas dummy (in real app, fetch from backend) ─────────────────────────
-const PETUGAS_LIST = [
-  { nama: "Ahmad Fauzi", titikIds: ["MON-01", "MON-02"] },
-  { nama: "Budi Santosa", titikIds: ["MON-03"] },
-  { nama: "Cahya Pratama", titikIds: ["MON-04", "MON-05"] },
-];
-
-function getPetugasData(monitoringData: Record<string, MonitoringData>): PetugasRow[] {
-  const rows: PetugasRow[] = [];
-  PETUGAS_LIST.forEach((p) => {
-    p.titikIds.forEach((tid) => {
-      const pt = MONITORING_POINTS.find((m) => m.id === tid);
-      const d = monitoringData[tid];
-      const hasPagi = d?.pagi?.tinggiAir != null || d?.pagi?.tekanan != null;
-      const hasSore = d?.sore?.tinggiAir != null || d?.sore?.tekanan != null;
-      const total = (hasPagi ? 1 : 0) + (hasSore ? 1 : 0);
-      rows.push({
-        nama: p.nama,
-        titik: pt?.name ?? tid,
-        inputPagi: hasPagi,
-        inputSore: hasSore,
-        kepatuhan: Math.round((total / 2) * 100),
-      });
-    });
-  });
-  return rows;
-}
-
 // ─── PDF Export ──────────────────────────────────────────────────────────────
 async function exportPDF(
   statuses: PointStatus[],
-  petugasData: PetugasRow[],
 ) {
   // Use browser print as PDF — simple, reliable, no external lib
   const printWindow = window.open("", "_blank");
@@ -244,10 +207,6 @@ async function exportPDF(
   const warningCount = statuses.filter((s) => s.status === "warning").length;
   const criticalCount = statuses.filter((s) => s.status === "critical").length;
   const emptyCount = statuses.filter((s) => s.status === "empty").length;
-
-  const avgKepatuhan = petugasData.length > 0
-    ? Math.round(petugasData.reduce((a, b) => a + b.kepatuhan, 0) / petugasData.length)
-    : 0;
 
   printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
     <title>Laporan Harian - PDAM TIARA</title>
@@ -315,21 +274,6 @@ async function exportPDF(
       `).join("")}
     </table>`}
 
-    <h2>👥 Kepatuhan Input Petugas</h2>
-    <table>
-      <tr><th>Petugas</th><th>Titik</th><th>Pagi</th><th>Sore</th><th>Kepatuhan</th></tr>
-      ${petugasData.map((p) => `
-        <tr>
-          <td>${p.nama}</td>
-          <td>${p.titik}</td>
-          <td>${p.inputPagi ? "✅" : "❌"}</td>
-          <td>${p.inputSore ? "✅" : "❌"}</td>
-          <td><span class="badge ${p.kepatuhan >= 80 ? "badge-normal" : p.kepatuhan >= 50 ? "badge-warning" : "badge-critical"}">${p.kepatuhan}%</span></td>
-        </tr>
-      `).join("")}
-    </table>
-    <p style="margin-top:8px;color:#64748b;">Rata-rata Kepatuhan: <strong>${avgKepatuhan}%</strong></p>
-
     <div class="footer">
       Dokumen ini di-generate secara otomatis oleh Tiara Manajemen Distribusi &bull; ${dateStr}
     </div>
@@ -345,22 +289,16 @@ export default function DireksiDashboard() {
   const [monitoringData] = useLocalStorage<Record<string, MonitoringData>>("gis-monitoring-data", {});
   const [expandedChart, setExpandedChart] = useState(true);
   const [expandedProblems, setExpandedProblems] = useState(true);
-  const [expandedCompliance, setExpandedCompliance] = useState(true);
 
   const weeklyRaw = useMemo(() => generateWeeklyData(monitoringData), [monitoringData]);
   const { data: chartData, tReg, pReg } = useMemo(() => addPredictions(weeklyRaw), [weeklyRaw]);
   const statuses = useMemo(() => getPointStatuses(monitoringData), [monitoringData]);
-  const petugasData = useMemo(() => getPetugasData(monitoringData), [monitoringData]);
 
   const problemPoints = statuses.filter((s) => s.status === "warning" || s.status === "critical");
   const normalCount = statuses.filter((s) => s.status === "normal").length;
   const warningCount = statuses.filter((s) => s.status === "warning").length;
   const criticalCount = statuses.filter((s) => s.status === "critical").length;
   const emptyCount = statuses.filter((s) => s.status === "empty").length;
-
-  const avgKepatuhan = petugasData.length > 0
-    ? Math.round(petugasData.reduce((a, b) => a + b.kepatuhan, 0) / petugasData.length)
-    : 0;
 
   // Estimate when prediction hits critical
   const estimateKritis = useMemo(() => {
@@ -413,7 +351,7 @@ export default function DireksiDashboard() {
                 <span>{dateStr}</span>
               </div>
               <button
-                onClick={() => exportPDF(statuses, petugasData)}
+                onClick={() => exportPDF(statuses)}
                 className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-blue-700 transition-all active:scale-95"
               >
                 <FileDown className="h-4 w-4" />
@@ -426,7 +364,7 @@ export default function DireksiDashboard() {
         <div className="p-4 sm:p-6 space-y-6 max-w-[1400px] mx-auto">
 
           {/* ── Summary Cards ──────────────────────────────────────────── */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <div className="rounded-xl border border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                 <Shield className="h-4 w-4 text-green-600" />
@@ -450,14 +388,6 @@ export default function DireksiDashboard() {
               </div>
               <p className={`text-3xl font-bold text-red-700 ${criticalCount > 0 ? "animate-pulse" : ""}`}>{criticalCount}</p>
               <p className="text-[11px] text-red-600/70 mt-1">Tindakan segera</p>
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-gray-50 p-4 shadow-sm">
-              <div className="flex items-center gap-2 mb-2">
-                <Users className="h-4 w-4 text-slate-500" />
-                <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Kepatuhan</span>
-              </div>
-              <p className={`text-3xl font-bold ${avgKepatuhan >= 80 ? "text-green-700" : avgKepatuhan >= 50 ? "text-amber-700" : "text-red-700"}`}>{avgKepatuhan}%</p>
-              <p className="text-[11px] text-slate-500 mt-1">Input petugas hari ini</p>
             </div>
           </div>
 
@@ -607,82 +537,7 @@ export default function DireksiDashboard() {
             )}
           </section>
 
-          {/* ── 3. Kepatuhan Input Petugas ─────────────────────────────── */}
-          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-            <button
-              onClick={() => setExpandedCompliance(!expandedCompliance)}
-              className="w-full flex items-center justify-between px-6 py-4 hover:bg-slate-50 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-100">
-                  <Users className="h-5 w-5 text-indigo-600" />
-                </div>
-                <div className="text-left">
-                  <h2 className="text-sm font-bold text-slate-800">Kepatuhan Input Petugas</h2>
-                  <p className="text-[11px] text-slate-500">Monitoring kepatuhan input harian petugas lapangan</p>
-                </div>
-              </div>
-              {expandedCompliance ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
-            </button>
 
-            {expandedCompliance && (
-              <div className="px-4 sm:px-6 pb-6">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b-2 border-slate-200">
-                        <th className="text-left py-2 px-3 text-xs font-bold text-slate-500 uppercase tracking-wide">Nama Petugas</th>
-                        <th className="text-left py-2 px-3 text-xs font-bold text-slate-500 uppercase tracking-wide">Titik</th>
-                        <th className="text-center py-2 px-3 text-xs font-bold text-slate-500 uppercase tracking-wide">Pagi</th>
-                        <th className="text-center py-2 px-3 text-xs font-bold text-slate-500 uppercase tracking-wide">Sore</th>
-                        <th className="text-center py-2 px-3 text-xs font-bold text-slate-500 uppercase tracking-wide">Kepatuhan</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {petugasData.map((row, i) => (
-                        <tr key={i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                          <td className="py-2.5 px-3 font-semibold text-slate-800">{row.nama}</td>
-                          <td className="py-2.5 px-3 text-slate-600">{row.titik}</td>
-                          <td className="py-2.5 px-3 text-center">
-                            {row.inputPagi ? (
-                              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-green-700 text-xs">✓</span>
-                            ) : (
-                              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-100 text-red-600 text-xs">✗</span>
-                            )}
-                          </td>
-                          <td className="py-2.5 px-3 text-center">
-                            {row.inputSore ? (
-                              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-green-700 text-xs">✓</span>
-                            ) : (
-                              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-100 text-red-600 text-xs">✗</span>
-                            )}
-                          </td>
-                          <td className="py-2.5 px-3 text-center">
-                            <span className={`inline-flex items-center rounded-full px-3 py-0.5 text-xs font-bold ${
-                              row.kepatuhan >= 80 ? "bg-green-100 text-green-700" :
-                              row.kepatuhan >= 50 ? "bg-amber-100 text-amber-700" :
-                              "bg-red-100 text-red-700"
-                            }`}>
-                              {row.kepatuhan}%
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="mt-4 flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3 border border-slate-200">
-                  <span className="text-xs font-semibold text-slate-600">Rata-rata Kepatuhan Minggu Ini</span>
-                  <span className={`text-lg font-bold ${
-                    avgKepatuhan >= 80 ? "text-green-700" : avgKepatuhan >= 50 ? "text-amber-700" : "text-red-700"
-                  }`}>
-                    {avgKepatuhan}%
-                  </span>
-                </div>
-              </div>
-            )}
-          </section>
 
           {/* Footer */}
           <div className="text-center pb-8">
