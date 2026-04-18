@@ -334,7 +334,7 @@ export function DashboardSidebar({
           <PanelLeftOpen className="h-5 w-5 text-slate-700" />
         </Button>
         <div className="mt-5 flex h-10 w-10 items-center justify-center">
-          <img src="/logo.png" alt="Tiara GIS" className="h-10 w-10 object-contain" />
+          <img src="/logo.png" alt="Tiara Manajemen Distribusi" className="h-10 w-10 object-contain" />
         </div>
         <div className="mt-6 flex flex-col gap-4 text-slate-500">
           <Activity className="h-5 w-5" />
@@ -352,9 +352,9 @@ export function DashboardSidebar({
       <div className="border-b border-slate-200 bg-white p-5">
         <div className="mb-2 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="Tiara GIS" className="h-10 w-10 object-contain" />
+            <img src="/logo.png" alt="Tiara Manajemen Distribusi" className="h-10 w-10 object-contain" />
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-slate-900">Tiara GIS</h1>
+              <h1 className="text-xl font-bold tracking-tight text-slate-900">Tiara Manajemen Distribusi</h1>
               <p className="text-[11px] font-medium uppercase tracking-wider text-slate-500">
                 Sistem Informasi Layanan Distribusi
               </p>

@@ -32,9 +32,9 @@ export class ErrorBoundary extends Component<Props, State> {
           </div>
           <div className="text-center">
             <h1 className="text-2xl font-bold text-white mb-2">
-              Tiara smart Gis
+              Tiara Manajemen Distribusi
             </h1>
-            <p className="text-slate-400 text-sm mb-1">TIARA GIS · SPAM Aiq Bone</p>
+            <p className="text-slate-400 text-sm mb-1">TIARA MANAJEMEN DISTRIBUSI · SPAM Aiq Bone</p>
             <p className="mt-4 text-red-400 text-sm font-mono bg-red-900/30 px-4 py-2 rounded-lg max-w-md">
               {this.state.error?.message ?? "Terjadi kesalahan yang tidak terduga."}
             </p>
