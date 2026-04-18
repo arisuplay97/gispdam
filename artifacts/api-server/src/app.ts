@@ -3,8 +3,33 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { db } from "@workspace/db";
+import { sql } from "drizzle-orm";
 
 const app: Express = express();
+
+// Auto-create monitoring_data table if it doesn't exist (safe for cold starts)
+async function ensureMonitoringTable() {
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS monitoring_data (
+        id SERIAL PRIMARY KEY,
+        point_id TEXT NOT NULL,
+        session TEXT NOT NULL,
+        date DATE NOT NULL,
+        tinggi_air DOUBLE PRECISION,
+        tekanan DOUBLE PRECISION,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    logger.info("monitoring_data table ready");
+  } catch (err) {
+    logger.warn({ err }, "Could not ensure monitoring_data table");
+  }
+}
+
+ensureMonitoringTable();
 
 app.use(
   pinoHttp({
@@ -32,3 +57,4 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api", router);
 
 export default app;
+
