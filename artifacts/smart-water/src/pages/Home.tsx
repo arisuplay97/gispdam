@@ -8,7 +8,10 @@ import {
   useListSources,
   useGetDashboardStats,
   useGetPressureHistory,
+  useGetMonitoringData,
+  useAddMonitoringData,
 } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { ScadaMap } from "@/components/ScadaMap";
@@ -42,17 +45,60 @@ export default function Home() {
   const [pipeWeight, setPipeWeight] = useLocalStorage<number>("gis-db-pipe-weight", 3);
   const [pipeColor, setPipeColor] = useLocalStorage<string>("gis-db-pipe-color", "#a855f7");
 
-  const [monitoringData, setMonitoringData] = useLocalStorage<Record<string, MonitoringData>>(
-    "gis-monitoring-data",
-    {}
-  );
-  const [monitoringDate, setMonitoringDate] = useLocalStorage<string>("gis-monitoring-date", "");
+  const queryClient = useQueryClient();
+  const { data: rawMonitoringData } = useGetMonitoringData();
+  const { mutateAsync: addMonitoringData } = useAddMonitoringData();
 
+  const [monitoringDate, setMonitoringDate] = useLocalStorage<string>("gis-monitoring-date", "");
   const [macroUrl, setMacroUrl] = useLocalStorage<string>("gis-macro-url", "");
   const [spreadsheetUrl, setSpreadsheetUrl] = useLocalStorage<string>("gis-spreadsheet-url", "https://docs.google.com/spreadsheets/d/1BKrBd0DaX5pohahUeUxsiTptFyYA9XXaKFqWLX2FKHE/");
 
-  const handleMonitoringSave = (id: string, data: MonitoringData) => {
-    setMonitoringData((prev) => ({ ...prev, [id]: data }));
+  const todayDateStr = new Date().toISOString().split("T")[0];
+  const monitoringData: Record<string, MonitoringData> = {};
+  
+  if (rawMonitoringData) {
+    rawMonitoringData.forEach((row) => {
+      const rowDateStr = new Date(row.date).toISOString().split("T")[0];
+      if (rowDateStr === todayDateStr) {
+        if (!monitoringData[row.pointId]) {
+          monitoringData[row.pointId] = {};
+        }
+        monitoringData[row.pointId][row.session] = {
+          tinggiAir: row.tinggiAir ?? undefined,
+          tekanan: row.tekanan ?? undefined,
+        };
+      }
+    });
+  }
+
+  const handleMonitoringSave = async (id: string, data: MonitoringData) => {
+    try {
+      if (data.pagi && (data.pagi.tinggiAir != null || data.pagi.tekanan != null)) {
+        await addMonitoringData({
+          data: {
+            pointId: id,
+            session: "pagi",
+            date: todayDateStr,
+            tinggiAir: data.pagi.tinggiAir,
+            tekanan: data.pagi.tekanan,
+          }
+        });
+      }
+      if (data.sore && (data.sore.tinggiAir != null || data.sore.tekanan != null)) {
+        await addMonitoringData({
+          data: {
+            pointId: id,
+            session: "sore",
+            date: todayDateStr,
+            tinggiAir: data.sore.tinggiAir,
+            tekanan: data.sore.tekanan,
+          }
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ['getMonitoringData'] });
+    } catch (e) {
+      console.error("Failed to save monitoring data", e);
+    }
   };
 
   const [visibleLayers, setVisibleLayers] = useState({

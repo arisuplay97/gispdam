@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { MONITORING_POINTS, type MonitoringData, type MonitoringPoint } from "@/components/MonitoringLayer";
+import { useGetMonitoringData } from "@workspace/api-client-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface PointStatus {
@@ -286,7 +287,25 @@ async function exportPDF(
 // ─── Main Component ─────────────────────────────────────────────────────────
 export default function DireksiDashboard() {
   const [, navigate] = useLocation();
-  const [monitoringData] = useLocalStorage<Record<string, MonitoringData>>("gis-monitoring-data", {});
+  const { data: rawMonitoringData } = useGetMonitoringData();
+  
+  const monitoringData = useMemo(() => {
+    const todayDateStr = new Date().toISOString().split("T")[0];
+    const data: Record<string, MonitoringData> = {};
+    if (rawMonitoringData) {
+      rawMonitoringData.forEach((row) => {
+        const rowDateStr = new Date(row.date).toISOString().split("T")[0];
+        if (rowDateStr === todayDateStr) {
+          if (!data[row.pointId]) data[row.pointId] = {};
+          data[row.pointId][row.session] = {
+            tinggiAir: row.tinggiAir ?? undefined,
+            tekanan: row.tekanan ?? undefined,
+          };
+        }
+      });
+    }
+    return data;
+  }, [rawMonitoringData]);
   const [expandedChart, setExpandedChart] = useState(true);
   const [expandedProblems, setExpandedProblems] = useState(true);
 

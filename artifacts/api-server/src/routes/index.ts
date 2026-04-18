@@ -7,6 +7,7 @@ import sourcesRouter from "./sources";
 import importExportRouter from "./import-export";
 import telemetryRouter from "./telemetry";
 import dashboardRouter from "./dashboard";
+import monitoringRouter from "./monitoring";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(sourcesRouter);
 router.use(importExportRouter);
 router.use(telemetryRouter);
 router.use(dashboardRouter);
+router.use(monitoringRouter);
 
 export default router;

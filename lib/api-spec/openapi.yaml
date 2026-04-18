@@ -22,6 +22,8 @@ tags:
     description: GIS data import/export
   - name: telemetry
     description: Live telemetry data
+  - name: monitoring
+    description: Manual daily monitoring endpoints
   - name: dashboard
     description: Dashboard statistics
 
@@ -336,6 +338,43 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TelemetryResponse"
+
+  /monitoring:
+    get:
+      operationId: getMonitoringData
+      tags: [monitoring]
+      summary: Get all monitoring data
+      responses:
+        "200":
+          description: List of monitoring data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MonitoringDataRecord"
+    post:
+      operationId: addMonitoringData
+      tags: [monitoring]
+      summary: Add or update monitoring data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMonitoringBody"
+      responses:
+        "200":
+          description: Monitoring data saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: "#/components/schemas/MonitoringDataRecord"
 
   /dashboard/stats:
     get:
@@ -692,3 +731,55 @@ components:
         - name
         - pressure
         - timestamp
+
+    MonitoringDataRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+        pointId:
+          type: string
+        session:
+          type: string
+          enum: [pagi, sore]
+        date:
+          type: string
+          format: date
+        tinggiAir:
+          type: number
+          nullable: true
+        tekanan:
+          type: number
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - pointId
+        - session
+        - date
+        
+    CreateMonitoringBody:
+      type: object
+      properties:
+        pointId:
+          type: string
+        session:
+          type: string
+          enum: [pagi, sore]
+        date:
+          type: string
+        tinggiAir:
+          type: number
+          nullable: true
+        tekanan:
+          type: number
+          nullable: true
+      required:
+        - pointId
+        - session
+        - date
