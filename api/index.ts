@@ -11,12 +11,13 @@ import {
   serial,
   doublePrecision,
   timestamp,
+  date,
   jsonb,
   integer,
   uuid,
   customType,
 } from "drizzle-orm/pg-core";
-import { eq, count, avg, desc, sql } from "drizzle-orm";
+import { eq, count, avg, desc, sql, and } from "drizzle-orm";
 
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL is not set");
@@ -78,6 +79,17 @@ const pressureHistoryTable = pgTable("pressure_history", {
   timestamp: timestamp("timestamp", { withTimezone: true }).notNull().defaultNow(),
 });
 
+const monitoringDataTable = pgTable("monitoring_data", {
+  id: serial("id").primaryKey(),
+  pointId: text("point_id").notNull(),
+  session: text("session").notNull(),
+  date: date("date").notNull(),
+  tinggiAir: doublePrecision("tinggi_air"),
+  tekanan: doublePrecision("tekanan"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // PostGIS Geometry custom type
 const geometryPoint = customType<{ data: string; driverData: string }>({
   dataType() {
@@ -108,7 +120,7 @@ app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-// ─── Auto-init customers table ──────────────────────────────────────────────
+// ─── Auto-init customers + monitoring tables ────────────────────────────────
 (async () => {
   try {
     await db.execute(sql`CREATE EXTENSION IF NOT EXISTS postgis;`);
@@ -126,6 +138,19 @@ app.use(express.urlencoded({ limit: "50mb", extended: true }));
       );
     `);
     await db.execute(sql`ALTER TABLE customers ADD COLUMN IF NOT EXISTS piutang DOUBLE PRECISION DEFAULT 0;`);
+    // Auto-create monitoring_data table
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS monitoring_data (
+        id SERIAL PRIMARY KEY,
+        point_id TEXT NOT NULL,
+        session TEXT NOT NULL,
+        date DATE NOT NULL,
+        tinggi_air DOUBLE PRECISION,
+        tekanan DOUBLE PRECISION,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
     // Seed pelanggan dummy jika kosong
     const custRes = await db.execute(sql`SELECT count(*) as c FROM customers`);
     if (Number((custRes.rows[0] as any).c) === 0) {
@@ -305,6 +330,49 @@ app.get("/api/dashboard/stats", async (_req: any, res: any) => {
       avgPressure: Number(valveStats.avg) || 0,
       normalCount, warningCount, criticalCount,
     });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── Monitoring Data ──────────────────────────────────────────────────────────
+app.get("/api/monitoring", async (_req: any, res: any) => {
+  try {
+    const data = await db.select().from(monitoringDataTable).orderBy(monitoringDataTable.date);
+    res.json(data);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/monitoring", async (req: any, res: any) => {
+  try {
+    const { pointId, session, date: dateStr, tinggiAir, tekanan } = req.body;
+    if (!pointId || !session || !dateStr) {
+      return res.status(400).json({ error: "pointId, session, dan date wajib diisi" });
+    }
+    // Upsert: update jika sudah ada, insert jika belum
+    const existing = await db.select().from(monitoringDataTable).where(
+      and(
+        eq(monitoringDataTable.pointId, pointId),
+        eq(monitoringDataTable.session, session),
+        eq(monitoringDataTable.date, dateStr),
+      )
+    );
+    let result;
+    if (existing.length > 0) {
+      const [updated] = await db.update(monitoringDataTable)
+        .set({ tinggiAir: tinggiAir ?? null, tekanan: tekanan ?? null, updatedAt: new Date() })
+        .where(eq(monitoringDataTable.id, existing[0].id))
+        .returning();
+      result = updated;
+    } else {
+      const [inserted] = await db.insert(monitoringDataTable)
+        .values({ pointId, session, date: dateStr, tinggiAir: tinggiAir ?? null, tekanan: tekanan ?? null })
+        .returning();
+      result = inserted;
+    }
+    res.json({ success: true, data: result });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
