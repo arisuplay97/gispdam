@@ -529,8 +529,8 @@ export function ScadaMap({
         {/* Zoom control moved to bottom-right */}
         <ZoomControl position="bottomright" />
 
-        {/* ── Custom Control: Fullscreen Button ──────────────────────── */}
-        <div className="absolute bottom-[90px] right-2.5 z-[1000] flex flex-col gap-2">
+        {/* ── Custom Control: Fullscreen Button (Top-right, under layer selector) ── */}
+        <div className="absolute top-[56px] right-2.5 z-[1000] flex flex-col gap-2">
           <button
             onClick={toggleFullscreen}
             title={isFullscreen ? "Keluar Fullscreen" : "Layar Penuh"}
