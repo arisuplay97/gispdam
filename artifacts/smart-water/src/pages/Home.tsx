@@ -71,31 +71,23 @@ export default function Home() {
     });
   }
 
-  const handleMonitoringSave = async (id: string, data: MonitoringData) => {
+  const handleMonitoringSave = async (
+    id: string,
+    session: "pagi" | "sore",
+    sessionData: { tinggiAir?: number; tekanan?: number }
+  ) => {
     try {
-      if (data.pagi && (data.pagi.tinggiAir != null || data.pagi.tekanan != null)) {
-        await addMonitoringData({
-          data: {
-            pointId: id,
-            session: "pagi",
-            date: todayDateStr,
-            tinggiAir: data.pagi.tinggiAir,
-            tekanan: data.pagi.tekanan,
-          }
-        });
-      }
-      if (data.sore && (data.sore.tinggiAir != null || data.sore.tekanan != null)) {
-        await addMonitoringData({
-          data: {
-            pointId: id,
-            session: "sore",
-            date: todayDateStr,
-            tinggiAir: data.sore.tinggiAir,
-            tekanan: data.sore.tekanan,
-          }
-        });
-      }
-      queryClient.invalidateQueries({ queryKey: ['getMonitoringData'] });
+      await addMonitoringData({
+        data: {
+          pointId: id,
+          session,
+          date: todayDateStr,
+          tinggiAir: sessionData.tinggiAir,
+          tekanan: sessionData.tekanan,
+        }
+      });
+      // Use the exact query key Orval generates
+      queryClient.invalidateQueries({ queryKey: ['/api/monitoring'] });
     } catch (e) {
       console.error("Failed to save monitoring data", e);
     }

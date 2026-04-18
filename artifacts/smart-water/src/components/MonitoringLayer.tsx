@@ -120,7 +120,7 @@ function createMonitoringIcon(status: AnalysisStatus) {
 interface ModalProps {
   point: MonitoringPoint;
   initial?: MonitoringData;
-  onSave:  (id: string, data: MonitoringData) => void;
+  onSave:  (id: string, session: "pagi" | "sore", data: { tinggiAir?: number; tekanan?: number }) => void;
   onClose: () => void;
   macroUrl?: string;
 }
@@ -218,7 +218,10 @@ function MonitoringModal({ point, initial, onSave, onClose, macroUrl }: ModalPro
       }
     }
 
-    onSave(point.id, updated);
+    onSave(point.id, sesi, {
+      tinggiAir: tinggiAir !== "" ? Number(tinggiAir) : undefined,
+      tekanan:   tekanan   !== "" ? Number(tekanan)   : undefined,
+    });
     onClose();
   };
 
@@ -406,7 +409,7 @@ function MonitoringModal({ point, initial, onSave, onClose, macroUrl }: ModalPro
 // ─── Komponen Utama Layer ────────────────────────────────────────────────────
 interface MonitoringLayerProps {
   data:    Record<string, MonitoringData>;
-  onSave:  (id: string, data: MonitoringData) => void;
+  onSave:  (id: string, session: "pagi" | "sore", data: { tinggiAir?: number; tekanan?: number }) => void;
   macroUrl?: string;
 }
 
