@@ -2,7 +2,7 @@
  * DireksiDashboard.tsx
  * Dashboard Direksi — Sistem Monitoring Distribusi Air PDAM TIARA
  */
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "wouter";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -253,7 +253,7 @@ function getPointStatuses(
   });
 }
 
-function getPakarAdvice(selectedPointId: string, pointStatuses: PointStatus[], chartRaw: any[], tReg: ReturnType<typeof linearRegression>, pReg: ReturnType<typeof linearRegression>): string {
+function getFallbackAdvice(selectedPointId: string, pointStatuses: PointStatus[], chartRaw: any[], tReg: ReturnType<typeof linearRegression>, pReg: ReturnType<typeof linearRegression>): string {
   const lastTinggi = chartRaw[chartRaw.length - 1]?.tinggiAir;
   const lastTekanan = chartRaw[chartRaw.length - 1]?.tekanan;
 
@@ -261,51 +261,34 @@ function getPakarAdvice(selectedPointId: string, pointStatuses: PointStatus[], c
     let msg = "";
     if (tReg.slope < -5) msg += "⚠️ Rata-rata tinggi air se-PDAM menurun drastis. Pantau produksi sumur air tanah. ";
     if (pReg.slope < -0.1) msg += "⚠️ Rata-rata tekanan perpipaan perlahan turun. Waspadai kebocoran pada pipa primer. ";
-    return msg || "✓ Secara keseluruhan, suplai tinggi air dan tekanan pada jaringan distribusi SPAM Aiq Bone terpantau stabil.";
+    return msg || "✓ Secara keseluruhan, suplai tinggi air dan tekanan pada jaringan distribusi terpantau stabil.";
   }
 
   const pointStatus = pointStatuses.find((p) => p.point.id === selectedPointId);
   if (!pointStatus) return "Pilih titik untuk memuat saran sistem.";
   const name = pointStatus.point.name;
 
-  // Cek Data
   if (lastTinggi == null && lastTekanan == null) {
     return `ℹ️ Belum ada input data (pagi/sore) di ${name} untuk hari ini. Silakan instruksikan petugas lapangan.`;
   }
 
-  // Pakar: Air (Reservoir / BPT)
   if (name.toLowerCase().includes("reservoir") || name.toLowerCase().includes("bpt")) {
     if (lastTinggi !== undefined && lastTinggi !== null) {
-      if (lastTinggi < 50 && tReg.slope < 0) {
-        return `🚨 TINGGI AIR DROP di ${name} (${lastTinggi} cm) dengan profil tren merosot! Segera periksa sumber suplai (Intake/Blok Atas) apakah ada penyumbatan aliran sedimen, atau periksa mesin pompa inlet. Buka jalur bypass jika darurat.`;
-      }
-      if (lastTinggi < 100) {
-        return `⚠️ Tinggi air di ${name} tergolong rendah (${lastTinggi} cm). Tekan angka distribusi keluar atau naikkan debit inlet agar tak sampai kosong saat jam komersial (puncak).`;
-      }
-      if (lastTinggi > 350) {
-        return `🛑 ${name} membahayakan nyaris meluap (${lastTinggi} cm). Kurangi pompa inlet atau pastikan pompa outlet tidak sedang mati/terhambat.`;
-      }
-      if (tReg.slope < -8) {
-        return `⚠️ Kehilangan debit tak wajar terdeteksi. Air surut dengan kecepatan ${tReg.slope.toFixed(1)} cm/hari. Terjunkan tim telusur di ring pemukiman karena dicurigai bocor pasca-reservoir.`;
-      }
+      if (lastTinggi < 50 && tReg.slope < 0) return `🚨 TINGGI AIR DROP di ${name} (${lastTinggi} cm) dengan profil tren merosot! Segera periksa sumber suplai.`;
+      if (lastTinggi < 100) return `⚠️ Tinggi air di ${name} tergolong rendah (${lastTinggi} cm). Tekan angka distribusi keluar.`;
+      if (lastTinggi > 350) return `🛑 ${name} membahayakan nyaris meluap (${lastTinggi} cm). Kurangi pompa inlet.`;
+      if (tReg.slope < -8) return `⚠️ Kehilangan debit tak wajar terdeteksi. Air surut dengan kecepatan ${tReg.slope.toFixed(1)} cm/hari.`;
     }
-    return `✓ Profil operasional di ${name} sejauh ini cukup stabil. Lakukan pengurasan bak berkala sesuai instrumen manual.`;
+    return `✓ Profil operasional di ${name} sejauh ini cukup stabil.`;
   }
 
-  // Pakar: Tekanan (Pipa / Jaringan Umum)
   if (lastTekanan !== undefined && lastTekanan !== null) {
-    if (lastTekanan < 0.5 && pReg.slope <= 0) {
-      return `🚨 TEKANAN KRITIS di batas ${name} (${lastTekanan} bar). Dugaan terkuat adalah PIPA TRANSMISI UTAMA PECAH, kerusakan rotor pompa pendorong, atau Gate Valve yang tertutup tak sadar. Terjunkan mekanik.`;
-    }
-    if (lastTekanan < 1.0) {
-      return `⚠️ Waspada keluhan pelanggan di sekitar ${name}. Tekanan mulai redup. Cek tegangan daya (Voltage) panel pompa, atau pastikan saringan (strainer) bebas lumut.`;
-    }
-    if (pReg.slope < -0.2) {
-      return `⚠️ Titik ini mengalami penyusutan tekanan kronis dari rentang mingguan. Potensi pencurian air (illegal tapping) pada rute atau pengerakan dimensi pipa sisi hulu.`;
-    }
+    if (lastTekanan < 0.5 && pReg.slope <= 0) return `🚨 TEKANAN KRITIS di batas ${name} (${lastTekanan} bar). Dugaan terkuat adalah PIPA TRANSMISI UTAMA PECAH.`;
+    if (lastTekanan < 1.0) return `⚠️ Waspada keluhan pelanggan di sekitar ${name}. Tekanan mulai redup.`;
+    if (pReg.slope < -0.2) return `⚠️ Titik ini mengalami penyusutan tekanan kronis. Potensi pencurian air atau pengerakan dimensi pipa sisi hulu.`;
   }
 
-  return `✓ Kondisi hidro-statis lapangan di area ${name} diklasifikasikan sangat optimal. Kalibrasi ulang alat ukur setidaknya satu kali sebulan.`;
+  return `✓ Kondisi hidro-statis lapangan di area ${name} diklasifikasikan sangat optimal.`;
 }
 
 // ─── PDF Export ──────────────────────────────────────────────────────────────
@@ -467,11 +450,42 @@ export default function DireksiDashboard() {
   const warningCount = statuses.filter((s) => s.status === "warning").length;
   const criticalCount = statuses.filter((s) => s.status === "critical").length;
 
-  const advice = useMemo(
-    () => getPakarAdvice(selectedPointId, statuses, chartRaw, tReg, pReg),
-    [selectedPointId, statuses, chartRaw, tReg, pReg]
-  );
-  const cleanAdvice = advice.replace(/^[\u2713\u26a0\ufe0f\ud83d\udea8\ud83d\uded1\u2139\ufe0f\ud83d\udca1]\s?/u, "");
+  const [adviceText, setAdviceText] = useState("Memuat analisa AI...");
+
+  // Setup React useEffect untuk fetch AI Analysis
+  useEffect(() => {
+    if (!chartRaw || chartRaw.length === 0) {
+      setAdviceText("Pilih titik untuk memuat saran sistem.");
+      return;
+    }
+
+    setAdviceText("🤖 Sedang dianalisis oleh Gemini AI...");
+
+    const pointName = selectedPointId === "all" ? "Seluruh Jaringan PDAM" : activePoints.find(p => p.id === selectedPointId)?.name;
+    const periodLabel = chartPeriod === "daily" ? "7 hari terakhir" : chartPeriod === "weekly" ? "4 minggu terakhir" : "6 bulan terakhir";
+
+    fetch("/api/ai-advice", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chartRaw, pointName, period: periodLabel })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.advice) {
+        setAdviceText(data.advice);
+      } else {
+        throw new Error("No advice provided");
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      const fallback = getFallbackAdvice(selectedPointId, statuses, chartRaw, tReg, pReg);
+      setAdviceText("[AI Timeout/Offline] " + fallback);
+    });
+
+  }, [chartRaw, selectedPointId, chartPeriod, activePoints, statuses, tReg, pReg]);
+
+  const cleanAdvice = adviceText.replace(/^[\u2713\u26a0\ufe0f\ud83d\udea8\ud83d\uded1\u2139\ufe0f\ud83d\udca1]\s?/u, "");
 
   const now = new Date();
   const dateStr = now.toLocaleDateString("id-ID", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
@@ -657,8 +671,9 @@ export default function DireksiDashboard() {
                 </div>
               </div>
               <div className="px-6 pb-5">
-                <div className={`rounded-lg px-4 py-3 text-[13px] leading-relaxed border ${cleanAdvice.includes("KRITIS") || cleanAdvice.includes("DROP") || cleanAdvice.includes("PECAH") ? "bg-red-50 border-red-200 text-red-800" : cleanAdvice.includes("stabil") || cleanAdvice.includes("optimal") || cleanAdvice.includes("Secara keseluruhan") ? "bg-green-50 border-green-200 text-green-800" : "bg-amber-50 border-amber-200 text-amber-800"}`}>
-                  <span className="font-semibold">Analisa & Saran: </span>{cleanAdvice}
+                <div className={`rounded-lg px-4 py-3 text-[13px] leading-relaxed border flex gap-3 ${cleanAdvice.includes("KRITIS") || cleanAdvice.includes("DROP") || cleanAdvice.includes("PECAH") || cleanAdvice.toLowerCase().includes("kritis") ? "bg-red-50 border-red-200 text-red-800" : cleanAdvice.includes("stabil") || cleanAdvice.includes("optimal") || cleanAdvice.includes("Secara keseluruhan") || cleanAdvice.toLowerCase().includes("normal") ? "bg-green-50 border-green-200 text-green-800" : "bg-amber-50 border-amber-200 text-amber-800"}`}>
+                  <div className="mt-0.5 opacity-80 shrink-0">✨</div>
+                  <div><span className="font-semibold">AI Assistant: </span>{cleanAdvice}</div>
                 </div>
               </div>
             </div>

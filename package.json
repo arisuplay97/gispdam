@@ -9,6 +9,7 @@
   },
   "private": true,
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@rollup/rollup-win32-x64-msvc": "^4.60.1",
     "@tailwindcss/oxide-win32-x64-msvc": "^4.2.2",
     "@vercel/node": "^3.2.17",
