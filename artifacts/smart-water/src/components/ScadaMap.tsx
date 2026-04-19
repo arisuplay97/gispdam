@@ -819,6 +819,7 @@ export function ScadaMap({
             data={monitoringData}
             onSave={onMonitoringSave}
             macroUrl={macroUrl}
+            editMode={editMode}
           />
         )}
       </MapContainer>

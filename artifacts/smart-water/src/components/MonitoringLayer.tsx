@@ -4,10 +4,19 @@
  * Data disimpan di localStorage sampai backend tersedia.
  */
 import React, { useState } from "react";
-import { Marker, Tooltip } from "react-leaflet";
+import { Marker, Tooltip, useMapEvents } from "react-leaflet";
 import L from "leaflet";
-import { X, Send, Droplets, Gauge, TrendingUp } from "lucide-react";
+import { X, Send, Droplets, Gauge, TrendingUp, Plus, Pencil, Trash2, Check } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts";
+import { toast } from "sonner";
+import {
+  useListMonitoringPoints,
+  useCreateMonitoringPoint,
+  useUpdateMonitoringPoint,
+  useDeleteMonitoringPoint,
+  getListMonitoringPointsQueryKey,
+} from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 // ─── Tipe Data ──────────────────────────────────────────────────────────────
 export interface MonitoringPoint {
@@ -406,34 +415,144 @@ function MonitoringModal({ point, initial, onSave, onClose, macroUrl }: ModalPro
   );
 }
 
-// ─── Komponen Utama Layer ────────────────────────────────────────────────────
+// ─── Komponen Utama Layer ────────────────────────────────────────────────────────
 interface MonitoringLayerProps {
-  data:    Record<string, MonitoringData>;
-  onSave:  (id: string, session: "pagi" | "sore", data: { tinggiAir?: number; tekanan?: number }) => void;
+  data:      Record<string, MonitoringData>;
+  onSave:    (id: string, session: "pagi" | "sore", d: { tinggiAir?: number; tekanan?: number }) => void;
   macroUrl?: string;
+  editMode?: boolean;
 }
 
-export function MonitoringLayer({ data, onSave, macroUrl }: MonitoringLayerProps) {
-  const [openModal, setOpenModal] = useState<string | null>(null);
+// ─── Helper: listen for map clicks when in add mode
+function AddClickListener({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click(e) { onMapClick(e.latlng.lat, e.latlng.lng); },
+  });
+  return null;
+}
+
+export function MonitoringLayer({ data, onSave, macroUrl, editMode = false }: MonitoringLayerProps) {
+  const queryClient = useQueryClient();
+  const { data: dbPoints } = useListMonitoringPoints();
+  const createPoint  = useCreateMonitoringPoint();
+  const updatePoint  = useUpdateMonitoringPoint();
+  const deletePoint  = useDeleteMonitoringPoint();
+
+  // Gunakan titik dari DB; jika kosong fallback ke MONITORING_POINTS
+  const points: MonitoringPoint[] = (dbPoints && dbPoints.length > 0)
+    ? dbPoints.map(p => ({ id: p.pointId, name: p.name, lat: p.lat, lng: p.lng, dbId: p.id }))
+    : MONITORING_POINTS.map(p => ({ ...p, dbId: undefined }));
+
+  const [openModal,    setOpenModal]    = useState<string | null>(null);
+  const [addMode,      setAddMode]      = useState(false);
+  const [editingId,    setEditingId]    = useState<number | null>(null);
+  const [editName,     setEditName]     = useState("");
+  const [pendingCoord, setPendingCoord] = useState<{ lat: number; lng: number } | null>(null);
+  const [newName,      setNewName]      = useState("");
+
+  const invalidatePoints = () =>
+    queryClient.invalidateQueries({ queryKey: getListMonitoringPointsQueryKey() });
+
+  // ─── Tambah titik baru
+  const handleMapClick = (lat: number, lng: number) => {
+    if (!addMode) return;
+    setPendingCoord({ lat, lng });
+    setAddMode(false);
+  };
+
+  const handleConfirmAdd = () => {
+    if (!pendingCoord || !newName.trim()) { toast.error("Nama tidak boleh kosong"); return; }
+    const auto = `MON-${String(Date.now()).slice(-4)}`;
+    createPoint.mutate(
+      { data: { pointId: auto, name: newName.trim(), lat: pendingCoord.lat, lng: pendingCoord.lng } },
+      {
+        onSuccess: () => { invalidatePoints(); setPendingCoord(null); setNewName(""); toast.success(`Titik "${newName}" berhasil ditambahkan`); },
+        onError:   () => toast.error("Gagal menambahkan titik"),
+      },
+    );
+  };
+
+  // ─── Edit nama
+  const handleSaveName = (dbId: number) => {
+    if (!editName.trim()) { toast.error("Nama tidak boleh kosong"); return; }
+    updatePoint.mutate(
+      { id: dbId, data: { name: editName.trim() } },
+      {
+        onSuccess: () => { invalidatePoints(); setEditingId(null); toast.success("Nama titik diperbarui"); },
+        onError:   () => toast.error("Gagal mengubah nama"),
+      },
+    );
+  };
+
+  // ─── Update koordinat via drag
+  const handleDragEnd = (dbId: number, lat: number, lng: number) => {
+    updatePoint.mutate(
+      { id: dbId, data: { lat, lng } },
+      {
+        onSuccess: () => { invalidatePoints(); toast.success("Koordinat diperbarui"); },
+        onError:   () => toast.error("Gagal update koordinat"),
+      },
+    );
+  };
+
+  // ─── Hapus titik
+  const handleDelete = (dbId: number, name: string) => {
+    if (!confirm(`Hapus titik "${name}"? Data monitoring terkait tidak ikut terhapus.`)) return;
+    deletePoint.mutate(
+      { id: dbId },
+      {
+        onSuccess: () => { invalidatePoints(); toast.success(`Titik "${name}" dihapus`); },
+        onError:   () => toast.error("Gagal menghapus titik"),
+      },
+    );
+  };
 
   return (
     <>
-      {MONITORING_POINTS.map((pt) => {
+      {/* Add mode banner + click listener */}
+      {editMode && addMode && (
+        <>
+          <AddClickListener onMapClick={handleMapClick} />
+        </>
+      )}
+
+      {points.map((pt) => {
         const ptData = data[pt.id];
         const status = getAnalysisStatus(ptData);
+        const dbPt   = dbPoints?.find(p => p.pointId === pt.id);
 
         return (
           <Marker
             key={pt.id}
             position={[pt.lat, pt.lng]}
             icon={createMonitoringIcon(status)}
+            draggable={editMode && !!dbPt}
             eventHandlers={{
-              click: () => setOpenModal(pt.id),
+              click:   () => { if (!editMode) setOpenModal(pt.id); },
+              dragend: (e) => {
+                if (!dbPt) return;
+                const { lat, lng } = (e.target as L.Marker).getLatLng();
+                handleDragEnd(dbPt.id, lat, lng);
+              },
             }}
           >
             <Tooltip direction="top" offset={[0, -20]} opacity={1} className="font-sans font-medium text-slate-800 shadow-xl rounded-lg">
               <div className="flex flex-col gap-1 text-center p-1">
-                <span className="font-bold text-sm tracking-tight">{pt.name}</span>
+                {editMode && dbPt && editingId === dbPt.id ? (
+                  <div className="flex items-center gap-1">
+                    <input
+                      autoFocus
+                      className="border border-blue-300 rounded px-1 py-0.5 text-xs w-28"
+                      value={editName}
+                      onChange={e => setEditName(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") handleSaveName(dbPt.id); }}
+                    />
+                    <button onClick={() => handleSaveName(dbPt.id)} className="text-green-600 hover:text-green-800"><Check className="h-3 w-3" /></button>
+                    <button onClick={() => setEditingId(null)} className="text-gray-400 hover:text-gray-600"><X className="h-3 w-3" /></button>
+                  </div>
+                ) : (
+                  <span className="font-bold text-sm tracking-tight">{pt.name}</span>
+                )}
                 {status === "empty" ? (
                   <span className="text-xs text-slate-400 italic">Belum ada input</span>
                 ) : (
@@ -444,23 +563,93 @@ export function MonitoringLayer({ data, onSave, macroUrl }: MonitoringLayerProps
                     Status: {status.toUpperCase()}
                   </span>
                 )}
-                <span className="text-[10px] text-slate-400 mt-1">(Klik untuk input)</span>
+                {editMode && dbPt ? (
+                  <div className="flex items-center justify-center gap-2 mt-1">
+                    <button
+                      onClick={() => { setEditingId(dbPt.id); setEditName(pt.name); }}
+                      className="flex items-center gap-0.5 text-[10px] text-blue-600 hover:underline"
+                    >
+                      <Pencil className="h-3 w-3" /> Edit Nama
+                    </button>
+                    <button
+                      onClick={() => handleDelete(dbPt.id, pt.name)}
+                      className="flex items-center gap-0.5 text-[10px] text-red-500 hover:underline"
+                    >
+                      <Trash2 className="h-3 w-3" /> Hapus
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-[10px] text-slate-400 mt-1">(Klik untuk input)</span>
+                )}
               </div>
             </Tooltip>
           </Marker>
         );
       })}
 
-      {/* Portal-like modal — rendered outside map */}
-      {openModal && (
-        <MonitoringModal
-          point={MONITORING_POINTS.find((p) => p.id === openModal)!}
-          initial={data[openModal]}
-          onSave={onSave}
-          onClose={() => setOpenModal(null)}
-          macroUrl={macroUrl}
+      {/* Pending new point preview */}
+      {pendingCoord && (
+        <Marker position={[pendingCoord.lat, pendingCoord.lng]} icon={createMonitoringIcon("empty")}>
+          <Tooltip permanent direction="top" offset={[0, -20]}>
+            <div className="p-1 text-xs">
+              <p className="font-semibold text-blue-700 mb-1">📍 Titik Baru</p>
+              <input
+                autoFocus
+                placeholder="Nama titik..."
+                className="border border-gray-300 rounded px-2 py-1 text-xs w-36 block mb-1"
+                value={newName}
+                onChange={e => setNewName(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") handleConfirmAdd(); }}
+              />
+              <div className="flex gap-1">
+                <button onClick={handleConfirmAdd} className="flex-1 bg-blue-600 text-white rounded px-2 py-1 text-[10px] font-semibold">Simpan</button>
+                <button onClick={() => setPendingCoord(null)} className="text-gray-400 hover:text-gray-600"><X className="h-3.5 w-3.5" /></button>
+              </div>
+            </div>
+          </Tooltip>
+        </Marker>
+      )}
+
+      {/* Edit mode: Add button floating badge */}
+      {editMode && !addMode && !pendingCoord && (
+        <Marker
+          position={[-8.660, 116.290]}
+          icon={L.divIcon({
+            className: "bg-transparent",
+            html: `<div style="background:#2563eb;color:white;border-radius:9999px;padding:4px 12px;font-size:11px;font-weight:600;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,0.25);cursor:pointer;">+ Tambah Titik Monitoring</div>`,
+            iconAnchor: [0, 0],
+          })}
+          eventHandlers={{ click: () => { setAddMode(true); toast.info("Klik pada peta untuk meletakkan titik baru"); } }}
         />
       )}
+
+      {/* Add mode banner */}
+      {editMode && addMode && (
+        <Marker
+          position={[-8.660, 116.290]}
+          icon={L.divIcon({
+            className: "bg-transparent",
+            html: `<div style="background:#d97706;color:white;border-radius:9999px;padding:4px 12px;font-size:11px;font-weight:600;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,0.25);">🎯 Klik pada peta untuk letakkan titik — Klik ini untuk batal</div>`,
+            iconAnchor: [0, 0],
+          })}
+          eventHandlers={{ click: () => setAddMode(false) }}
+        />
+      )}
+
+      {/* Data input modal */}
+      {openModal && (() => {
+        const found = points.find(p => p.id === openModal);
+        if (!found) return null;
+        return (
+          <MonitoringModal
+            point={found}
+            initial={data[openModal]}
+            onSave={onSave}
+            onClose={() => setOpenModal(null)}
+            macroUrl={macroUrl}
+          />
+        );
+      })()}
     </>
   );
 }

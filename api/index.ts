@@ -90,6 +90,16 @@ const monitoringDataTable = pgTable("monitoring_data", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+const monitoringPointsTable = pgTable("monitoring_points", {
+  id: serial("id").primaryKey(),
+  pointId: text("point_id").notNull().unique(),
+  name: text("name").notNull(),
+  lat: doublePrecision("lat").notNull(),
+  lng: doublePrecision("lng").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // PostGIS Geometry custom type
 const geometryPoint = customType<{ data: string; driverData: string }>({
   dataType() {
@@ -151,6 +161,36 @@ app.use(express.urlencoded({ limit: "50mb", extended: true }));
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `);
+    // Auto-create monitoring_points table
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS monitoring_points (
+        id SERIAL PRIMARY KEY,
+        point_id TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
+        lat DOUBLE PRECISION NOT NULL,
+        lng DOUBLE PRECISION NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    // Seed monitoring points default jika kosong
+    const mpRes = await db.execute(sql`SELECT count(*) as c FROM monitoring_points`);
+    if (Number((mpRes.rows[0] as any).c) === 0) {
+      const defaultPoints = [
+        { pointId: "MON-01", name: "Reservoir Induk (IPA)",  lat: -8.6650, lng: 116.3150 },
+        { pointId: "MON-02", name: "BPT Airvale",            lat: -8.6720, lng: 116.3080 },
+        { pointId: "MON-03", name: "Reservoir Airbaku",      lat: -8.6590, lng: 116.3220 },
+        { pointId: "MON-04", name: "BPT Montong Terep",      lat: -8.6680, lng: 116.3000 },
+        { pointId: "MON-05", name: "Reservoir Pagesangan",   lat: -8.6750, lng: 116.3300 },
+      ];
+      for (const p of defaultPoints) {
+        await db.execute(sql`
+          INSERT INTO monitoring_points (point_id, name, lat, lng)
+          VALUES (${p.pointId}, ${p.name}, ${p.lat}, ${p.lng})
+          ON CONFLICT (point_id) DO NOTHING;
+        `);
+      }
+    }
     // Seed pelanggan dummy jika kosong
     const custRes = await db.execute(sql`SELECT count(*) as c FROM customers`);
     if (Number((custRes.rows[0] as any).c) === 0) {
@@ -729,6 +769,62 @@ app.all("/api/seed-demo", async (_req: any, res: any) => {
     }
 
     res.json({ ok: true, seeded: seeded.length > 0 ? seeded : ["nothing (data already exists)"] });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── Monitoring Points CRUD ──────────────────────────────────────────────────
+app.get("/api/monitoring-points", async (_req: any, res: any) => {
+  try {
+    const points = await db.select().from(monitoringPointsTable).orderBy(monitoringPointsTable.id);
+    res.json(points);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/monitoring-points", async (req: any, res: any) => {
+  try {
+    const { pointId, name, lat, lng } = req.body;
+    if (!pointId || !name || lat == null || lng == null)
+      return res.status(400).json({ error: "pointId, name, lat, lng wajib diisi" });
+    const [pt] = await db
+      .insert(monitoringPointsTable)
+      .values({ pointId, name, lat: Number(lat), lng: Number(lng) })
+      .returning();
+    res.status(201).json(pt);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put("/api/monitoring-points/:id", async (req: any, res: any) => {
+  try {
+    const id = Number(req.params.id);
+    const { name, lat, lng } = req.body;
+    const [pt] = await db
+      .update(monitoringPointsTable)
+      .set({
+        ...(name != null && { name }),
+        ...(lat  != null && { lat: Number(lat) }),
+        ...(lng  != null && { lng: Number(lng) }),
+        updatedAt: new Date(),
+      })
+      .where(eq(monitoringPointsTable.id, id))
+      .returning();
+    if (!pt) return res.status(404).json({ error: "Not found" });
+    res.json(pt);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete("/api/monitoring-points/:id", async (req: any, res: any) => {
+  try {
+    const id = Number(req.params.id);
+    await db.delete(monitoringPointsTable).where(eq(monitoringPointsTable.id, id));
+    res.status(204).end();
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }

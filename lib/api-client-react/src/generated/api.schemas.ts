@@ -187,3 +187,27 @@ export type AddMonitoringData200 = {
   success?: boolean;
   data?: MonitoringDataRecord;
 };
+
+// Monitoring Points
+export interface MonitoringPoint {
+  id: number;
+  pointId: string;
+  name: string;
+  lat: number;
+  lng: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreateMonitoringPointBody {
+  pointId: string;
+  name: string;
+  lat: number;
+  lng: number;
+}
+
+export interface UpdateMonitoringPointBody {
+  name?: string;
+  lat?: number;
+  lng?: number;
+}

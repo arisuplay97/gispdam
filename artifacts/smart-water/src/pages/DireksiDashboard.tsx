@@ -14,7 +14,7 @@ import {
   Droplets, Clock, Moon, Sun,
 } from "lucide-react";
 import { MONITORING_POINTS, type MonitoringData, type MonitoringPoint } from "@/components/MonitoringLayer";
-import { useGetMonitoringData } from "@workspace/api-client-react";
+import { useGetMonitoringData, useListMonitoringPoints } from "@workspace/api-client-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface PointStatus {
@@ -149,9 +149,10 @@ function addPredictions(weeklyData: any[]) {
 }
 
 function getPointStatuses(
-  monitoringData: Record<string, MonitoringData>
+  monitoringData: Record<string, MonitoringData>,
+  points: MonitoringPoint[] = MONITORING_POINTS
 ): PointStatus[] {
-  return MONITORING_POINTS.map((pt) => {
+  return points.map((pt) => {
     const d = monitoringData[pt.id];
     const session = d?.sore ?? d?.pagi;
     const shadow = SHADOW_DATA[pt.id];
@@ -376,7 +377,15 @@ async function exportPDF(statuses: PointStatus[]) {
 export default function DireksiDashboard() {
   const [, navigate] = useLocation();
   const { data: rawMonitoringData } = useGetMonitoringData();
+  const { data: dbPoints } = useListMonitoringPoints();
   const [darkMode, setDarkMode] = useState(false);
+
+  // Gunakan titik dari DB; jika kosong fallback ke MONITORING_POINTS hardcoded
+  const activePoints: MonitoringPoint[] = useMemo(() => {
+    if (dbPoints && dbPoints.length > 0)
+      return dbPoints.map(p => ({ id: p.pointId, name: p.name, lat: p.lat, lng: p.lng }));
+    return MONITORING_POINTS;
+  }, [dbPoints]);
 
   // Style untuk animasi cahaya garis prediksi (bolak-balik)
   const animStyle = `
@@ -411,7 +420,7 @@ export default function DireksiDashboard() {
 
   const weeklyRaw = useMemo(() => generateWeeklyData(monitoringData, selectedPointId), [monitoringData, selectedPointId]);
   const { data: chartData, tReg, pReg } = useMemo(() => addPredictions(weeklyRaw), [weeklyRaw]);
-  const statuses = useMemo(() => getPointStatuses(monitoringData), [monitoringData]);
+  const statuses = useMemo(() => getPointStatuses(monitoringData, activePoints), [monitoringData, activePoints]);
 
   const normalCount = statuses.filter((s) => s.status === "normal").length;
   const warningCount = statuses.filter((s) => s.status === "warning").length;
@@ -566,7 +575,7 @@ export default function DireksiDashboard() {
                 <h2 className={`text-sm font-semibold ${darkMode ? "text-gray-100" : "text-gray-900"}`}>Tinggi Air & Tekanan</h2>
                 <select className={`text-xs border rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer ${darkMode ? "bg-gray-800 border-gray-700 text-gray-200" : "bg-white border-gray-200 text-gray-600"}`} value={selectedPointId} onChange={(e) => setSelectedPointId(e.target.value)}>
                   <option value="all">Semua Titik</option>
-                  {MONITORING_POINTS.map((pt) => (<option key={pt.id} value={pt.id}>{pt.name}</option>))}
+                  {activePoints.map((pt) => (<option key={pt.id} value={pt.id}>{pt.name}</option>))}
                 </select>
               </div>
               <div className="px-4 sm:px-6 pt-4 pb-2">

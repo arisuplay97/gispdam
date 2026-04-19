@@ -19,6 +19,7 @@ import type {
 import type {
   AddMonitoringData200,
   CreateMonitoringBody,
+  CreateMonitoringPointBody,
   CreatePipeBody,
   CreateSourceBody,
   CreateValveBody,
@@ -29,10 +30,12 @@ import type {
   HealthStatus,
   ImportResult,
   MonitoringDataRecord,
+  MonitoringPoint,
   Pipe,
   PressureRecord,
   TelemetryData,
   TelemetryResponse,
+  UpdateMonitoringPointBody,
   UpdatePipeBody,
   UpdateValveBody,
   Valve,
@@ -1878,4 +1881,142 @@ export function useGetPressureHistory<
   };
 
   return { ...query, queryKey: queryOptions.queryKey };
+}
+
+// ─── Monitoring Points ────────────────────────────────────────────────────────
+export const listMonitoringPoints = async (options?: RequestInit): Promise<MonitoringPoint[]> =>
+  customFetch<MonitoringPoint[]>(`/api/monitoring-points`, { ...options, method: "GET" });
+
+export const getListMonitoringPointsQueryKey = () => [`/api/monitoring-points`] as const;
+
+export const getListMonitoringPointsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listMonitoringPoints>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof listMonitoringPoints>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListMonitoringPointsQueryKey();
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listMonitoringPoints>>> = ({ signal }) =>
+    listMonitoringPoints({ ...requestOptions, signal });
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listMonitoringPoints>>, TError, TData
+  >;
+};
+
+export function useListMonitoringPoints<
+  TData = Awaited<ReturnType<typeof listMonitoringPoints>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof listMonitoringPoints>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListMonitoringPointsQueryOptions(options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const createMonitoringPoint = async (
+  body: CreateMonitoringPointBody,
+  options?: SecondParameter<typeof customFetch>,
+): Promise<MonitoringPoint> =>
+  customFetch<MonitoringPoint>(`/api/monitoring-points`, {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(options as any)?.headers },
+    body: JSON.stringify(body),
+  });
+
+export function useCreateMonitoringPoint<TError = ErrorType<unknown>, TContext = unknown>(
+  options?: UseMutationOptions<
+    Awaited<ReturnType<typeof createMonitoringPoint>>,
+    TError,
+    { data: CreateMonitoringPointBody },
+    TContext
+  >,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createMonitoringPoint>>,
+  TError,
+  { data: CreateMonitoringPointBody },
+  TContext
+> {
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createMonitoringPoint>>,
+    { data: CreateMonitoringPointBody }
+  > = (props) => createMonitoringPoint(props.data);
+  return useMutation<
+    Awaited<ReturnType<typeof createMonitoringPoint>>,
+    TError,
+    { data: CreateMonitoringPointBody },
+    TContext
+  >({ mutationFn, ...options });
+}
+
+export const updateMonitoringPoint = async (
+  id: number,
+  body: UpdateMonitoringPointBody,
+  options?: SecondParameter<typeof customFetch>,
+): Promise<MonitoringPoint> =>
+  customFetch<MonitoringPoint>(`/api/monitoring-points/${id}`, {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...(options as any)?.headers },
+    body: JSON.stringify(body),
+  });
+
+export function useUpdateMonitoringPoint<TError = ErrorType<unknown>, TContext = unknown>(
+  options?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMonitoringPoint>>,
+    TError,
+    { id: number; data: UpdateMonitoringPointBody },
+    TContext
+  >,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateMonitoringPoint>>,
+  TError,
+  { id: number; data: UpdateMonitoringPointBody },
+  TContext
+> {
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateMonitoringPoint>>,
+    { id: number; data: UpdateMonitoringPointBody }
+  > = (props) => updateMonitoringPoint(props.id, props.data);
+  return useMutation<
+    Awaited<ReturnType<typeof updateMonitoringPoint>>,
+    TError,
+    { id: number; data: UpdateMonitoringPointBody },
+    TContext
+  >({ mutationFn, ...options });
+}
+
+export const deleteMonitoringPoint = async (
+  id: number,
+  options?: SecondParameter<typeof customFetch>,
+): Promise<void> =>
+  customFetch<void>(`/api/monitoring-points/${id}`, { ...options, method: "DELETE" });
+
+export function useDeleteMonitoringPoint<TError = ErrorType<unknown>, TContext = unknown>(
+  options?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteMonitoringPoint>>,
+    TError,
+    { id: number },
+    TContext
+  >,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteMonitoringPoint>>,
+  TError,
+  { id: number },
+  TContext
+> {
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteMonitoringPoint>>,
+    { id: number }
+  > = (props) => deleteMonitoringPoint(props.id);
+  return useMutation<
+    Awaited<ReturnType<typeof deleteMonitoringPoint>>,
+    TError,
+    { id: number },
+    TContext
+  >({ mutationFn, ...options });
 }
