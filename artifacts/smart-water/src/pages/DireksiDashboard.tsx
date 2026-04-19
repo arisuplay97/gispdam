@@ -2,7 +2,7 @@
  * DireksiDashboard.tsx
  * Dashboard Direksi — Sistem Monitoring Distribusi Air PDAM TIARA
  */
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -11,7 +11,7 @@ import {
 } from "recharts";
 import {
   ArrowLeft, AlertTriangle, TrendingUp, FileDown,
-  Droplets, Clock, Moon, Sun,
+  Droplets, Clock, Moon, Sun, Sparkles, Loader2,
 } from "lucide-react";
 import { MONITORING_POINTS, type MonitoringData, type MonitoringPoint } from "@/components/MonitoringLayer";
 import { useGetMonitoringData, useListMonitoringPoints } from "@workspace/api-client-react";
@@ -155,7 +155,7 @@ const PRED_LABELS: Record<ChartPeriod, string[]> = {
   monthly: ["+1 Bln", "+2 Bln"],
 };
 
-function addPredictions(rawData: any[], period: ChartPeriod) {
+function addPredictions(rawData: any[], period: ChartPeriod, aiPredictions?: { predTinggi: number; predTekanan: number }[] | null) {
   const tinggiPts = rawData.map((d, i) => ({ x: i, y: d.tinggiAir })).filter(p => p.y != null);
   const tekananPts = rawData.map((d, i) => ({ x: i, y: d.tekanan })).filter(p => p.y != null);
 
@@ -165,13 +165,16 @@ function addPredictions(rawData: any[], period: ChartPeriod) {
   const labels = PRED_LABELS[period];
   const predictions = labels.map((lbl, i) => {
     const xVal = rawData.length - 1 + i + 1;
+    // Jika AI sudah memberikan prediksi, gunakan angka AI; jika tidak, gunakan regresi
+    const usedTinggi = aiPredictions?.[i]?.predTinggi ?? Number((tReg.slope * xVal + tReg.intercept).toFixed(1));
+    const usedTekanan = aiPredictions?.[i]?.predTekanan ?? Number((pReg.slope * xVal + pReg.intercept).toFixed(2));
     return {
       label: lbl,
-      sublabel: "pred",
+      sublabel: aiPredictions ? "AI pred" : "pred",
       tinggiAir: null,
       tekanan: null,
-      predTinggi: Number((tReg.slope * xVal + tReg.intercept).toFixed(1)),
-      predTekanan: Number((pReg.slope * xVal + pReg.intercept).toFixed(2)),
+      predTinggi: Math.max(0, usedTinggi),
+      predTekanan: Math.max(0, usedTekanan),
       isPrediction: true,
     };
   });
@@ -443,52 +446,54 @@ export default function DireksiDashboard() {
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("daily");
 
   const chartRaw = useMemo(() => generateChartData(monitoringData, selectedPointId, chartPeriod), [monitoringData, selectedPointId, chartPeriod]);
-  const { data: chartData, tReg, pReg } = useMemo(() => addPredictions(chartRaw, chartPeriod), [chartRaw, chartPeriod]);
+  // AI state — hanya dieksekusi ketika tombol ditekan
+  const [aiPredictions, setAiPredictions] = useState<{ predTinggi: number; predTekanan: number }[] | null>(null);
+  const [isAILoading, setIsAILoading] = useState(false);
+
+  const { data: chartData, tReg, pReg } = useMemo(() => addPredictions(chartRaw, chartPeriod, aiPredictions), [chartRaw, chartPeriod, aiPredictions]);
   const statuses = useMemo(() => getPointStatuses(monitoringData, activePoints), [monitoringData, activePoints]);
 
   const normalCount = statuses.filter((s) => s.status === "normal").length;
   const warningCount = statuses.filter((s) => s.status === "warning").length;
   const criticalCount = statuses.filter((s) => s.status === "critical").length;
 
-  const [adviceText, setAdviceText] = useState("Memuat analisa AI...");
-  const [lastAnalyzedData, setLastAnalyzedData] = useState<string>("");
+  // Default: tampilkan analisa template (tanpa token)
+  const fallbackAdvice = useMemo(() => getFallbackAdvice(selectedPointId, statuses, chartRaw, tReg, pReg), [selectedPointId, statuses, chartRaw, tReg, pReg]);
+  const [adviceText, setAdviceText] = useState<string | null>(null);
 
-  // Setup React useEffect untuk fetch AI Analysis
+  // Reset AI state ketika user ganti titik/periode
   useEffect(() => {
-    if (!chartRaw || chartRaw.length === 0) {
-      setAdviceText("Pilih titik untuk memuat saran sistem.");
-      return;
-    }
+    setAdviceText(null);
+    setAiPredictions(null);
+  }, [selectedPointId, chartPeriod]);
 
-    // Hindari re-fetch jika data yang dianalisis sama persis (mencegah loop/boros kuota akibat polling)
-    const currentDataStr = JSON.stringify({ chartRaw, selectedPointId, chartPeriod });
-    if (currentDataStr === lastAnalyzedData) return;
-
-
-    setAdviceText("🤖 Sedang dianalisis oleh Groq AI (Llama 3.3)...");
+  // Fungsi panggil AI — HANYA dipanggil saat tombol ditekan
+  const requestAIAnalysis = useCallback(() => {
+    if (!chartRaw || chartRaw.length === 0) return;
+    setIsAILoading(true);
+    setAdviceText(null);
 
     const pointName = selectedPointId === "all" ? "Seluruh Jaringan PDAM" : activePoints.find(p => p.id === selectedPointId)?.name;
     const periodLabel = chartPeriod === "daily" ? "7 hari terakhir" : chartPeriod === "weekly" ? "4 minggu terakhir" : "6 bulan terakhir";
     const currentPointStatus = selectedPointId === "all" ? "agregat" : statuses.find(s => s.point.id === selectedPointId)?.status || "normal";
+    const predCount = PRED_LABELS[chartPeriod].length;
 
     fetch("/api/ai-advice", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chartRaw, pointName, period: periodLabel, status: currentPointStatus })
+      body: JSON.stringify({ chartRaw, pointName, period: periodLabel, status: currentPointStatus, predCount })
     })
     .then(async (r) => {
       const data = await r.json().catch(() => null);
-      if (!r.ok) {
-        throw new Error(data?.error || `HTTP ${r.status}`);
-      }
+      if (!r.ok) throw new Error(data?.error || `HTTP ${r.status}`);
       return data;
     })
     .then(data => {
       if (data && data.advice) {
         setAdviceText(data.advice);
-        setLastAnalyzedData(currentDataStr);
-      } else {
-        throw new Error("No advice provided");
+      }
+      if (data && data.predictions && Array.isArray(data.predictions)) {
+        setAiPredictions(data.predictions);
       }
     })
     .catch(err => {
@@ -499,14 +504,14 @@ export default function DireksiDashboard() {
       } else if (errorMsg.includes("403") || errorMsg.includes("API key") || errorMsg.includes("401")) {
         errorMsg = "API Key Groq tidak valid atau belum diatur.";
       }
-      
-      const fallback = getFallbackAdvice(selectedPointId, statuses, chartRaw, tReg, pReg);
-      setAdviceText(`[Warning: ${errorMsg}] ${fallback}`);
-    });
+      setAdviceText(`[Warning: ${errorMsg}]`);
+    })
+    .finally(() => setIsAILoading(false));
+  }, [chartRaw, selectedPointId, chartPeriod, activePoints, statuses]);
 
-  }, [chartRaw, selectedPointId, chartPeriod, activePoints, statuses, tReg, pReg]);
-
-  const cleanAdvice = adviceText.replace(/^[\u2713\u26a0\ufe0f\ud83d\udea8\ud83d\uded1\u2139\ufe0f\ud83d\udca1]\s?/u, "");
+  const displayAdvice = adviceText ?? fallbackAdvice;
+  const cleanAdvice = displayAdvice.replace(/^[\u2713\u26a0\ufe0f\ud83d\udea8\ud83d\uded1\u2139\ufe0f\ud83d\udca1]\s?/u, "");
+  const isAIPowered = adviceText !== null;
 
   const now = new Date();
   const dateStr = now.toLocaleDateString("id-ID", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
@@ -691,11 +696,23 @@ export default function DireksiDashboard() {
                   </ResponsiveContainer>
                 </div>
               </div>
-              <div className="px-6 pb-5">
+              <div className="px-6 pb-5 space-y-3">
                 <div className={`rounded-lg px-4 py-3 text-[13px] leading-relaxed border flex gap-3 ${cleanAdvice.includes("KRITIS") || cleanAdvice.includes("DROP") || cleanAdvice.includes("PECAH") || cleanAdvice.toLowerCase().includes("kritis") ? "bg-red-50 border-red-200 text-red-800" : cleanAdvice.includes("stabil") || cleanAdvice.includes("optimal") || cleanAdvice.includes("Secara keseluruhan") || cleanAdvice.toLowerCase().includes("normal") ? "bg-green-50 border-green-200 text-green-800" : "bg-amber-50 border-amber-200 text-amber-800"}`}>
-                  <div className="mt-0.5 opacity-80 shrink-0">✨</div>
-                  <div><span className="font-semibold">AI Assistant: </span>{cleanAdvice}</div>
+                  <div className="mt-0.5 opacity-80 shrink-0">{isAIPowered ? "🤖" : "✨"}</div>
+                  <div><span className="font-semibold">{isAIPowered ? "Groq AI: " : "Sistem: "}</span>{isAILoading ? "🤖 Sedang dianalisis oleh Groq AI (Llama 3.3)..." : cleanAdvice}</div>
                 </div>
+                <button
+                  onClick={requestAIAnalysis}
+                  disabled={isAILoading || !chartRaw || chartRaw.length === 0}
+                  className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${
+                    darkMode
+                      ? "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg shadow-purple-900/30"
+                      : "bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white shadow-lg shadow-purple-200/60"
+                  }`}
+                >
+                  {isAILoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  {isAILoading ? "Sedang Menganalisis..." : (isAIPowered ? "🔄 Minta AI Analisis & Prediksi Ulang" : "🧠 Minta AI Analisis & Prediksi")}
+                </button>
               </div>
             </div>
 
