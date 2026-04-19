@@ -24,7 +24,7 @@ TUGAS: Jawab HANYA dalam format JSON MURNI (tanpa markdown, tanpa backtick) deng
   "advice": "2-4 kalimat analisis operasional lapangan dan prediksi teknis singkat untuk Direksi PDAM. Jika status KRITIS/WASPADA, FOKUSKAN kalimat pertama pada keadaan DARURAT terbaru. Berpura-puralah data berasal dari sensor SCADA real-time.",
   "predictions": [${Array.from({length: numPred}, (_, i) => `{"predTinggi": <angka prediksi tinggi air cm titik ke-${i+1}>, "predTekanan": <angka prediksi tekanan bar titik ke-${i+1}>}`).join(', ')}]
 }
-Pastikan angka predictions realistis berdasarkan tren data historis. Jangan pernah mengembalikan angka negatif.`;
+PENTING: Anda WAJIB berpikir dan merespons SEPENUHNYA dalam Bahasa Indonesia. Pastikan angka predictions realistis berdasarkan tren data historis. Jangan pernah mengembalikan angka negatif.`;
 
     const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -48,13 +48,16 @@ Pastikan angka predictions realistis berdasarkan tren data historis. Jangan pern
     const result = await groqResponse.json();
     const rawText = result.choices?.[0]?.message?.content || "{}";
     
+    // Hapus blok <think>...</think> bawaan model reasoning
+    const cleanText = rawText.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
     try {
-      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-      const jsonStr = jsonMatch ? jsonMatch[0] : rawText;
+      const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : cleanText;
       const parsed = JSON.parse(jsonStr);
       res.json({ advice: parsed.advice || "Gagal mendapatkan saran dari AI.", predictions: parsed.predictions || [] });
     } catch {
-      res.json({ advice: rawText, predictions: [] });
+      res.json({ advice: cleanText, predictions: [] });
     }
   } catch (e: any) {
     console.error("AI Error:", e);
