@@ -463,11 +463,12 @@ export default function DireksiDashboard() {
 
     const pointName = selectedPointId === "all" ? "Seluruh Jaringan PDAM" : activePoints.find(p => p.id === selectedPointId)?.name;
     const periodLabel = chartPeriod === "daily" ? "7 hari terakhir" : chartPeriod === "weekly" ? "4 minggu terakhir" : "6 bulan terakhir";
+    const currentPointStatus = selectedPointId === "all" ? "agregat" : statuses.find(s => s.point.id === selectedPointId)?.status || "normal";
 
     fetch("/api/ai-advice", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chartRaw, pointName, period: periodLabel })
+      body: JSON.stringify({ chartRaw, pointName, period: periodLabel, status: currentPointStatus })
     })
     .then(async (r) => {
       const data = await r.json().catch(() => null);

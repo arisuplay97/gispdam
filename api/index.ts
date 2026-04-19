@@ -833,7 +833,7 @@ app.delete("/api/monitoring-points/:id", async (req: any, res: any) => {
 
 app.post("/api/ai-advice", async (req: any, res: any) => {
   try {
-    const { chartRaw, pointName, period } = req.body;
+    const { chartRaw, pointName, period, status } = req.body;
     
     // Fallback if no key
     if (!process.env.GEMINI_API_KEY) {
@@ -846,10 +846,11 @@ app.post("/api/ai-advice", async (req: any, res: any) => {
     // Format prompt
     const prompt = `Anda adalah sistem pakar / engineer senior manajemen distribusi air PDAM.
 Berikut adalah rekap historis grafik PDAM rentang waktu: "${period}" untuk lokasi pengamatan: "${pointName}".
-Data parameter Tinggi Air (cm) dan Tekanan (bar) berformat JSON (beserta prakiraan ke depan):
+Saat ini algoritma pendeteksi sistem menyatakan status titik ini adalah: "${status ? status.toUpperCase() : 'NORMAL'}".
+Data parameter Tinggi Air (cm) dan Tekanan (bar) berformat JSON (beserta prediksi peramalan ke depan):
 ${JSON.stringify(chartRaw)}
 
-Tugas Anda: Berikan 2 sampai 4 kalimat analisis operasional lapangan dan prediksi teknis yang singkat, padat, dan to-the-point sebagai masukan untuk Direksi Manajemen PDAM. Jika Anda mendeteksi anomali penurunan/tekanan nol, berikan saran perbaikan langsung. JANGAN menulis menggunakan blok markdown berlebihan, JANGAN merujuk ke kata-kata "Berdasarkan JSON", berpura-puralah bahwa Anda mendapat data ini langsung dari sensor SCADA real-time.`;
+Tugas Anda: Berikan 2 sampai 4 kalimat analisis operasional lapangan dan prediksi teknis yang singkat, padat, dan to-the-point sebagai masukan untuk Direksi Manajemen PDAM. Jika status saat ini adalah KRITIS atau WASPADA (atau jika data hari/titik pengamatan terakhir menunjukkan anomali/angka drop), FOKUSKAN kalimat pertama peringatan Anda pada keadaan DARURAT terbaru tersebut ("Hari ini...", "Saat ini...") dan abaikan data normal di awal minggu/bulan. JANGAN menulis menggunakan blok markdown berlebihan, JANGAN merujuk ke kata-kata "Berdasarkan JSON", berpura-puralah bahwa Anda mendapat data ini langsung dari pantauan lapangan sensor SCADA real-time hari ini.`;
 
     const result = await model.generateContent(prompt);
     const responseText = result.response.text();
