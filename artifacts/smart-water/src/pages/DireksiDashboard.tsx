@@ -697,21 +697,61 @@ export default function DireksiDashboard() {
                 </div>
               </div>
               <div className="px-6 pb-5 space-y-3">
-                <div className={`rounded-lg px-4 py-3 text-[13px] leading-relaxed border flex gap-3 ${cleanAdvice.includes("KRITIS") || cleanAdvice.includes("DROP") || cleanAdvice.includes("PECAH") || cleanAdvice.toLowerCase().includes("kritis") ? "bg-red-50 border-red-200 text-red-800" : cleanAdvice.includes("stabil") || cleanAdvice.includes("optimal") || cleanAdvice.includes("Secara keseluruhan") || cleanAdvice.toLowerCase().includes("normal") ? "bg-green-50 border-green-200 text-green-800" : "bg-amber-50 border-amber-200 text-amber-800"}`}>
-                  <div className="mt-0.5 opacity-80 shrink-0">{isAIPowered ? "🤖" : "✨"}</div>
-                  <div><span className="font-semibold">{isAIPowered ? "Groq AI: " : "Sistem: "}</span>{isAILoading ? "🤖 Sedang dianalisis oleh Groq AI (Llama 3.3)..." : cleanAdvice}</div>
+                {/* AI Analysis Card */}
+                <div className={`relative overflow-hidden rounded-xl border transition-all duration-300 ${
+                  isAIPowered
+                    ? darkMode ? "bg-gray-800/80 border-gray-700" : "bg-gray-900 border-gray-800"
+                    : darkMode ? "bg-gray-800/50 border-gray-700/50" : "bg-gray-50 border-gray-200"
+                }`}>
+                  {/* Subtle top accent line */}
+                  <div className={`h-[2px] w-full ${
+                    isAIPowered
+                      ? cleanAdvice.toLowerCase().includes("kritis") || cleanAdvice.includes("DARURAT") || cleanAdvice.includes("DROP")
+                        ? "bg-gradient-to-r from-red-500 via-red-400 to-red-500"
+                        : cleanAdvice.toLowerCase().includes("waspada") || cleanAdvice.toLowerCase().includes("warning")
+                          ? "bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500"
+                          : "bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500"
+                      : darkMode ? "bg-gray-700" : "bg-gray-200"
+                  }`} />
+                  <div className="px-4 py-3.5">
+                    <div className="flex items-start gap-3">
+                      <div className={`flex items-center justify-center h-8 w-8 rounded-lg shrink-0 mt-0.5 ${
+                        isAIPowered
+                          ? "bg-white/10 text-white"
+                          : darkMode ? "bg-gray-700 text-gray-400" : "bg-gray-200 text-gray-500"
+                      }`}>
+                        {isAILoading ? <Loader2 className="h-4 w-4 animate-spin" /> : isAIPowered ? <Sparkles className="h-4 w-4" /> : <TrendingUp className="h-4 w-4" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className={`flex items-center gap-2 mb-1 ${isAIPowered ? "text-white/60" : darkMode ? "text-gray-500" : "text-gray-400"}`}>
+                          <span className="text-[10px] font-bold uppercase tracking-widest">{isAIPowered ? "Groq AI · Llama 3.3 70B" : "Analisis Sistem"}</span>
+                          {isAIPowered && <span className="flex items-center gap-1 text-[10px] bg-white/10 text-emerald-400 px-1.5 py-0.5 rounded-full font-medium"><span className="h-1 w-1 rounded-full bg-emerald-400" />AI</span>}
+                        </div>
+                        <p className={`text-[13px] leading-relaxed ${
+                          isAIPowered ? "text-white/90" : darkMode ? "text-gray-300" : "text-gray-700"
+                        }`}>
+                          {isAILoading ? "Sedang menganalisis data dan menghitung prediksi..." : cleanAdvice}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+
+                {/* AI Trigger Button */}
                 <button
                   onClick={requestAIAnalysis}
                   disabled={isAILoading || !chartRaw || chartRaw.length === 0}
-                  className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${
+                  className={`group w-full flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-200 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed border ${
                     darkMode
-                      ? "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg shadow-purple-900/30"
-                      : "bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white shadow-lg shadow-purple-200/60"
+                      ? "bg-white text-gray-900 border-white/20 hover:bg-gray-100 shadow-lg shadow-white/5"
+                      : "bg-gray-900 text-white border-gray-800 hover:bg-gray-800 shadow-lg shadow-gray-900/20"
                   }`}
                 >
-                  {isAILoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                  {isAILoading ? "Sedang Menganalisis..." : (isAIPowered ? "🔄 Minta AI Analisis & Prediksi Ulang" : "🧠 Minta AI Analisis & Prediksi")}
+                  {isAILoading
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <Sparkles className={`h-4 w-4 transition-transform group-hover:scale-110 ${darkMode ? "text-gray-600" : "text-gray-400"}`} />
+                  }
+                  {isAILoading ? "Menganalisis & Memprediksi..." : (isAIPowered ? "Minta AI Analisis & Prediksi Ulang" : "Minta AI Analisis & Prediksi")}
                 </button>
               </div>
             </div>
