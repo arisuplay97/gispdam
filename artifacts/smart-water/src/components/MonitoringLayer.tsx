@@ -133,7 +133,7 @@ function buildReservoirSVG(c: typeof STATUS_PALETTE["normal"], status: AnalysisS
 
   const dashStyle = status === "empty" ? `stroke-dasharray="5,3"` : "";
 
-  return `<svg width="48" height="56" viewBox="0 0 64 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+  return `<svg width="40" height="45" viewBox="0 0 64 72" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect x="8" y="22" width="48" height="32" rx="4" fill="${c.bg}" stroke="${c.stroke}" stroke-width="2" ${dashStyle}/>
     <rect x="4" y="16" width="56" height="8" rx="3" fill="${c.roof}" stroke="${c.stroke}" stroke-width="1.5"/>
     <line x1="8" y1="32" x2="56" y2="32" stroke="${c.stroke}" stroke-width="0.5" stroke-dasharray="3,3" opacity="0.4"/>
@@ -163,7 +163,7 @@ function buildBptSVG(c: typeof STATUS_PALETTE["normal"], status: AnalysisStatus)
        <text x="50" y="24" text-anchor="middle" fill="white" font-size="7" font-weight="bold">✕</text>`
     : `<circle cx="50" cy="20" r="5" fill="${c.stroke}" opacity="0.5"/>`;
 
-  return `<svg width="48" height="56" viewBox="0 0 64 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+  return `<svg width="40" height="45" viewBox="0 0 64 72" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect x="14" y="26" width="36" height="28" rx="4" fill="${c.bg}" stroke="${c.stroke}" stroke-width="2"/>
     <rect x="10" y="20" width="44" height="8" rx="3" fill="${c.roof}" stroke="${c.stroke}" stroke-width="1.5"/>
     <path d="M32 30 L32 44 M28 40 L32 44 L36 40" stroke="${c.stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -192,7 +192,7 @@ function buildIpaSVG(c: typeof STATUS_PALETTE["normal"], status: AnalysisStatus)
        <text x="52" y="22" text-anchor="middle" fill="white" font-size="7" font-weight="bold">✕</text>`
     : `<circle cx="52" cy="18" r="5" fill="${c.stroke}" opacity="0.5"/>`;
 
-  return `<svg width="48" height="56" viewBox="0 0 64 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+  return `<svg width="40" height="45" viewBox="0 0 64 72" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect x="6" y="28" width="52" height="26" rx="4" fill="${c.bg}" stroke="${c.stroke}" stroke-width="2"/>
     <path d="M4 28 L32 12 L60 28Z" fill="${c.roof}" stroke="${c.stroke}" stroke-width="1.5"/>
     <rect x="14" y="36" width="10" height="10" rx="2" fill="${c.roof}" stroke="${c.stroke}" stroke-width="1"/>
@@ -219,8 +219,8 @@ function createMonitoringIcon(status: AnalysisStatus, pointType: PointType = "re
   return L.divIcon({
     className: "bg-transparent",
     html: `<div style="filter:drop-shadow(0 4px 12px ${c.stroke}66)">${svgHtml}</div>`,
-    iconSize:   [48, 56],
-    iconAnchor: [24, 56],
+    iconSize:   [40, 45],
+    iconAnchor: [20, 45],
   });
 }
 
