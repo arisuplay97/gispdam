@@ -516,8 +516,12 @@ export default function DireksiDashboard() {
                 </div>
 
                 {/* Prediction insight */}
-                <div className={`mt-4 rounded-lg px-4 py-3 text-sm ${estimateKritis.startsWith("✓") ? "bg-green-50 text-green-800 border border-green-200" : "bg-amber-50 text-amber-800 border border-amber-200"}`}>
-                  <strong>💡 Analisa Prediksi:</strong> {estimateKritis}
+                <div className={`mt-4 rounded-lg px-4 py-3 text-sm flex gap-3 items-start ${pakarAdvice.startsWith("✓") || pakarAdvice.startsWith("ℹ️") ? "bg-green-50 text-green-800 border border-green-200" : "bg-amber-50 text-amber-900 border border-amber-200"}`}>
+                  <span className="text-base leading-none pt-0.5">💡</span>
+                  <div>
+                    <strong className="block mb-1">Analisa & Saran Pakar:</strong> 
+                    <span className="leading-relaxed">{pakarAdvice}</span>
+                  </div>
                 </div>
               </div>
             )}
