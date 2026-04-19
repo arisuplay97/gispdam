@@ -841,19 +841,38 @@ app.post("/api/ai-advice", async (req: any, res: any) => {
 
     const numPred = predCount || 3;
 
-    // Format prompt — meminta JSON ketat
-    const prompt = `Anda adalah sistem pakar / engineer senior manajemen distribusi air PDAM.
-Berikut adalah rekap historis grafik PDAM rentang waktu: "${period}" untuk lokasi pengamatan: "${pointName}".
-Saat ini algoritma pendeteksi sistem menyatakan status titik ini adalah: "${status ? status.toUpperCase() : 'NORMAL'}".
-Data parameter Tinggi Air (cm) dan Tekanan (bar) berformat JSON:
+    // Format prompt — Senior Hydraulic Engineer Role
+    const prompt = `ROLE:
+Kamu adalah "Senior Hydraulic Engineer & Data Analyst" untuk PDAM Tirta Ardhia Rinjani. Tugasmu adalah melakukan diagnosa pada dashboard sistem monitoring distribusi air (SIM-DIST) secara real-time.
+
+CONTEXT:
+Lokasi pengamatan: "${pointName}".
+Rentang waktu data: "${period}".
+Status deteksi sistem saat ini: "${status ? status.toUpperCase() : 'NORMAL'}".
+Data historis parameter Tinggi Air (cm) dan Tekanan (bar) dalam format JSON:
 ${JSON.stringify(chartRaw)}
 
-TUGAS: Jawab HANYA dalam format JSON MURNI (tanpa markdown, tanpa backtick) dengan struktur berikut:
+LOGIKA ANALISA TEKNIS (Wajib Diikuti):
+1. KORELASI TINGGI vs TEKANAN:
+   - NORMAL: Jika Tinggi Air turun, Tekanan ikut turun sedikit karena penggunaan warga (Pola Beban Puncak).
+   - ANOMALI TEKNIS: Jika Tinggi Air NAIK atau STABIL, tapi Tekanan TURUN drastis, ini tanda "Penyumbatan Katup" atau "Pipa Pecah" di jalur transmisi.
+2. POLA BEBAN PUNCAK (Siklus Harian):
+   - Kenali penurunan tekanan pada jam sibuk (05.00-08.00 WITA pagi dan 17.00-20.00 WITA) sebagai kondisi AMAN, bukan kerusakan.
+3. ANALISA DATA CURAM:
+   - Jangan melakukan "smoothing" jika terjadi penurunan >20% di luar jam beban puncak.
+   - Jangan memaksa memprediksi grafik "curam" jika tren data menunjukkan stabilitas. Prediksi harus didasarkan pada REPEATABILITY (pengulangan pola).
+
+TUGAS: Jawab HANYA dalam format JSON MURNI (tanpa markdown, tanpa backtick, tanpa penjelasan tambahan) dengan struktur berikut:
 {
-  "advice": "2-4 kalimat analisis operasional lapangan dan prediksi teknis singkat untuk Direksi PDAM. Jika status KRITIS/WASPADA, FOKUSKAN kalimat pertama pada keadaan DARURAT terbaru. Berpura-puralah data berasal dari sensor SCADA real-time.",
+  "advice": "[STATUS]: NORMAL/WASPADA/KRITIS. [ANALISA]: Maks 5 kalimat teknis kondisi saat ini. [EVIDENCE]: Sebutkan Hari/Tanggal saat anomali paling signifikan. [PREDIKSI]: Tren 24-72 jam ke depan berdasarkan statistik data, jika pola anomali terlihat berulang beri peringatan keras. [CONFIDENCE]: High/Medium/Low. [SARAN LAPANGAN]: Instruksi spesifik untuk petugas (misal: Cek Air Valve, manual flushing, pantau bukaan katup). [SARAN DIREKSI]: Rekomendasi kebijakan/eskalasi.",
   "predictions": [${Array.from({length: numPred}, (_, i) => `{"predTinggi": <angka prediksi tinggi air cm titik ke-${i+1}>, "predTekanan": <angka prediksi tekanan bar titik ke-${i+1}>}`).join(', ')}]
 }
-PENTING: Anda WAJIB berpikir dan merespons SEPENUHNYA dalam Bahasa Indonesia. Pastikan angka predictions realistis berdasarkan tren data historis. Jangan pernah mengembalikan angka negatif.`;
+
+ATURAN KETAT:
+- WAJIB merespons SEPENUHNYA dalam Bahasa Indonesia.
+- Tone: Profesional, teknis, singkat, berorientasi tindakan lapangan. DILARANG basa-basi atau kata puitis.
+- Angka predictions WAJIB realistis berdasarkan tren data dan REPEATABILITY pola. Jangan pernah mengembalikan angka negatif.
+- Jika data menunjukkan anomali serius, BERANI memberikan peringatan keras dan tegas.`;
 
     const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -864,8 +883,8 @@ PENTING: Anda WAJIB berpikir dan merespons SEPENUHNYA dalam Bahasa Indonesia. Pa
       body: JSON.stringify({
         model: "meta-llama/llama-4-scout-17b-16e-instruct",
         messages: [{ role: "user", content: prompt }],
-        temperature: 0.6,
-        max_tokens: 700
+        temperature: 0.5,
+        max_tokens: 1000
       })
     });
 
