@@ -98,129 +98,131 @@ const STATUS_PALETTE: Record<AnalysisStatus, { bg: string; roof: string; stroke:
   critical: { bg: "#7f1d1d", roof: "#991b1b", stroke: "#ef4444", water: "#ef4444" },
 };
 
-// ─── SVG builders ─────────────────────────────────────────────────────────────
-function buildReservoirSVG(c: typeof STATUS_PALETTE["normal"], status: AnalysisStatus): string {
-  const badgeDot = status === "empty"
-    ? `<circle cx="52" cy="18" r="5" fill="${c.stroke}" opacity="0.5"/>`
-    : status === "normal"
-    ? `<circle cx="52" cy="18" r="5" fill="${c.stroke}"/>
-       <circle cx="52" cy="18" r="5" fill="${c.stroke}" opacity="0.4">
-         <animate attributeName="r" from="5" to="11" dur="2s" repeatCount="indefinite"/>
-         <animate attributeName="opacity" from="0.4" to="0" dur="2s" repeatCount="indefinite"/>
-       </circle>`
-    : status === "warning"
-    ? `<circle cx="52" cy="18" r="5" fill="${c.stroke}"/>
-       <text x="52" y="22" text-anchor="middle" fill="white" font-size="7" font-weight="bold">!</text>`
-    : `<circle cx="52" cy="18" r="5" fill="${c.stroke}">
-         <animate attributeName="opacity" values="1;0.3;1" dur="0.8s" repeatCount="indefinite"/>
-       </circle>
-       <text x="52" y="22" text-anchor="middle" fill="white" font-size="7" font-weight="bold">✕</text>`;
-
-  const waterLevel = status === "empty"
-    ? `<text x="32" y="42" text-anchor="middle" fill="${c.stroke}" font-size="16" font-weight="bold">?</text>`
-    : status === "warning"
-    ? `<rect x="9" y="42" width="46" height="11" rx="0" fill="${c.stroke}" opacity="0.15"/>
-       <line x1="9" y1="42" x2="55" y2="42" stroke="${c.stroke}" stroke-width="1.5" stroke-dasharray="4,2"/>
-       <path d="M32 28 C32 28 26 35 26 39 C26 42.3 28.7 45 32 45 C35.3 45 38 42.3 38 39 C38 35 32 28 32 28Z" fill="${c.water}" opacity="0.9"/>
-       <ellipse cx="29.5" cy="37" rx="2" ry="3" fill="white" opacity="0.3" transform="rotate(-15 29.5 37)"/>`
-    : status === "critical"
-    ? `<rect x="9" y="50" width="46" height="3" rx="0" fill="${c.stroke}" opacity="0.15"/>
-       <line x1="9" y1="50" x2="55" y2="50" stroke="${c.stroke}" stroke-width="1.5"/>
-       <path d="M32 28 C32 28 26 35 26 39 C26 42.3 28.7 45 32 45 C35.3 45 38 42.3 38 39 C38 35 32 28 32 28Z" fill="${c.water}" opacity="0.9"/>
-       <ellipse cx="29.5" cy="37" rx="2" ry="3" fill="white" opacity="0.3" transform="rotate(-15 29.5 37)"/>`
-    : `<path d="M32 28 C32 28 26 35 26 39 C26 42.3 28.7 45 32 45 C35.3 45 38 42.3 38 39 C38 35 32 28 32 28Z" fill="${c.water}" opacity="0.9"/>
-       <ellipse cx="29.5" cy="37" rx="2" ry="3" fill="white" opacity="0.3" transform="rotate(-15 29.5 37)"/>`;
-
-  const dashStyle = status === "empty" ? `stroke-dasharray="5,3"` : "";
-
-  return `<svg width="40" height="45" viewBox="0 0 64 72" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect x="8" y="22" width="48" height="32" rx="4" fill="${c.bg}" stroke="${c.stroke}" stroke-width="2" ${dashStyle}/>
-    <rect x="4" y="16" width="56" height="8" rx="3" fill="${c.roof}" stroke="${c.stroke}" stroke-width="1.5"/>
-    <line x1="8" y1="32" x2="56" y2="32" stroke="${c.stroke}" stroke-width="0.5" stroke-dasharray="3,3" opacity="0.4"/>
-    <line x1="8" y1="42" x2="56" y2="42" stroke="${c.stroke}" stroke-width="0.5" stroke-dasharray="3,3" opacity="0.4"/>
-    ${waterLevel}
-    <rect x="26" y="54" width="6" height="8" rx="1" fill="${c.bg}" stroke="${c.stroke}" stroke-width="1.5"/>
-    <rect x="36" y="54" width="6" height="8" rx="1" fill="${c.bg}" stroke="${c.stroke}" stroke-width="1.5"/>
-    <rect x="20" y="62" width="24" height="4" rx="2" fill="${c.roof}" stroke="${c.stroke}" stroke-width="1"/>
-    ${badgeDot}
+// ─── SVG builders (Unified Teardrop Design) ──────────────────────────────────
+function buildReservoirSVG(status: AnalysisStatus): string {
+  if (status === "normal") {
+    return `<svg width="40" height="46" viewBox="0 0 64 72" fill="none">
+    <defs><linearGradient id="drop-normal" x1="32" y1="0" x2="32" y2="72" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#166534"/><stop offset="100%" stop-color="#14532d"/></linearGradient></defs>
+    <path d="M32 4 C32 4 10 24 10 42 C10 54.6 19.9 65 32 65 C44.1 65 54 54.6 54 42 C54 24 32 4 32 4Z" fill="url(#drop-normal)" stroke="#22c55e" stroke-width="1.5"/>
+    <path d="M32 8 C32 8 16 26 16 42 C16 42 14 32 24 22Z" fill="#22c55e" opacity="0.15"/>
+    <path d="M16 46 L24 34 L32 42 L40 30 L48 46Z" fill="#166534" stroke="#22c55e" stroke-width="1" opacity="0.9"/>
+    <path d="M38 33 L40 30 L42 33Z" fill="white" opacity="0.6"/>
+    <path d="M22 37 L24 34 L26 37Z" fill="white" opacity="0.6"/>
+    <g class="blink-eye"><circle cx="24" cy="50" r="5" fill="#0a2e14"/><circle cx="24" cy="50" r="3.5" fill="#22c55e"/><circle cx="25" cy="49" r="1.2" fill="white" opacity="0.9"/></g>
+    <g class="blink-eye" style="animation-delay:0.1s"><circle cx="40" cy="50" r="5" fill="#0a2e14"/><circle cx="40" cy="50" r="3.5" fill="#22c55e"/><circle cx="41" cy="49" r="1.2" fill="white" opacity="0.9"/></g>
+    <path d="M20 58 Q26 54 32 58 Q38 62 44 58" stroke="#22c55e" stroke-width="2" fill="none" stroke-linecap="round" class="wave-anim"/>
+    <circle cx="52" cy="10" r="4" fill="#22c55e" class="pulse"/>
+    <circle cx="52" cy="10" r="8" fill="#22c55e" opacity="0.2" class="pulse"/>
   </svg>`;
+  } else if (status === "warning") {
+    return `<svg width="40" height="46" viewBox="0 0 64 72" fill="none">
+    <defs><linearGradient id="drop-warn" x1="32" y1="0" x2="32" y2="72" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#78350f"/><stop offset="100%" stop-color="#92400e"/></linearGradient></defs>
+    <path d="M32 4 C32 4 10 24 10 42 C10 54.6 19.9 65 32 65 C44.1 65 54 54.6 54 42 C54 24 32 4 32 4Z" fill="url(#drop-warn)" stroke="#f59e0b" stroke-width="1.5"/>
+    <path d="M32 8 C32 8 16 26 16 42 C16 42 14 32 24 22Z" fill="#f59e0b" opacity="0.1"/>
+    <rect x="11" y="50" width="42" height="14" rx="0" fill="#f59e0b" opacity="0.08"/>
+    <line x1="11" y1="50" x2="53" y2="50" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4,2"/>
+    <path d="M16 50 L26 36 L32 44 L38 32 L48 50Z" fill="#78350f" stroke="#f59e0b" stroke-width="1" opacity="0.7"/>
+    <g class="blink-eye"><circle cx="24" cy="54" r="5" fill="#3d1a04"/><circle cx="24" cy="54" r="3.5" fill="#f59e0b"/><circle cx="25" cy="53" r="1.2" fill="white" opacity="0.9"/></g>
+    <g class="blink-eye" style="animation-delay:0.1s"><circle cx="40" cy="54" r="5" fill="#3d1a04"/><circle cx="40" cy="54" r="3.5" fill="#f59e0b"/><circle cx="41" cy="53" r="1.2" fill="white" opacity="0.9"/></g>
+    <path d="M22 61 L42 61" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="52" cy="10" r="6" fill="#f59e0b"/>
+    <text x="52" y="14" text-anchor="middle" fill="white" font-size="8" font-weight="bold" font-family="monospace">!</text>
+  </svg>`;
+  } else if (status === "critical") {
+    return `<svg width="40" height="46" viewBox="0 0 64 72" fill="none">
+    <defs><linearGradient id="drop-crit" x1="32" y1="0" x2="32" y2="72" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#7f1d1d"/><stop offset="100%" stop-color="#991b1b"/></linearGradient></defs>
+    <path d="M32 4 C32 4 10 24 10 42 C10 54.6 19.9 65 32 65 C44.1 65 54 54.6 54 42 C54 24 32 4 32 4Z" fill="url(#drop-crit)" stroke="#ef4444" stroke-width="1.5"/>
+    <rect x="11" y="58" width="42" height="6" rx="0" fill="#ef4444" opacity="0.1"/>
+    <line x1="11" y1="58" x2="53" y2="58" stroke="#ef4444" stroke-width="2"/>
+    <line x1="24" y1="32" x2="40" y2="48" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+    <line x1="40" y1="32" x2="24" y2="48" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+    <g class="blink-eye"><circle cx="24" cy="54" r="5" fill="#3d0000"/><circle cx="24" cy="54" r="3.5" fill="#ef4444"/><circle cx="25" cy="53" r="1.2" fill="white" opacity="0.9"/></g>
+    <g class="blink-eye" style="animation-delay:0.1s"><circle cx="40" cy="54" r="5" fill="#3d0000"/><circle cx="40" cy="54" r="3.5" fill="#ef4444"/><circle cx="41" cy="53" r="1.2" fill="white" opacity="0.9"/></g>
+    <path d="M22 63 Q32 59 42 63" stroke="#ef4444" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <circle cx="52" cy="10" r="6" fill="#ef4444"><animate attributeName="opacity" values="1;0.3;1" dur="0.8s" repeatCount="indefinite"/></circle>
+    <line x1="49" y1="7" x2="55" y2="13" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="55" y1="7" x2="49" y2="13" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+  </svg>`;
+  } else {
+    return `<svg width="40" height="46" viewBox="0 0 64 72" fill="none">
+    <path d="M32 4 C32 4 10 24 10 42 C10 54.6 19.9 65 32 65 C44.1 65 54 54.6 54 42 C54 24 32 4 32 4Z" fill="#0f172a" stroke="#334155" stroke-width="1.5" stroke-dasharray="5,3"/>
+    <text x="32" y="48" text-anchor="middle" fill="#334155" font-size="22" font-weight="bold" font-family="monospace">?</text>
+    <circle cx="32" cy="56" r="2" fill="#334155"/>
+  </svg>`;
+  }
 }
 
-function buildBptSVG(c: typeof STATUS_PALETTE["normal"], status: AnalysisStatus): string {
-  const badgeDot = status === "normal"
-    ? `<circle cx="50" cy="20" r="5" fill="${c.stroke}"/>
-       <circle cx="50" cy="20" r="5" fill="${c.stroke}" opacity="0.4">
-         <animate attributeName="r" from="5" to="11" dur="2s" repeatCount="indefinite"/>
-         <animate attributeName="opacity" from="0.4" to="0" dur="2s" repeatCount="indefinite"/>
-       </circle>`
-    : status === "warning"
-    ? `<circle cx="50" cy="20" r="5" fill="${c.stroke}"/>
-       <text x="50" y="24" text-anchor="middle" fill="white" font-size="7" font-weight="bold">!</text>`
-    : status === "critical"
-    ? `<circle cx="50" cy="20" r="5" fill="${c.stroke}">
-         <animate attributeName="opacity" values="1;0.3;1" dur="0.8s" repeatCount="indefinite"/>
-       </circle>
-       <text x="50" y="24" text-anchor="middle" fill="white" font-size="7" font-weight="bold">✕</text>`
-    : `<circle cx="50" cy="20" r="5" fill="${c.stroke}" opacity="0.5"/>`;
-
-  return `<svg width="40" height="45" viewBox="0 0 64 72" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect x="14" y="26" width="36" height="28" rx="4" fill="${c.bg}" stroke="${c.stroke}" stroke-width="2"/>
-    <rect x="10" y="20" width="44" height="8" rx="3" fill="${c.roof}" stroke="${c.stroke}" stroke-width="1.5"/>
-    <path d="M32 30 L32 44 M28 40 L32 44 L36 40" stroke="${c.stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <rect x="24" y="54" width="6" height="8" rx="1" fill="${c.bg}" stroke="${c.stroke}" stroke-width="1.5"/>
-    <rect x="34" y="54" width="6" height="8" rx="1" fill="${c.bg}" stroke="${c.stroke}" stroke-width="1.5"/>
-    <rect x="18" y="62" width="28" height="4" rx="2" fill="${c.roof}" stroke="${c.stroke}" stroke-width="1"/>
-    <text x="32" y="19" text-anchor="middle" fill="${c.stroke}" font-size="5.5" font-weight="bold" font-family="monospace">BPT</text>
-    ${badgeDot}
+function buildBptSVG(status: AnalysisStatus): string {
+  if (status === "normal") {
+    return `<svg width="40" height="46" viewBox="0 0 64 72" fill="none">
+    <defs><linearGradient id="drop-bpt" x1="32" y1="0" x2="32" y2="72" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#0c4a6e"/><stop offset="100%" stop-color="#075985"/></linearGradient></defs>
+    <path d="M32 4 C32 4 10 24 10 42 C10 54.6 19.9 65 32 65 C44.1 65 54 54.6 54 42 C54 24 32 4 32 4Z" fill="url(#drop-bpt)" stroke="#38bdf8" stroke-width="1.5"/>
+    <path d="M32 8 C32 8 16 26 16 42 C16 42 14 32 24 22Z" fill="#38bdf8" opacity="0.1"/>
+    <line x1="32" y1="24" x2="32" y2="48" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M24 42 L32 52 L40 42" stroke="#38bdf8" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="32" y="21" text-anchor="middle" fill="#38bdf8" font-size="6" font-weight="bold" font-family="monospace" opacity="0.7">BPT</text>
+    <g class="blink-eye"><circle cx="22" cy="57" r="4" fill="#042f4b"/><circle cx="22" cy="57" r="2.5" fill="#38bdf8"/><circle cx="23" cy="56" r="1" fill="white" opacity="0.9"/></g>
+    <g class="blink-eye" style="animation-delay:0.1s"><circle cx="42" cy="57" r="4" fill="#042f4b"/><circle cx="42" cy="57" r="2.5" fill="#38bdf8"/><circle cx="43" cy="56" r="1" fill="white" opacity="0.9"/></g>
+    <path d="M20 62 Q26 59 32 62 Q38 65 44 62" stroke="#38bdf8" stroke-width="1.8" fill="none" stroke-linecap="round" class="wave-anim"/>
+    <circle cx="52" cy="10" r="4" fill="#38bdf8" class="pulse"/>
   </svg>`;
+  } else if (status === "warning") {
+    return `<svg width="40" height="46" viewBox="0 0 64 72" fill="none">
+    <path d="M32 4 C32 4 10 24 10 42 C10 54.6 19.9 65 32 65 C44.1 65 54 54.6 54 42 C54 24 32 4 32 4Z" fill="#78350f" stroke="#f59e0b" stroke-width="1.5"/>
+    <line x1="32" y1="24" x2="32" y2="48" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M24 42 L32 52 L40 42" stroke="#f59e0b" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="32" y="21" text-anchor="middle" fill="#f59e0b" font-size="6" font-weight="bold" font-family="monospace" opacity="0.7">BPT</text>
+    <g class="blink-eye"><circle cx="22" cy="57" r="4" fill="#3d1a04"/><circle cx="22" cy="57" r="2.5" fill="#f59e0b"/></g>
+    <g class="blink-eye" style="animation-delay:0.1s"><circle cx="42" cy="57" r="4" fill="#3d1a04"/><circle cx="42" cy="57" r="2.5" fill="#f59e0b"/></g>
+    <path d="M22 63 L42 63" stroke="#f59e0b" stroke-width="1.8" stroke-linecap="round"/>
+    <circle cx="52" cy="10" r="6" fill="#f59e0b"/>
+    <text x="52" y="14" text-anchor="middle" fill="white" font-size="8" font-weight="bold">!</text>
+  </svg>`;
+  } else if (status === "critical") {
+    return `<svg width="40" height="46" viewBox="0 0 64 72" fill="none">
+    <path d="M32 4 C32 4 10 24 10 42 C10 54.6 19.9 65 32 65 C44.1 65 54 54.6 54 42 C54 24 32 4 32 4Z" fill="#7f1d1d" stroke="#ef4444" stroke-width="1.5"/>
+    <line x1="32" y1="24" x2="32" y2="48" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M24 42 L32 52 L40 42" stroke="#ef4444" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="32" y="21" text-anchor="middle" fill="#ef4444" font-size="6" font-weight="bold" font-family="monospace" opacity="0.7">BPT</text>
+    <g class="blink-eye"><circle cx="22" cy="57" r="4" fill="#3d0000"/><circle cx="22" cy="57" r="2.5" fill="#ef4444"/></g>
+    <g class="blink-eye" style="animation-delay:0.1s"><circle cx="42" cy="57" r="4" fill="#3d0000"/><circle cx="42" cy="57" r="2.5" fill="#ef4444"/></g>
+    <path d="M22 63 Q32 59 42 63" stroke="#ef4444" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <circle cx="52" cy="10" r="6" fill="#ef4444"><animate attributeName="opacity" values="1;0.3;1" dur="0.8s" repeatCount="indefinite"/></circle>
+    <line x1="49" y1="7" x2="55" y2="13" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="55" y1="7" x2="49" y2="13" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+  </svg>`;
+  } else {
+    return buildReservoirSVG("empty");
+  }
 }
 
-function buildIpaSVG(c: typeof STATUS_PALETTE["normal"], status: AnalysisStatus): string {
-  const badgeDot = status === "normal"
-    ? `<circle cx="52" cy="18" r="5" fill="${c.stroke}"/>
-       <circle cx="52" cy="18" r="5" fill="${c.stroke}" opacity="0.4">
-         <animate attributeName="r" from="5" to="11" dur="2s" repeatCount="indefinite"/>
-         <animate attributeName="opacity" from="0.4" to="0" dur="2s" repeatCount="indefinite"/>
-       </circle>`
-    : status === "warning"
-    ? `<circle cx="52" cy="18" r="5" fill="${c.stroke}"/>
-       <text x="52" y="22" text-anchor="middle" fill="white" font-size="7" font-weight="bold">!</text>`
-    : status === "critical"
-    ? `<circle cx="52" cy="18" r="5" fill="${c.stroke}">
-         <animate attributeName="opacity" values="1;0.3;1" dur="0.8s" repeatCount="indefinite"/>
-       </circle>
-       <text x="52" y="22" text-anchor="middle" fill="white" font-size="7" font-weight="bold">✕</text>`
-    : `<circle cx="52" cy="18" r="5" fill="${c.stroke}" opacity="0.5"/>`;
-
-  return `<svg width="40" height="45" viewBox="0 0 64 72" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect x="6" y="28" width="52" height="26" rx="4" fill="${c.bg}" stroke="${c.stroke}" stroke-width="2"/>
-    <path d="M4 28 L32 12 L60 28Z" fill="${c.roof}" stroke="${c.stroke}" stroke-width="1.5"/>
-    <rect x="14" y="36" width="10" height="10" rx="2" fill="${c.roof}" stroke="${c.stroke}" stroke-width="1"/>
-    <rect x="40" y="36" width="10" height="10" rx="2" fill="${c.roof}" stroke="${c.stroke}" stroke-width="1"/>
-    <rect x="28" y="18" width="8" height="12" rx="1" fill="${c.roof}" stroke="${c.stroke}" stroke-width="1"/>
-    <path d="M32 36 C32 36 29 40 29 42 C29 43.7 30.3 45 32 45 C33.7 45 35 43.7 35 42 C35 40 32 36 32 36Z" fill="${c.stroke}"/>
-    <rect x="22" y="54" width="6" height="8" rx="1" fill="${c.bg}" stroke="${c.stroke}" stroke-width="1.5"/>
-    <rect x="36" y="54" width="6" height="8" rx="1" fill="${c.bg}" stroke="${c.stroke}" stroke-width="1.5"/>
-    <rect x="16" y="62" width="32" height="4" rx="2" fill="${c.roof}" stroke="${c.stroke}" stroke-width="1"/>
-    <text x="32" y="25" text-anchor="middle" fill="${c.stroke}" font-size="5" font-weight="bold" font-family="monospace">IPA</text>
-    ${badgeDot}
+function buildIpaSVG(status: AnalysisStatus): string {
+  return `<svg width="40" height="46" viewBox="0 0 64 72" fill="none">
+    <defs><linearGradient id="drop-ipa" x1="32" y1="0" x2="32" y2="72" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#2e1065"/><stop offset="100%" stop-color="#3b0764"/></linearGradient></defs>
+    <path d="M32 4 C32 4 10 24 10 42 C10 54.6 19.9 65 32 65 C44.1 65 54 54.6 54 42 C54 24 32 4 32 4Z" fill="url(#drop-ipa)" stroke="#a78bfa" stroke-width="1.5"/>
+    <path d="M14 52 L26 28 L32 38 L38 24 L50 52Z" fill="#3b0764" stroke="#a78bfa" stroke-width="1.2"/>
+    <path d="M36 27 L38 24 L40 27Z" fill="white" opacity="0.7"/>
+    <path d="M24 31 L26 28 L28 31Z" fill="white" opacity="0.7"/>
+    <path d="M18 56 Q24 52 30 56 Q36 60 42 56 Q46 52 50 56" stroke="#a78bfa" stroke-width="2" fill="none" stroke-linecap="round" class="wave-anim"/>
+    <text x="32" y="68" text-anchor="middle" fill="#a78bfa" font-size="6" font-weight="bold" font-family="monospace">IPA</text>
+    <g class="blink-eye"><circle cx="24" cy="46" r="4" fill="#1a0540"/><circle cx="24" cy="46" r="2.5" fill="#a78bfa"/><circle cx="25" cy="45" r="1" fill="white" opacity="0.9"/></g>
+    <g class="blink-eye" style="animation-delay:0.15s"><circle cx="40" cy="46" r="4" fill="#1a0540"/><circle cx="40" cy="46" r="2.5" fill="#a78bfa"/><circle cx="41" cy="45" r="1" fill="white" opacity="0.9"/></g>
+    <circle cx="52" cy="10" r="4" fill="#a78bfa" class="pulse"/>
   </svg>`;
 }
 
 // ─── Main icon factory ────────────────────────────────────────────────────────
 function createMonitoringIcon(status: AnalysisStatus, pointType: PointType = "reservoir") {
-  const c = STATUS_PALETTE[status];
-
   let svgHtml: string;
-  if (pointType === "bpt")      svgHtml = buildBptSVG(c, status);
-  else if (pointType === "ipa") svgHtml = buildIpaSVG(c, status);
-  else                          svgHtml = buildReservoirSVG(c, status);
+  if (pointType === "bpt")      svgHtml = buildBptSVG(status);
+  else if (pointType === "ipa") svgHtml = buildIpaSVG(status);
+  else                          svgHtml = buildReservoirSVG(status);
 
   return L.divIcon({
     className: "bg-transparent",
-    html: `<div style="filter:drop-shadow(0 4px 12px ${c.stroke}66)">${svgHtml}</div>`,
-    iconSize:   [40, 45],
-    iconAnchor: [20, 45],
+    html: `<div class="unified-icon-wrapper" style="filter:drop-shadow(0 4px 12px rgba(0,0,0,0.5))">${svgHtml}</div>`,
+    iconSize:   [40, 46],
+    iconAnchor: [20, 46],
   });
 }
 
@@ -231,6 +233,15 @@ const MODAL_STYLE = `
     to   { opacity:1; transform:scale(1) translateY(0); }
   }
   .mon-modal-enter { animation: mon-modal-in 0.2s cubic-bezier(0.16,1,0.3,1) forwards; }
+  
+  @keyframes pulse-dot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.3); } }
+  @keyframes blink { 0%, 88%, 100% { transform: scaleY(1); } 93% { transform: scaleY(0.05); } }
+  @keyframes wave { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(2px); } }
+  
+  .pulse { animation: pulse-dot 2s infinite; }
+  .blink-eye { animation: blink 4s infinite; transform-origin: center; }
+  .wave-anim { animation: wave 2s ease-in-out infinite; }
+  .unified-icon-wrapper svg { display: block; }
 `;
 
 // ─── Unified Modal (view data + optionally edit point) ───────────────────────
