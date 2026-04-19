@@ -365,7 +365,6 @@ export default function DireksiDashboard() {
   const [, navigate] = useLocation();
   const { data: rawMonitoringData } = useGetMonitoringData();
 
-  // Proses data dari API database menjadi format per-titik
   const monitoringData = useMemo(() => {
     const todayDateStr = new Date().toISOString().split("T")[0];
     const result: Record<string, MonitoringData> = {};
@@ -384,270 +383,251 @@ export default function DireksiDashboard() {
     return result;
   }, [rawMonitoringData]);
 
-  const [expandedChart, setExpandedChart] = useState(true);
-  const [expandedProblems, setExpandedProblems] = useState(true);
   const [selectedPointId, setSelectedPointId] = useState<string>("all");
 
   const weeklyRaw = useMemo(() => generateWeeklyData(monitoringData, selectedPointId), [monitoringData, selectedPointId]);
   const { data: chartData, tReg, pReg } = useMemo(() => addPredictions(weeklyRaw), [weeklyRaw]);
   const statuses = useMemo(() => getPointStatuses(monitoringData), [monitoringData]);
 
-  const problemPoints = statuses.filter((s) => s.status === "warning" || s.status === "critical");
   const normalCount = statuses.filter((s) => s.status === "normal").length;
   const warningCount = statuses.filter((s) => s.status === "warning").length;
   const criticalCount = statuses.filter((s) => s.status === "critical").length;
-  const emptyCount = statuses.filter((s) => s.status === "empty").length;
 
-  const pakarAdvice = useMemo(
+  const advice = useMemo(
     () => getPakarAdvice(selectedPointId, statuses, weeklyRaw, tReg, pReg),
     [selectedPointId, statuses, weeklyRaw, tReg, pReg]
   );
+  const cleanAdvice = advice.replace(/^[\u2713\u26a0\ufe0f\ud83d\udea8\ud83d\uded1\u2139\ufe0f\ud83d\udca1]\s?/u, "");
 
   const now = new Date();
   const dateStr = now.toLocaleDateString("id-ID", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+  const timeStr = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+
+  const avgTekanan = useMemo(() => {
+    const vals = statuses.filter(s => s.tekanan != null).map(s => s.tekanan!);
+    return vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
+  }, [statuses]);
+
+  const pctAman = statuses.length > 0 ? Math.round((normalCount / statuses.length) * 100) : 0;
+
+  const issueCategories = useMemo(() => {
+    const issues: { label: string; count: number; color: string }[] = [];
+    let lowPressure = 0, lowWater = 0, noInput = 0;
+    statuses.forEach(s => {
+      if (s.cause.includes("Tekanan")) lowPressure++;
+      else if (s.cause.includes("Tinggi air") || s.cause.includes("Penurunan")) lowWater++;
+      else if (s.status === "empty") noInput++;
+    });
+    if (lowPressure > 0) issues.push({ label: "Tekanan Rendah", count: lowPressure, color: "#ef4444" });
+    if (lowWater > 0) issues.push({ label: "Level Air Rendah", count: lowWater, color: "#f59e0b" });
+    if (noInput > 0) issues.push({ label: "Belum Input", count: noInput, color: "#94a3b8" });
+    if (issues.length === 0) issues.push({ label: "Semua Normal", count: statuses.length, color: "#22c55e" });
+    return issues;
+  }, [statuses]);
+  const totalIssues = issueCategories.reduce((a, b) => a + b.count, 0);
+
+  const reservoirUtama = statuses.find(s => s.point.id === "MON-01");
 
   return (
-    <div className="flex h-screen w-full bg-slate-50 text-slate-900 overflow-hidden">
-      {/* Main content */}
-      <div className="flex-1 overflow-y-auto">
-        {/* Header */}
-        <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
-          <div className="flex items-center justify-between px-6 py-4">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate("/")}
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50 transition-all"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </button>
-              <div>
-                <h1 className="text-lg font-bold text-slate-900 tracking-tight">Dashboard Direksi</h1>
-                <p className="text-xs text-slate-500">Sistem Monitoring Distribusi Air — PDAM TIARA</p>
-              </div>
-            </div>
+    <div style={{ fontFamily: "'Inter','Segoe UI',system-ui,sans-serif" }} className="min-h-screen bg-[#fafbfc]">
+      {/* Top Nav */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div className="flex items-center justify-between px-4 sm:px-8 h-14">
+          <div className="flex items-center gap-6">
+            <button onClick={() => navigate("/")} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline font-medium">Kembali</span>
+            </button>
+            <div className="h-5 w-px bg-gray-200 hidden sm:block" />
             <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-2 text-xs text-slate-500">
-                <Clock className="h-3.5 w-3.5" />
-                <span>{dateStr}</span>
+              <div className="h-7 w-7 rounded-md bg-gray-900 flex items-center justify-center">
+                <Droplets className="h-4 w-4 text-white" />
               </div>
-              <button
-                onClick={() => exportPDF(statuses)}
-                className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-blue-700 transition-all active:scale-95"
-              >
-                <FileDown className="h-4 w-4" />
-                <span className="hidden sm:inline">Export Laporan</span>
-              </button>
+              <span className="font-semibold text-gray-900 text-sm tracking-tight">PDAM TIARA</span>
             </div>
+            <nav className="hidden md:flex items-center gap-1 ml-4">
+              {["Dashboard", "Peta", "Laporan"].map((item, i) => (
+                <span key={item} className={`px-3 py-1.5 text-sm rounded-md cursor-default ${i === 0 ? "font-semibold text-gray-900 bg-gray-100" : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"}`}>{item}</span>
+              ))}
+            </nav>
           </div>
-        </header>
-
-        <div className="p-4 sm:p-6 space-y-6 max-w-[1400px] mx-auto">
-
-          {/* ── Summary Cards ──────────────────────────────────────────── */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            <div className="rounded-xl border border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 p-4 shadow-sm">
-              <div className="flex items-center gap-2 mb-2">
-                <Shield className="h-4 w-4 text-green-600" />
-                <span className="text-xs font-semibold text-green-700 uppercase tracking-wide">Normal</span>
-              </div>
-              <p className="text-3xl font-bold text-green-700">{normalCount}</p>
-              <p className="text-[11px] text-green-600/70 mt-1">Titik aman</p>
+          <div className="flex items-center gap-4">
+            <div className="hidden lg:flex items-center gap-2 text-xs text-gray-400">
+              <Clock className="h-3.5 w-3.5" />
+              <span>Last update: {timeStr}</span>
             </div>
-            <div className="rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50 p-4 shadow-sm">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle className="h-4 w-4 text-amber-600" />
-                <span className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Waspada</span>
-              </div>
-              <p className="text-3xl font-bold text-amber-700">{warningCount}</p>
-              <p className="text-[11px] text-amber-600/70 mt-1">Perlu perhatian</p>
-            </div>
-            <div className="rounded-xl border border-red-200 bg-gradient-to-br from-red-50 to-rose-50 p-4 shadow-sm">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle className="h-4 w-4 text-red-600" />
-                <span className="text-xs font-semibold text-red-700 uppercase tracking-wide">Kritis</span>
-              </div>
-              <p className={`text-3xl font-bold text-red-700 ${criticalCount > 0 ? "animate-pulse" : ""}`}>{criticalCount}</p>
-              <p className="text-[11px] text-red-600/70 mt-1">Tindakan segera</p>
-            </div>
+            <button onClick={() => exportPDF(statuses)} className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors active:scale-[0.98]">
+              <FileDown className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Export Laporan</span>
+            </button>
           </div>
+        </div>
+      </header>
 
-          {/* ── 1. Grafik Tren Mingguan ────────────────────────────────── */}
-          <div className="bg-white rounded-xl shadow-[0_2px_12px_rgba(0,0,0,0.02)] border border-slate-200 overflow-hidden">
-            <div 
-              className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 cursor-pointer"
-              onClick={() => setExpandedChart(!expandedChart)}
-            >
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
-                  <TrendingUp size={18} />
-                </div>
-                <div>
-                  <h2 className="font-semibold text-slate-800 leading-tight">Grafik Tren Mingguan + Prediksi</h2>
-                  <p className="text-xs text-slate-500">
-                    Sistem pemantau historis dan kecerdasan prediksi linear
-                  </p>
+      <div className="bg-white border-b border-gray-100 px-4 sm:px-8 py-2.5 flex items-center gap-4 text-xs text-gray-400">
+        <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" /> Sistem Aktif</span>
+        <span>{dateStr}</span>
+      </div>
+
+      {/* Content */}
+      <div className="px-4 sm:px-8 py-6 max-w-[1440px] mx-auto">
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-6">
+
+          {/* LEFT COL */}
+          <div className="space-y-6">
+            {/* Metric Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-white rounded-xl border border-gray-200 p-5">
+                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">Efisiensi Distribusi</p>
+                <div className="flex items-end justify-between">
+                  <div>
+                    <p className="text-3xl font-bold text-gray-900 tracking-tight">{pctAman}%</p>
+                    <p className="text-xs text-gray-400 mt-1">{normalCount}/{statuses.length} titik aman</p>
+                  </div>
+                  <div className="flex items-end gap-[2px] h-10">
+                    {weeklyRaw.slice(-7).map((d: any, i: number) => {
+                      const h = Math.max(4, ((d.tinggiAir ?? 0) / 400) * 36);
+                      return <div key={i} className="w-[5px] rounded-sm bg-green-400" style={{ height: h }} />;
+                    })}
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
-                <select 
-                  className="text-sm border border-slate-200 rounded-md px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                  onClick={(e) => e.stopPropagation()}
-                  value={selectedPointId}
-                  onChange={(e) => setSelectedPointId(e.target.value)}
-                >
-                  <option value="all">Rata-rata Seluruh Titik</option>
-                  <optgroup label="Titik Monitoring Aktif">
-                    {MONITORING_POINTS.map((pt) => (
-                      <option key={pt.id} value={pt.id}>{pt.name}</option>
-                    ))}
-                  </optgroup>
+              <div className="bg-white rounded-xl border border-gray-200 p-5">
+                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">Rata-Rata Tekanan</p>
+                <div className="flex items-end justify-between">
+                  <p className="text-3xl font-bold text-gray-900 tracking-tight">{avgTekanan.toFixed(1)} <span className="text-lg font-medium text-gray-400">bar</span></p>
+                  <span className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${avgTekanan >= 2 ? "bg-green-50 text-green-700" : avgTekanan >= 0.5 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"}`}>
+                    {avgTekanan >= 2 ? "Stabil" : avgTekanan >= 0.5 ? "Waspada" : "Kritis"}
+                  </span>
+                </div>
+                <div className="flex gap-[2px] mt-3">
+                  {weeklyRaw.slice(-7).map((d: any, i: number) => {
+                    const v = d.tekanan ?? 0;
+                    const color = v >= 2 ? "#22c55e" : v >= 0.5 ? "#f59e0b" : "#ef4444";
+                    return <div key={i} className="flex-1 h-1.5 rounded-sm" style={{ background: color, opacity: 0.4 + (v / 8) * 0.6 }} />;
+                  })}
+                </div>
+              </div>
+              <div className="bg-white rounded-xl border border-gray-200 p-5">
+                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">Titik Monitoring</p>
+                <p className="text-3xl font-bold text-gray-900 tracking-tight">{statuses.length}</p>
+                <div className="flex items-center gap-3 mt-3">
+                  <span className="flex items-center gap-1.5 text-xs"><span className="h-2 w-2 rounded-full bg-green-500" /><span className="text-gray-500">{normalCount}</span></span>
+                  <span className="flex items-center gap-1.5 text-xs"><span className="h-2 w-2 rounded-full bg-amber-500" /><span className="text-gray-500">{warningCount}</span></span>
+                  <span className="flex items-center gap-1.5 text-xs"><span className="h-2 w-2 rounded-full bg-red-500" /><span className="text-gray-500">{criticalCount}</span></span>
+                </div>
+              </div>
+            </div>
+
+            {/* Chart */}
+            <div className="bg-white rounded-xl border border-gray-200">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                <h2 className="text-sm font-semibold text-gray-900">Tinggi Air & Tekanan</h2>
+                <select className="text-xs border border-gray-200 rounded-md px-2.5 py-1.5 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/30" value={selectedPointId} onChange={(e) => setSelectedPointId(e.target.value)}>
+                  <option value="all">Semua Titik</option>
+                  {MONITORING_POINTS.map((pt) => (<option key={pt.id} value={pt.id}>{pt.name}</option>))}
                 </select>
-                {expandedChart ? <ChevronUp size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
               </div>
-            </div>
-
-            {expandedChart && (
-              <div className="px-4 sm:px-6 pb-6">
-                <div className="h-[280px] sm:h-[340px]">
+              <div className="px-4 sm:px-6 pt-4 pb-2">
+                <div className="h-[280px] sm:h-[320px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                      <XAxis
-                        dataKey="day"
-                        tick={{ fontSize: 11, fill: "#64748b" }}
-                        axisLine={{ stroke: "#e2e8f0" }}
-                      />
-                      <YAxis
-                        yAxisId="left"
-                        tick={{ fontSize: 11, fill: "#3b82f6" }}
-                        axisLine={{ stroke: "#3b82f6" }}
-                        label={{ value: "Tinggi Air (cm)", angle: -90, position: "insideLeft", style: { fontSize: 10, fill: "#3b82f6" }, offset: 15 }}
-                      />
-                      <YAxis
-                        yAxisId="right"
-                        orientation="right"
-                        tick={{ fontSize: 11, fill: "#8b5cf6" }}
-                        axisLine={{ stroke: "#8b5cf6" }}
-                        label={{ value: "Tekanan (bar)", angle: 90, position: "insideRight", style: { fontSize: 10, fill: "#8b5cf6" }, offset: 15 }}
-                      />
-                      <RechartsTooltip
-                        contentStyle={{ borderRadius: 12, fontSize: 12, border: "1px solid #e2e8f0", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}
-                        formatter={(val: any, name: string) => {
-                          if (val == null) return ["-", name];
-                          return [typeof val === "number" ? val.toFixed(2) : val, name];
-                        }}
-                      />
-                      <Legend wrapperStyle={{ fontSize: 11 }} />
-
-                      {/* Actual data */}
-                      <Line yAxisId="left" type="monotone" dataKey="tinggiAir" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 3.5, fill: "#3b82f6" }} name="Tinggi Air (cm)" connectNulls />
-                      <Line yAxisId="right" type="monotone" dataKey="tekanan" stroke="#8b5cf6" strokeWidth={2.5} dot={{ r: 3.5, fill: "#8b5cf6" }} name="Tekanan (bar)" connectNulls />
-
-                      {/* Prediction lines */}
-                      <Line yAxisId="left" type="monotone" dataKey="predTinggi" stroke="#3b82f6" strokeWidth={2} strokeDasharray="8 4" dot={{ r: 3, fill: "#93c5fd", stroke: "#3b82f6" }} name="Prediksi T.Air" connectNulls />
-                      <Line yAxisId="right" type="monotone" dataKey="predTekanan" stroke="#8b5cf6" strokeWidth={2} strokeDasharray="8 4" dot={{ r: 3, fill: "#c4b5fd", stroke: "#8b5cf6" }} name="Prediksi Tekanan" connectNulls />
-
-                      {/* Critical threshold lines */}
-                      <ReferenceLine yAxisId="left" y={50} stroke="#ef4444" strokeDasharray="6 3" strokeWidth={1} label={{ value: "Kritis 50cm", position: "insideBottomLeft", style: { fontSize: 9, fill: "#ef4444" } }} />
-                      <ReferenceLine yAxisId="right" y={0.5} stroke="#ef4444" strokeDasharray="6 3" strokeWidth={1} label={{ value: "Kritis 0.5bar", position: "insideBottomRight", style: { fontSize: 9, fill: "#ef4444" } }} />
+                    <LineChart data={chartData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                      <XAxis dataKey="day" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={{ stroke: "#e5e7eb" }} tickLine={false} />
+                      <YAxis yAxisId="left" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} label={{ value: "Tinggi Air, cm", angle: -90, position: "insideLeft", style: { fontSize: 10, fill: "#9ca3af" }, offset: 20 }} />
+                      <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} label={{ value: "Tekanan, bar", angle: 90, position: "insideRight", style: { fontSize: 10, fill: "#9ca3af" }, offset: 20 }} />
+                      <RechartsTooltip contentStyle={{ borderRadius: 10, fontSize: 12, border: "1px solid #e5e7eb", boxShadow: "0 4px 16px rgba(0,0,0,0.06)", padding: "10px 14px" }} formatter={(val: any, name: string) => [val == null ? "-" : typeof val === "number" ? val.toFixed(2) : val, name]} />
+                      <Legend wrapperStyle={{ fontSize: 11, paddingTop: 12 }} iconType="circle" iconSize={8} />
+                      <Line yAxisId="left" type="monotone" dataKey="tinggiAir" stroke="#22c55e" strokeWidth={2} dot={{ r: 3, fill: "#22c55e", strokeWidth: 0 }} name="Tinggi Air (cm)" connectNulls />
+                      <Line yAxisId="right" type="monotone" dataKey="tekanan" stroke="#ef4444" strokeWidth={2} dot={{ r: 3, fill: "#ef4444", strokeWidth: 0 }} name="Tekanan (bar)" connectNulls />
+                      <Line yAxisId="left" type="monotone" dataKey="predTinggi" stroke="#22c55e" strokeWidth={1.5} strokeDasharray="6 4" dot={{ r: 2.5, fill: "#bbf7d0", stroke: "#22c55e", strokeWidth: 1 }} name="Prediksi T.Air" connectNulls />
+                      <Line yAxisId="right" type="monotone" dataKey="predTekanan" stroke="#ef4444" strokeWidth={1.5} strokeDasharray="6 4" dot={{ r: 2.5, fill: "#fecaca", stroke: "#ef4444", strokeWidth: 1 }} name="Prediksi Tekanan" connectNulls />
+                      <ReferenceLine yAxisId="left" y={50} stroke="#ef4444" strokeDasharray="4 4" strokeWidth={1} />
+                      <ReferenceLine yAxisId="right" y={0.5} stroke="#ef4444" strokeDasharray="4 4" strokeWidth={1} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
-
-                {/* Prediction insight */}
-                <div className={`mt-4 rounded-lg px-4 py-3 text-sm flex gap-3 items-start ${pakarAdvice.startsWith("✓") || pakarAdvice.startsWith("ℹ️") ? "bg-green-50 text-green-800 border border-green-200" : "bg-amber-50 text-amber-900 border border-amber-200"}`}>
-                  <span className="text-base leading-none pt-0.5">💡</span>
-                  <div>
-                    <strong className="block mb-1">Analisa & Saran Pakar:</strong> 
-                    <span className="leading-relaxed">{pakarAdvice}</span>
-                  </div>
+              </div>
+              <div className="px-6 pb-5">
+                <div className={`rounded-lg px-4 py-3 text-[13px] leading-relaxed border ${cleanAdvice.includes("KRITIS") || cleanAdvice.includes("DROP") || cleanAdvice.includes("PECAH") ? "bg-red-50 border-red-200 text-red-800" : cleanAdvice.includes("stabil") || cleanAdvice.includes("optimal") || cleanAdvice.includes("Secara keseluruhan") ? "bg-green-50 border-green-200 text-green-800" : "bg-amber-50 border-amber-200 text-amber-800"}`}>
+                  <span className="font-semibold">Analisa & Saran: </span>{cleanAdvice}
                 </div>
               </div>
-            )}
+            </div>
+
+            {/* Bottom Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-white rounded-xl border border-gray-200 p-5">
+                <h3 className="text-sm font-semibold text-gray-900 mb-4">Kategori Masalah</h3>
+                <div className="flex w-full h-3 rounded-full overflow-hidden mb-4 bg-gray-100">
+                  {issueCategories.map((cat, i) => (<div key={i} style={{ width: `${(cat.count / totalIssues) * 100}%`, background: cat.color }} className="transition-all" />))}
+                </div>
+                <div className="space-y-2.5">
+                  {issueCategories.map((cat, i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: cat.color }} /><span className="text-sm text-gray-600">{cat.label}</span></div>
+                      <div className="flex items-center gap-3"><span className="text-sm font-semibold text-gray-900">{cat.count}</span><span className="text-xs text-gray-400 w-8 text-right">{Math.round((cat.count / totalIssues) * 100)}%</span></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-white rounded-xl border border-gray-200 p-5">
+                <h3 className="text-sm font-semibold text-gray-900 mb-4">Reservoir Induk (IPA)</h3>
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="text-center"><p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Level</p><p className="text-xl font-bold text-gray-900">{reservoirUtama?.tinggiAir ?? "-"}<span className="text-xs text-gray-400 ml-0.5">cm</span></p></div>
+                  <div className="text-center"><p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Tekanan</p><p className="text-xl font-bold text-gray-900">{reservoirUtama?.tekanan?.toFixed(1) ?? "-"}<span className="text-xs text-gray-400 ml-0.5">bar</span></p></div>
+                  <div className="text-center"><p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Status</p><span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${reservoirUtama?.status === "normal" ? "bg-green-100 text-green-700" : reservoirUtama?.status === "warning" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}><span className={`h-1.5 w-1.5 rounded-full ${reservoirUtama?.status === "normal" ? "bg-green-500" : reservoirUtama?.status === "warning" ? "bg-amber-500" : "bg-red-500 animate-pulse"}`} />{reservoirUtama?.status === "normal" ? "Normal" : reservoirUtama?.status === "warning" ? "Waspada" : "Kritis"}</span></div>
+                </div>
+                <div className="relative w-full h-4 rounded-full bg-gray-100 overflow-hidden">
+                  <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(100, ((reservoirUtama?.tinggiAir ?? 0) / 400) * 100)}%`, background: (reservoirUtama?.tinggiAir ?? 0) > 100 ? "linear-gradient(90deg, #22c55e, #4ade80)" : (reservoirUtama?.tinggiAir ?? 0) > 50 ? "linear-gradient(90deg, #f59e0b, #fbbf24)" : "linear-gradient(90deg, #ef4444, #f87171)" }} />
+                </div>
+                <div className="flex justify-between mt-1.5 text-[10px] text-gray-400"><span>0 cm</span><span>Kapasitas ~400 cm</span></div>
+              </div>
+            </div>
           </div>
 
-          {/* ── 2. Daftar Titik Bermasalah ────────────────────────────── */}
-          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-            <button
-              onClick={() => setExpandedProblems(!expandedProblems)}
-              className="w-full flex items-center justify-between px-6 py-4 hover:bg-slate-50 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-100">
-                  <AlertTriangle className="h-5 w-5 text-red-600" />
-                </div>
-                <div className="text-left">
-                  <h2 className="text-sm font-bold text-slate-800">Daftar Titik Bermasalah</h2>
-                  <p className="text-[11px] text-slate-500">{problemPoints.length} titik memerlukan perhatian</p>
-                </div>
-              </div>
-              {expandedProblems ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
-            </button>
-
-            {expandedProblems && (
-              <div className="px-4 sm:px-6 pb-6">
-                {problemPoints.length === 0 ? (
-                  <div className="py-8 text-center">
-                    <Shield className="h-10 w-10 text-green-400 mx-auto mb-2" />
-                    <p className="text-sm font-semibold text-green-700">Semua titik dalam kondisi normal</p>
-                    <p className="text-xs text-slate-400 mt-1">Tidak ada titik yang memerlukan tindakan saat ini</p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b-2 border-slate-200">
-                          <th className="text-left py-2 px-3 text-xs font-bold text-slate-500 uppercase tracking-wide">Nama Titik</th>
-                          <th className="text-left py-2 px-3 text-xs font-bold text-slate-500 uppercase tracking-wide">Status</th>
-                          <th className="text-left py-2 px-3 text-xs font-bold text-slate-500 uppercase tracking-wide hidden sm:table-cell">Penyebab</th>
-                          <th className="text-left py-2 px-3 text-xs font-bold text-slate-500 uppercase tracking-wide hidden md:table-cell">Tinggi Air</th>
-                          <th className="text-left py-2 px-3 text-xs font-bold text-slate-500 uppercase tracking-wide hidden md:table-cell">Tekanan</th>
-                          <th className="text-left py-2 px-3 text-xs font-bold text-slate-500 uppercase tracking-wide">Prediksi</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {problemPoints.map((row) => (
-                          <tr
-                            key={row.point.id}
-                            className={`border-b border-slate-100 transition-colors ${
-                              row.status === "critical"
-                                ? "bg-red-50/70 hover:bg-red-50"
-                                : "bg-amber-50/50 hover:bg-amber-50"
-                            }`}
-                          >
-                            <td className="py-2.5 px-3 font-semibold text-slate-800">{row.point.name}</td>
-                            <td className="py-2.5 px-3">
-                              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${
-                                row.status === "critical" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
-                              }`}>
-                                <span className={`h-1.5 w-1.5 rounded-full ${row.status === "critical" ? "bg-red-500 animate-pulse" : "bg-amber-500"}`} />
-                                {row.status === "critical" ? "KRITIS" : "WASPADA"}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-3 text-slate-600 hidden sm:table-cell">{row.cause}</td>
-                            <td className="py-2.5 px-3 text-slate-600 hidden md:table-cell">{row.tinggiAir != null ? `${row.tinggiAir} cm` : "-"}</td>
-                            <td className="py-2.5 px-3 text-slate-600 hidden md:table-cell">{row.tekanan != null ? `${row.tekanan} bar` : "-"}</td>
-                            <td className="py-2.5 px-3 text-xs font-medium text-slate-500">{row.prediksiKritis}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            )}
-          </section>
-
-
-
-          {/* Footer */}
-          <div className="text-center pb-8">
-            <p className="text-[11px] text-slate-400">
-              Tiara Manajemen Distribusi &bull; Sistem Informasi Layanan Distribusi &bull; {dateStr}
-            </p>
+          {/* RIGHT COL — Table */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-gray-900">Pantauan Titik Real-Time</h2>
+              <span className="text-[11px] text-gray-400">{statuses.length} titik</span>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <table className="w-full text-left">
+                <thead className="sticky top-0 bg-white">
+                  <tr className="border-b border-gray-100">
+                    <th className="px-5 py-2.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Nama</th>
+                    <th className="px-3 py-2.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Status</th>
+                    <th className="px-3 py-2.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider text-right">Level</th>
+                    <th className="px-3 py-2.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider text-right">Tekanan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {statuses.map((row) => (
+                    <tr key={row.point.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                      <td className="px-5 py-3"><p className="text-sm font-medium text-gray-900 leading-tight">{row.point.name}</p><p className="text-[11px] text-gray-400 mt-0.5">{row.point.id}</p></td>
+                      <td className="px-3 py-3">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${row.status === "normal" ? "bg-green-50 text-green-700" : row.status === "warning" ? "bg-amber-50 text-amber-700" : row.status === "critical" ? "bg-red-50 text-red-700" : "bg-gray-50 text-gray-500"}`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${row.status === "normal" ? "bg-green-500" : row.status === "warning" ? "bg-amber-500" : row.status === "critical" ? "bg-red-500 animate-pulse" : "bg-gray-400"}`} />
+                          {row.status === "normal" ? "Normal" : row.status === "warning" ? "Waspada" : row.status === "critical" ? "Kritis" : "N/A"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-sm text-gray-700 text-right font-mono tabular-nums">{row.tinggiAir != null ? row.tinggiAir : "-"}<span className="text-gray-400 text-xs ml-0.5">cm</span></td>
+                      <td className="px-3 py-3 text-sm text-gray-700 text-right font-mono tabular-nums">{row.tekanan != null ? row.tekanan.toFixed(1) : "-"}<span className="text-gray-400 text-xs ml-0.5">bar</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="px-5 py-3 border-t border-gray-100 text-[11px] text-gray-400 flex justify-between">
+              <span>{statuses.length} titik</span>
+              <span>Update: {timeStr}</span>
+            </div>
           </div>
+
         </div>
       </div>
     </div>
   );
 }
+
