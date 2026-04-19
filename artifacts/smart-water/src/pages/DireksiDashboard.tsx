@@ -378,6 +378,17 @@ export default function DireksiDashboard() {
   const { data: rawMonitoringData } = useGetMonitoringData();
   const [darkMode, setDarkMode] = useState(false);
 
+  // Style untuk animasi cahaya garis prediksi (bolak-balik)
+  const animStyle = `
+    @keyframes dash-beam {
+      0% { stroke-dashoffset: 60; }
+      100% { stroke-dashoffset: 0; }
+    }
+    .animated-prediction-line path.recharts-curve {
+      animation: dash-beam 2s linear infinite alternate !important;
+    }
+  `;
+
   const monitoringData = useMemo(() => {
     const todayDateStr = new Date().toISOString().split("T")[0];
     const result: Record<string, MonitoringData> = {};
@@ -443,6 +454,7 @@ export default function DireksiDashboard() {
 
   return (
     <div style={{ fontFamily: "'Inter','Segoe UI',system-ui,sans-serif" }} className={`min-h-screen transition-colors duration-300 ${darkMode ? "bg-gray-950 text-gray-100" : "bg-[#fafbfc] text-gray-900"}`}>
+      <style>{animStyle}</style>
       {/* Top Nav */}
       <header className={`border-b sticky top-0 z-50 transition-colors duration-300 ${darkMode ? "bg-gray-900 border-gray-800" : "bg-white border-gray-200"}`}>
         <div className="flex items-center justify-between px-4 sm:px-8 h-14">
@@ -510,7 +522,7 @@ export default function DireksiDashboard() {
                 <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">Efisiensi Distribusi</p>
                 <div className="flex items-end justify-between">
                   <div>
-                    <p className="text-3xl font-bold text-gray-900 tracking-tight">{pctAman}%</p>
+                    <p className={`text-3xl font-bold tracking-tight ${darkMode ? "text-gray-100" : "text-gray-900"}`}>{pctAman}%</p>
                     <p className="text-xs text-gray-400 mt-1">{normalCount}/{statuses.length} titik aman</p>
                   </div>
                   <div className="flex items-end gap-[2px] h-10">
@@ -524,7 +536,7 @@ export default function DireksiDashboard() {
               <div className={`rounded-xl border p-5 transition-colors ${darkMode ? "bg-gray-900 border-gray-800" : "bg-white border-gray-200"}`}>
                 <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">Rata-Rata Tekanan</p>
                 <div className="flex items-end justify-between">
-                  <p className="text-3xl font-bold text-gray-900 tracking-tight">{avgTekanan.toFixed(1)} <span className="text-lg font-medium text-gray-400">bar</span></p>
+                  <p className={`text-3xl font-bold tracking-tight ${darkMode ? "text-gray-100" : "text-gray-900"}`}>{avgTekanan.toFixed(1)} <span className="text-lg font-medium text-gray-400">bar</span></p>
                   <span className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${avgTekanan >= 2 ? "bg-green-50 text-green-700" : avgTekanan >= 0.5 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"}`}>
                     {avgTekanan >= 2 ? "Stabil" : avgTekanan >= 0.5 ? "Waspada" : "Kritis"}
                   </span>
@@ -569,8 +581,8 @@ export default function DireksiDashboard() {
                       <Legend wrapperStyle={{ fontSize: 11, paddingTop: 12, color: darkMode ? "#9ca3af" : undefined }} iconType="circle" iconSize={8} />
                       <Line yAxisId="left" type="monotone" dataKey="tinggiAir" stroke="#22c55e" strokeWidth={2} dot={{ r: 3, fill: "#22c55e", strokeWidth: 0 }} name="Tinggi Air (cm)" connectNulls />
                       <Line yAxisId="right" type="monotone" dataKey="tekanan" stroke="#ef4444" strokeWidth={2} dot={{ r: 3, fill: "#ef4444", strokeWidth: 0 }} name="Tekanan (bar)" connectNulls />
-                      <Line yAxisId="left" type="monotone" dataKey="predTinggi" stroke="#22c55e" strokeWidth={1.5} strokeDasharray="6 4" dot={{ r: 2.5, fill: "#bbf7d0", stroke: "#22c55e", strokeWidth: 1 }} name="Prediksi T.Air" connectNulls />
-                      <Line yAxisId="right" type="monotone" dataKey="predTekanan" stroke="#ef4444" strokeWidth={1.5} strokeDasharray="6 4" dot={{ r: 2.5, fill: "#fecaca", stroke: "#ef4444", strokeWidth: 1 }} name="Prediksi Tekanan" connectNulls />
+                      <Line className="animated-prediction-line" yAxisId="left" type="monotone" dataKey="predTinggi" stroke="#22c55e" strokeWidth={1.5} strokeDasharray="6 6" dot={{ r: 2.5, fill: "#bbf7d0", stroke: "#22c55e", strokeWidth: 1 }} name="Prediksi T.Air" connectNulls />
+                      <Line className="animated-prediction-line" yAxisId="right" type="monotone" dataKey="predTekanan" stroke="#ef4444" strokeWidth={1.5} strokeDasharray="6 6" dot={{ r: 2.5, fill: "#fecaca", stroke: "#ef4444", strokeWidth: 1 }} name="Prediksi Tekanan" connectNulls />
                       <ReferenceLine yAxisId="left" y={50} stroke="#ef4444" strokeDasharray="4 4" strokeWidth={1} />
                       <ReferenceLine yAxisId="right" y={0.5} stroke="#ef4444" strokeDasharray="4 4" strokeWidth={1} />
                     </LineChart>
@@ -594,8 +606,8 @@ export default function DireksiDashboard() {
                 <div className="space-y-2.5">
                   {issueCategories.map((cat, i) => (
                     <div key={i} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: cat.color }} /><span className="text-sm text-gray-600">{cat.label}</span></div>
-                      <div className="flex items-center gap-3"><span className="text-sm font-semibold text-gray-900">{cat.count}</span><span className="text-xs text-gray-400 w-8 text-right">{Math.round((cat.count / totalIssues) * 100)}%</span></div>
+                      <div className="flex items-center gap-2.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: cat.color }} /><span className={`text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}>{cat.label}</span></div>
+                      <div className="flex items-center gap-3"><span className={`text-sm font-semibold ${darkMode ? "text-gray-100" : "text-gray-900"}`}>{cat.count}</span><span className="text-xs text-gray-400 w-8 text-right">{Math.round((cat.count / totalIssues) * 100)}%</span></div>
                     </div>
                   ))}
                 </div>
@@ -603,8 +615,8 @@ export default function DireksiDashboard() {
               <div className={`rounded-xl border p-5 transition-colors ${darkMode ? "bg-gray-900 border-gray-800" : "bg-white border-gray-200"}`}>
                 <h3 className={`text-sm font-semibold mb-4 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>Reservoir Induk (IPA)</h3>
                 <div className="grid grid-cols-3 gap-3 mb-4">
-                  <div className="text-center"><p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Level</p><p className="text-xl font-bold text-gray-900">{reservoirUtama?.tinggiAir ?? "-"}<span className="text-xs text-gray-400 ml-0.5">cm</span></p></div>
-                  <div className="text-center"><p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Tekanan</p><p className="text-xl font-bold text-gray-900">{reservoirUtama?.tekanan?.toFixed(1) ?? "-"}<span className="text-xs text-gray-400 ml-0.5">bar</span></p></div>
+                  <div className="text-center"><p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Level</p><p className={`text-xl font-bold ${darkMode ? "text-gray-100" : "text-gray-900"}`}>{reservoirUtama?.tinggiAir ?? "-"}<span className="text-xs text-gray-400 ml-0.5">cm</span></p></div>
+                  <div className="text-center"><p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Tekanan</p><p className={`text-xl font-bold ${darkMode ? "text-gray-100" : "text-gray-900"}`}>{reservoirUtama?.tekanan?.toFixed(1) ?? "-"}<span className="text-xs text-gray-400 ml-0.5">bar</span></p></div>
                   <div className="text-center"><p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Status</p><span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${reservoirUtama?.status === "normal" ? "bg-green-100 text-green-700" : reservoirUtama?.status === "warning" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}><span className={`h-1.5 w-1.5 rounded-full ${reservoirUtama?.status === "normal" ? "bg-green-500" : reservoirUtama?.status === "warning" ? "bg-amber-500" : "bg-red-500 animate-pulse"}`} />{reservoirUtama?.status === "normal" ? "Normal" : reservoirUtama?.status === "warning" ? "Waspada" : "Kritis"}</span></div>
                 </div>
                 <div className="relative w-full h-4 rounded-full bg-gray-100 overflow-hidden">
@@ -641,8 +653,8 @@ export default function DireksiDashboard() {
                           {row.status === "normal" ? "Normal" : row.status === "warning" ? "Waspada" : row.status === "critical" ? "Kritis" : "N/A"}
                         </span>
                       </td>
-                      <td className="px-3 py-3 text-sm text-gray-700 text-right font-mono tabular-nums">{row.tinggiAir != null ? row.tinggiAir : "-"}<span className="text-gray-400 text-xs ml-0.5">cm</span></td>
-                      <td className="px-3 py-3 text-sm text-gray-700 text-right font-mono tabular-nums">{row.tekanan != null ? row.tekanan.toFixed(1) : "-"}<span className="text-gray-400 text-xs ml-0.5">bar</span></td>
+                      <td className={`px-3 py-3 text-sm text-right font-mono tabular-nums ${darkMode ? "text-gray-300" : "text-gray-700"}`}>{row.tinggiAir != null ? row.tinggiAir : "-"}<span className="text-gray-400 text-xs ml-0.5">cm</span></td>
+                      <td className={`px-3 py-3 text-sm text-right font-mono tabular-nums ${darkMode ? "text-gray-300" : "text-gray-700"}`}>{row.tekanan != null ? row.tekanan.toFixed(1) : "-"}<span className="text-gray-400 text-xs ml-0.5">bar</span></td>
                     </tr>
                   ))}
                 </tbody>
