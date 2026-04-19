@@ -31,7 +31,7 @@ interface PointStatus {
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const HARI = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 
-function generateWeeklyData(monitoringData: Record<string, MonitoringData>) {
+function generateWeeklyData(monitoringData: Record<string, MonitoringData>, selectedPointId: string) {
   const now = new Date();
   const data = [];
 
@@ -45,6 +45,8 @@ function generateWeeklyData(monitoringData: Record<string, MonitoringData>) {
     let totalTinggi = 0, totalTekanan = 0, countT = 0, countP = 0;
 
     MONITORING_POINTS.forEach((pt) => {
+      if (selectedPointId !== "all" && pt.id !== selectedPointId) return;
+
       const ptData = monitoringData[pt.id];
       const session = ptData?.sore ?? ptData?.pagi;
       if (session?.tinggiAir != null) {
@@ -192,6 +194,61 @@ function getPointStatuses(
   });
 }
 
+function getPakarAdvice(selectedPointId: string, pointStatuses: PointStatus[], weeklyData: any[], tReg: ReturnType<typeof linearRegression>, pReg: ReturnType<typeof linearRegression>): string {
+  const lastTinggi = weeklyData[weeklyData.length - 1]?.tinggiAir;
+  const lastTekanan = weeklyData[weeklyData.length - 1]?.tekanan;
+
+  if (selectedPointId === "all") {
+    let msg = "";
+    if (tReg.slope < -5) msg += "⚠️ Rata-rata tinggi air se-PDAM menurun drastis. Pantau produksi sumur air tanah. ";
+    if (pReg.slope < -0.1) msg += "⚠️ Rata-rata tekanan perpipaan perlahan turun. Waspadai kebocoran pada pipa primer. ";
+    return msg || "✓ Secara keseluruhan, suplai tinggi air dan tekanan pada jaringan distribusi SPAM Aiq Bone terpantau stabil.";
+  }
+
+  const pointStatus = pointStatuses.find((p) => p.point.id === selectedPointId);
+  if (!pointStatus) return "Pilih titik untuk memuat saran sistem.";
+  const name = pointStatus.point.name;
+
+  // Cek Data
+  if (lastTinggi == null && lastTekanan == null) {
+    return `ℹ️ Belum ada input data (pagi/sore) di ${name} untuk hari ini. Silakan instruksikan petugas lapangan.`;
+  }
+
+  // Pakar: Air (Reservoir / BPT)
+  if (name.toLowerCase().includes("reservoir") || name.toLowerCase().includes("bpt")) {
+    if (lastTinggi !== undefined && lastTinggi !== null) {
+      if (lastTinggi < 50 && tReg.slope < 0) {
+        return `🚨 TINGGI AIR DROP di ${name} (${lastTinggi} cm) dengan profil tren merosot! Segera periksa sumber suplai (Intake/Blok Atas) apakah ada penyumbatan aliran sedimen, atau periksa mesin pompa inlet. Buka jalur bypass jika darurat.`;
+      }
+      if (lastTinggi < 100) {
+        return `⚠️ Tinggi air di ${name} tergolong rendah (${lastTinggi} cm). Tekan angka distribusi keluar atau naikkan debit inlet agar tak sampai kosong saat jam komersial (puncak).`;
+      }
+      if (lastTinggi > 350) {
+        return `🛑 ${name} membahayakan nyaris meluap (${lastTinggi} cm). Kurangi pompa inlet atau pastikan pompa outlet tidak sedang mati/terhambat.`;
+      }
+      if (tReg.slope < -8) {
+        return `⚠️ Kehilangan debit tak wajar terdeteksi. Air surut dengan kecepatan ${tReg.slope.toFixed(1)} cm/hari. Terjunkan tim telusur di ring pemukiman karena dicurigai bocor pasca-reservoir.`;
+      }
+    }
+    return `✓ Profil operasional di ${name} sejauh ini cukup stabil. Lakukan pengurasan bak berkala sesuai instrumen manual.`;
+  }
+
+  // Pakar: Tekanan (Pipa / Jaringan Umum)
+  if (lastTekanan !== undefined && lastTekanan !== null) {
+    if (lastTekanan < 0.5 && pReg.slope <= 0) {
+      return `🚨 TEKANAN KRITIS di batas ${name} (${lastTekanan} bar). Dugaan terkuat adalah PIPA TRANSMISI UTAMA PECAH, kerusakan rotor pompa pendorong, atau Gate Valve yang tertutup tak sadar. Terjunkan mekanik.`;
+    }
+    if (lastTekanan < 1.0) {
+      return `⚠️ Waspada keluhan pelanggan di sekitar ${name}. Tekanan mulai redup. Cek tegangan daya (Voltage) panel pompa, atau pastikan saringan (strainer) bebas lumut.`;
+    }
+    if (pReg.slope < -0.2) {
+      return `⚠️ Titik ini mengalami penyusutan tekanan kronis dari rentang mingguan. Potensi pencurian air (illegal tapping) pada rute atau pengerakan dimensi pipa sisi hulu.`;
+    }
+  }
+
+  return `✓ Kondisi hidro-statis lapangan di area ${name} diklasifikasikan sangat optimal. Kalibrasi ulang alat ukur setidaknya satu kali sebulan.`;
+}
+
 // ─── PDF Export ──────────────────────────────────────────────────────────────
 async function exportPDF(
   statuses: PointStatus[],
@@ -287,29 +344,12 @@ async function exportPDF(
 // ─── Main Component ─────────────────────────────────────────────────────────
 export default function DireksiDashboard() {
   const [, navigate] = useLocation();
-  const { data: rawMonitoringData } = useGetMonitoringData();
-  
-  const monitoringData = useMemo(() => {
-    const todayDateStr = new Date().toISOString().split("T")[0];
-    const data: Record<string, MonitoringData> = {};
-    if (rawMonitoringData) {
-      rawMonitoringData.forEach((row) => {
-        const rowDateStr = new Date(row.date).toISOString().split("T")[0];
-        if (rowDateStr === todayDateStr) {
-          if (!data[row.pointId]) data[row.pointId] = {};
-          data[row.pointId][row.session] = {
-            tinggiAir: row.tinggiAir ?? undefined,
-            tekanan: row.tekanan ?? undefined,
-          };
-        }
-      });
-    }
-    return data;
-  }, [rawMonitoringData]);
+  const [monitoringData] = useLocalStorage<Record<string, MonitoringData>>("gis-monitoring-data", {});
   const [expandedChart, setExpandedChart] = useState(true);
   const [expandedProblems, setExpandedProblems] = useState(true);
+  const [selectedPointId, setSelectedPointId] = useState<string>("all");
 
-  const weeklyRaw = useMemo(() => generateWeeklyData(monitoringData), [monitoringData]);
+  const weeklyRaw = useMemo(() => generateWeeklyData(monitoringData, selectedPointId), [monitoringData, selectedPointId]);
   const { data: chartData, tReg, pReg } = useMemo(() => addPredictions(weeklyRaw), [weeklyRaw]);
   const statuses = useMemo(() => getPointStatuses(monitoringData), [monitoringData]);
 
@@ -319,28 +359,10 @@ export default function DireksiDashboard() {
   const criticalCount = statuses.filter((s) => s.status === "critical").length;
   const emptyCount = statuses.filter((s) => s.status === "empty").length;
 
-  // Estimate when prediction hits critical
-  const estimateKritis = useMemo(() => {
-    const critTinggi = 50; // cm
-    const critTekanan = 0.5; // bar
-    const lastTinggi = weeklyRaw[weeklyRaw.length - 1]?.tinggiAir;
-    const lastTekanan = weeklyRaw[weeklyRaw.length - 1]?.tekanan;
-
-    let msg = "";
-    if (tReg.slope < 0 && lastTinggi != null) {
-      const daysToKritis = (critTinggi - lastTinggi) / tReg.slope;
-      if (daysToKritis > 0 && daysToKritis < 30) {
-        msg += `⚠️ Tinggi air diperkirakan mencapai kritis dalam ${Math.ceil(daysToKritis)} hari. `;
-      }
-    }
-    if (pReg.slope < 0 && lastTekanan != null) {
-      const daysToKritis = (critTekanan - lastTekanan) / pReg.slope;
-      if (daysToKritis > 0 && daysToKritis < 30) {
-        msg += `⚠️ Tekanan diperkirakan mencapai kritis dalam ${Math.ceil(daysToKritis)} hari.`;
-      }
-    }
-    return msg || "✓ Tidak ada prediksi kondisi kritis dalam waktu dekat.";
-  }, [weeklyRaw, tReg, pReg]);
+  const pakarAdvice = useMemo(
+    () => getPakarAdvice(selectedPointId, statuses, weeklyRaw, tReg, pReg),
+    [selectedPointId, statuses, weeklyRaw, tReg, pReg]
+  );
 
   const now = new Date();
   const dateStr = now.toLocaleDateString("id-ID", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
@@ -411,22 +433,39 @@ export default function DireksiDashboard() {
           </div>
 
           {/* ── 1. Grafik Tren Mingguan ────────────────────────────────── */}
-          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-            <button
+          <div className="bg-white rounded-xl shadow-[0_2px_12px_rgba(0,0,0,0.02)] border border-slate-200 overflow-hidden">
+            <div 
+              className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 cursor-pointer"
               onClick={() => setExpandedChart(!expandedChart)}
-              className="w-full flex items-center justify-between px-6 py-4 hover:bg-slate-50 transition-colors"
             >
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100">
-                  <TrendingUp className="h-5 w-5 text-blue-700" />
+                <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                  <TrendingUp size={18} />
                 </div>
-                <div className="text-left">
-                  <h2 className="text-sm font-bold text-slate-800">Grafik Tren Mingguan + Prediksi</h2>
-                  <p className="text-[11px] text-slate-500">Rata-rata tinggi air & tekanan seluruh titik, prediksi 3 hari ke depan</p>
+                <div>
+                  <h2 className="font-semibold text-slate-800 leading-tight">Grafik Tren Mingguan + Prediksi</h2>
+                  <p className="text-xs text-slate-500">
+                    Sistem pemantau historis dan kecerdasan prediksi linear
+                  </p>
                 </div>
               </div>
-              {expandedChart ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
-            </button>
+              <div className="flex items-center gap-4">
+                <select 
+                  className="text-sm border border-slate-200 rounded-md px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  onClick={(e) => e.stopPropagation()}
+                  value={selectedPointId}
+                  onChange={(e) => setSelectedPointId(e.target.value)}
+                >
+                  <option value="all">Rata-rata Seluruh Titik</option>
+                  <optgroup label="Titik Monitoring Aktif">
+                    {MONITORING_POINTS.map((pt) => (
+                      <option key={pt.id} value={pt.id}>{pt.name}</option>
+                    ))}
+                  </optgroup>
+                </select>
+                {expandedChart ? <ChevronUp size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
+              </div>
+            </div>
 
             {expandedChart && (
               <div className="px-4 sm:px-6 pb-6">
