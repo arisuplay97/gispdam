@@ -111,110 +111,50 @@ function getCylinderColors(status: AnalysisStatus, type: PointType) {
   return { top:'#22c55e', body:'#bbf7d0', bg:'#dcfce7', acc:'#16a34a', dot:'#16a34a' }; // For Reservoir & Valve
 }
 
-// ─── SVG builders (Cylinder Style) ───────────────────────────────────────────
-function buildReservoirSVG(status: AnalysisStatus, type: PointType): string {
-  const { top, body, bg, acc, dot } = getCylinderColors(status, type);
+// ─── Hexagon Colors Helper ─────────────────────────────────────────────────────
+function getHexagonColors(status: AnalysisStatus, type: PointType) {
+  if (status === "empty") return { body:'#f1f5f9', bg:'#f8fafc', acc:'#cbd5e1', dot:'#cbd5e1' };
+  if (status === "warning") return { body:'#fde68a', bg:'#fef3c7', acc:'#d97706', dot:'#d97706' };
+  if (status === "critical") return { body:'#fca5a5', bg:'#fee2e2', acc:'#dc2626', dot:'#dc2626' };
   
-  let innerHtml = "";
+  // Normal state
+  if (type === "bpt") return { body:'#bae6fd', bg:'#e0f2fe', acc:'#0284c7', dot:'#0284c7' };
+  if (type === "ipa") return { body:'#ddd6fe', bg:'#ede9fe', acc:'#7c3aed', dot:'#7c3aed' };
+  return { body:'#bbf7d0', bg:'#dcfce7', acc:'#16a34a', dot:'#16a34a' }; // For Reservoir & Valve
+}
+
+// ─── SVG builders (Hexagon Style) ────────────────────────────────────────────
+function buildHexagonSVG(status: AnalysisStatus, type: PointType): string {
+  const { body, bg, acc, dot } = getHexagonColors(status, type);
+  
+  let label = "RES";
+  if (type === "bpt") label = "BPT";
+  if (type === "ipa") label = "IPA";
+  if (type === "valve") label = "VAL";
+
   let badge = "";
-  
-  if (status === "empty") {
-    innerHtml = `<rect x="8" y="10" width="44" height="36" fill="${bg}" stroke="${acc}" stroke-width="1.5" stroke-dasharray="4,3"/>
-                 <text x="30" y="34" text-anchor="middle" fill="${acc}" font-size="20" font-weight="bold" font-family="monospace">?</text>`;
-  } else if (status === "warning") {
-    innerHtml = `<rect x="8" y="10" width="44" height="36" fill="${bg}" stroke="${acc}" stroke-width="1.5"/>
-                 <rect x="9" y="28" width="42" height="17" fill="${body}"/>
-                 <line x1="9" y1="28" x2="51" y2="28" stroke="${acc}" stroke-width="1.5" stroke-dasharray="4,2.5"/>`;
-    if (type === "bpt") {
-      innerHtml += `<line x1="30" y1="17" x2="30" y2="32" stroke="${acc}" stroke-width="2.5" stroke-linecap="round"/>
-                    <path d="M24 27 L30 35 L36 27" stroke="${acc}" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-                    <text x="30" y="55" text-anchor="middle" fill="${acc}" font-size="7" font-weight="700" font-family="monospace">BPT</text>`;
-    } else {
-      innerHtml += `<path d="M30 14 C30 14 26.5 19 26.5 22 C26.5 24.1 28 25.5 30 25.5 C32 25.5 33.5 24.1 33.5 22 C33.5 19 30 14 30 14Z" fill="${acc}" opacity="0.7"/>`;
-    }
-    badge = `<circle cx="54" cy="10" r="6" fill="${dot}"/><text x="54" y="14" text-anchor="middle" fill="white" font-size="8" font-weight="bold" font-family="monospace">!</text>`;
+  if (status === "warning") {
+    badge = `<circle cx="34" cy="10" r="6" fill="${dot}"/><text x="34" y="14" text-anchor="middle" fill="white" font-size="9" font-weight="bold" font-family="monospace">!</text>`;
   } else if (status === "critical") {
-    innerHtml = `<rect x="8" y="10" width="44" height="36" fill="${bg}" stroke="${acc}" stroke-width="1.5"/>
-                 <rect x="9" y="40" width="42" height="5" fill="${body}"/>
-                 <line x1="9" y1="40" x2="51" y2="40" stroke="${acc}" stroke-width="2"/>`;
-    if (type === "bpt") {
-      innerHtml += `<line x1="30" y1="17" x2="30" y2="32" stroke="${acc}" stroke-width="2.5" stroke-linecap="round"/>
-                    <path d="M24 27 L30 35 L36 27" stroke="${acc}" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-                    <text x="30" y="55" text-anchor="middle" fill="${acc}" font-size="7" font-weight="700" font-family="monospace">BPT</text>`;
-    } else {
-      innerHtml += `<rect x="27.5" y="14" width="5" height="16" rx="2.5" fill="${acc}" opacity="0.5"/><circle cx="30" cy="35" r="3" fill="${acc}" opacity="0.5"/>`;
-    }
-    badge = `<circle cx="54" cy="10" r="6" fill="${dot}" class="pulse"/><line x1="51" y1="7" x2="57" y2="13" stroke="white" stroke-width="1.8" stroke-linecap="round"/><line x1="57" y1="7" x2="51" y2="13" stroke="white" stroke-width="1.8" stroke-linecap="round"/>`;
+    badge = `<circle cx="34" cy="10" r="6" fill="${dot}" class="pulse"/><line x1="31.5" y1="7.5" x2="36.5" y2="12.5" stroke="white" stroke-width="1.8" stroke-linecap="round"/><line x1="36.5" y1="7.5" x2="31.5" y2="12.5" stroke="white" stroke-width="1.8" stroke-linecap="round"/>`;
+  } else if (status === "empty") {
+    badge = `<circle cx="34" cy="10" r="5" fill="${dot}"/>`;
+    label = "?";
   } else {
-    innerHtml = `<rect x="8" y="10" width="44" height="36" fill="${bg}" stroke="${acc}" stroke-width="1.5"/>
-                 <rect x="9" y="11" width="42" height="34" fill="${body}"/>`;
-    if (type === "bpt") {
-      innerHtml += `<line x1="30" y1="17" x2="30" y2="33" stroke="${acc}" stroke-width="2.5" stroke-linecap="round"/>
-                    <path d="M24 28 L30 36 L36 28" stroke="${acc}" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-                    <text x="30" y="55" text-anchor="middle" fill="${acc}" font-size="7" font-weight="700" font-family="monospace">BPT</text>`;
-    } else {
-       innerHtml += `<path d="M30 20 C30 20 25 27 25 31 C25 33.8 27.2 36 30 36 C32.8 36 35 33.8 35 31 C35 27 30 20 30 20Z" fill="${acc}"/><ellipse cx="28" cy="29" rx="2" ry="3" fill="white" opacity="0.35" transform="rotate(-15 28 29)"/>`;
-    }
-    badge = `<circle cx="54" cy="10" r="4" fill="${dot}"/>`;
+    badge = `<circle cx="34" cy="10" r="4" fill="${dot}"/>`;
   }
 
-  return `<svg width="44" height="50" viewBox="0 0 60 68" fill="none" class="floater">
-    <ellipse cx="30" cy="12" rx="22" ry="5" fill="${acc}"/>
-    <ellipse cx="30" cy="10" rx="22" ry="5" fill="${top}"/>
-    ${innerHtml}
-    <line x1="44" y1="12" x2="44" y2="46" stroke="${acc}" stroke-width="1.5"/>
-    <line x1="50" y1="12" x2="50" y2="46" stroke="${acc}" stroke-width="1.5"/>
-    <line x1="44" y1="17" x2="50" y2="17" stroke="${acc}" stroke-width="1.2"/>
-    <line x1="44" y1="22" x2="50" y2="22" stroke="${acc}" stroke-width="1.2"/>
-    <line x1="44" y1="27" x2="50" y2="27" stroke="${acc}" stroke-width="1.2"/>
-    <line x1="44" y1="32" x2="50" y2="32" stroke="${acc}" stroke-width="1.2"/>
-    <line x1="44" y1="37" x2="50" y2="37" stroke="${acc}" stroke-width="1.2"/>
-    <line x1="44" y1="42" x2="50" y2="42" stroke="${acc}" stroke-width="1.2"/>
-    <ellipse cx="30" cy="46" rx="22" ry="5" fill="${acc}"/>
-    <rect x="6" y="48" width="8" height="5" rx="1" fill="${acc}"/>
-    <rect x="4" y="52" width="6" height="4" rx="1" fill="${acc}"/>
-    <rect x="10" y="51" width="40" height="4" rx="1" fill="${acc}" opacity="0.5"/>
+  return `<svg width="40" height="46" viewBox="0 0 40 46" fill="none" class="floater">
+    <polygon points="20,7 33.8,15 33.8,31 20,39 6.2,31 6.2,15" fill="${bg}" stroke="${acc}" stroke-width="2" stroke-linejoin="round"/>
+    <polygon points="20,11 30.4,17 30.4,29 20,35 9.6,29 9.6,17" fill="${body}" opacity="0.8"/>
+    <text x="20" y="27" text-anchor="middle" fill="${acc}" font-size="10" font-weight="900" font-family="monospace" letter-spacing="-0.5">${label}</text>
     ${badge}
-  </svg>`;
-}
-
-function buildIpaSVG(status: AnalysisStatus): string {
-  const { top, body, bg, acc, dot } = getCylinderColors(status, "ipa");
-  return `<svg width="44" height="50" viewBox="0 0 60 68" fill="none" class="floater">
-    <path d="M8 20 Q30 4 52 20Z" fill="${acc}"/>
-    <ellipse cx="30" cy="20" rx="22" ry="5" fill="${top}"/>
-    <rect x="8" y="20" width="44" height="28" fill="${bg}" stroke="${acc}" stroke-width="1.5"/>
-    <rect x="9" y="21" width="42" height="26" fill="${body}"/>
-    <rect x="12" y="25" width="10" height="10" rx="2" fill="${acc}" opacity="0.25" stroke="${acc}" stroke-width="1"/>
-    <rect x="38" y="25" width="10" height="10" rx="2" fill="${acc}" opacity="0.25" stroke="${acc}" stroke-width="1"/>
-    <rect x="24" y="32" width="12" height="16" rx="2" fill="${acc}" opacity="0.3" stroke="${acc}" stroke-width="1"/>
-    <rect x="26" y="8" width="8" height="14" rx="2" fill="${acc}" opacity="0.6"/>
-    <ellipse cx="30" cy="48" rx="22" ry="5" fill="${acc}"/>
-    <text x="30" y="60" text-anchor="middle" fill="${acc}" font-size="7" font-weight="700" font-family="monospace">IPA</text>
-    <circle cx="54" cy="14" r="4" fill="${dot}" class="${status === 'critical' ? 'pulse' : ''}"/>
-  </svg>`;
-}
-
-function buildValveSVG(status: AnalysisStatus): string {
-  const { top, body, bg, acc, dot } = getCylinderColors(status, "valve");
-  return `<svg width="44" height="50" viewBox="0 0 60 68" fill="none" class="floater">
-    <rect x="4" y="26" width="52" height="14" rx="7" fill="${bg}" stroke="${acc}" stroke-width="1.5"/>
-    <circle cx="30" cy="33" r="13" fill="${body}" stroke="${acc}" stroke-width="2"/>
-    <circle cx="30" cy="33" r="9" fill="${bg}" stroke="${acc}" stroke-width="1.5"/>
-    <rect x="26" y="14" width="8" height="10" rx="2" fill="${acc}"/>
-    <line x1="30" y1="24" x2="30" y2="33" stroke="${acc}" stroke-width="2.5" stroke-linecap="round"/>
-    <path d="M22 33 L30 26 L38 33 L30 40 Z" fill="${acc}" opacity="0.8"/>
-    <text x="30" y="58" text-anchor="middle" fill="${acc}" font-size="7" font-weight="700" font-family="monospace">VALVE</text>
-    <circle cx="52" cy="18" r="4" fill="${dot}" class="${status === 'critical' ? 'pulse' : ''}"/>
   </svg>`;
 }
 
 // ─── Main icon factory ────────────────────────────────────────────────────────
 function createMonitoringIcon(status: AnalysisStatus, pointType: PointType = "reservoir") {
-  let svgHtml: string;
-  if (pointType === "ipa") svgHtml = buildIpaSVG(status);
-  else if (pointType === "valve") svgHtml = buildValveSVG(status);
-  else svgHtml = buildReservoirSVG(status, pointType); // handles both reservoir and BPT
+  const svgHtml = buildHexagonSVG(status, pointType);
 
   return L.divIcon({
     className: "bg-transparent",
