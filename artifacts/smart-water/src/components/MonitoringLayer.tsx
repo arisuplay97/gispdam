@@ -69,18 +69,7 @@ function getAnalysisStatus(data?: MonitoringData): AnalysisStatus {
   return "normal";
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  empty:    "#94a3b8",
-  normal:   "#10b981",
-  warning:  "#f59e0b",
-  critical: "#ef4444",
-};
-const STATUS_GLOW: Record<string, string> = {
-  empty:    "0 4px 6px rgba(148,163,184,0.3),0 0 0 3px rgba(148,163,184,0.15)",
-  normal:   "0 0 12px rgba(16,185,129,0.9),0 0 0 4px rgba(16,185,129,0.3)",
-  warning:  "0 0 12px rgba(245,158,11,0.9),0 0 0 4px rgba(245,158,11,0.3)",
-  critical: "0 0 15px rgba(239,68,68,1),0 0 0 5px rgba(239,68,68,0.4)",
-};
+// ─── Status display helpers ───────────────────────────────────────────────────
 const STATUS_LABEL: Record<string, string> = {
   empty: "Belum Input", normal: "Normal", warning: "Waspada", critical: "Kritis",
 };
@@ -91,29 +80,147 @@ const STATUS_BADGE: Record<string, string> = {
   critical: "bg-red-50 text-red-700",
 };
 
-function createMonitoringIcon(status: AnalysisStatus) {
-  const color = STATUS_COLORS[status];
-  const glow  = STATUS_GLOW[status];
+// ─── Point type detection ─────────────────────────────────────────────────────
+type PointType = "reservoir" | "bpt" | "ipa";
+
+function getPointType(name: string): PointType {
+  const n = name.toLowerCase();
+  if (n.includes("bpt")) return "bpt";
+  if (n.includes("ipa") || n.includes("instalasi") || n.includes("sumber") || n.includes("intake")) return "ipa";
+  return "reservoir";
+}
+
+// ─── Color palettes per status ────────────────────────────────────────────────
+const STATUS_PALETTE: Record<AnalysisStatus, { bg: string; roof: string; stroke: string; water: string }> = {
+  empty:    { bg: "#1f2937", roof: "#111827", stroke: "#6b7280", water: "#6b7280" },
+  normal:   { bg: "#166534", roof: "#15803d", stroke: "#22c55e", water: "#22c55e" },
+  warning:  { bg: "#78350f", roof: "#92400e", stroke: "#f59e0b", water: "#f59e0b" },
+  critical: { bg: "#7f1d1d", roof: "#991b1b", stroke: "#ef4444", water: "#ef4444" },
+};
+
+// ─── SVG builders ─────────────────────────────────────────────────────────────
+function buildReservoirSVG(c: typeof STATUS_PALETTE["normal"], status: AnalysisStatus): string {
+  const badgeDot = status === "empty"
+    ? `<circle cx="52" cy="18" r="5" fill="${c.stroke}" opacity="0.5"/>`
+    : status === "normal"
+    ? `<circle cx="52" cy="18" r="5" fill="${c.stroke}"/>
+       <circle cx="52" cy="18" r="5" fill="${c.stroke}" opacity="0.4">
+         <animate attributeName="r" from="5" to="11" dur="2s" repeatCount="indefinite"/>
+         <animate attributeName="opacity" from="0.4" to="0" dur="2s" repeatCount="indefinite"/>
+       </circle>`
+    : status === "warning"
+    ? `<circle cx="52" cy="18" r="5" fill="${c.stroke}"/>
+       <text x="52" y="22" text-anchor="middle" fill="white" font-size="7" font-weight="bold">!</text>`
+    : `<circle cx="52" cy="18" r="5" fill="${c.stroke}">
+         <animate attributeName="opacity" values="1;0.3;1" dur="0.8s" repeatCount="indefinite"/>
+       </circle>
+       <text x="52" y="22" text-anchor="middle" fill="white" font-size="7" font-weight="bold">✕</text>`;
+
+  const waterLevel = status === "empty"
+    ? `<text x="32" y="42" text-anchor="middle" fill="${c.stroke}" font-size="16" font-weight="bold">?</text>`
+    : status === "warning"
+    ? `<rect x="9" y="42" width="46" height="11" rx="0" fill="${c.stroke}" opacity="0.15"/>
+       <line x1="9" y1="42" x2="55" y2="42" stroke="${c.stroke}" stroke-width="1.5" stroke-dasharray="4,2"/>
+       <path d="M32 28 C32 28 26 35 26 39 C26 42.3 28.7 45 32 45 C35.3 45 38 42.3 38 39 C38 35 32 28 32 28Z" fill="${c.water}" opacity="0.9"/>
+       <ellipse cx="29.5" cy="37" rx="2" ry="3" fill="white" opacity="0.3" transform="rotate(-15 29.5 37)"/>`
+    : status === "critical"
+    ? `<rect x="9" y="50" width="46" height="3" rx="0" fill="${c.stroke}" opacity="0.15"/>
+       <line x1="9" y1="50" x2="55" y2="50" stroke="${c.stroke}" stroke-width="1.5"/>
+       <path d="M32 28 C32 28 26 35 26 39 C26 42.3 28.7 45 32 45 C35.3 45 38 42.3 38 39 C38 35 32 28 32 28Z" fill="${c.water}" opacity="0.9"/>
+       <ellipse cx="29.5" cy="37" rx="2" ry="3" fill="white" opacity="0.3" transform="rotate(-15 29.5 37)"/>`
+    : `<path d="M32 28 C32 28 26 35 26 39 C26 42.3 28.7 45 32 45 C35.3 45 38 42.3 38 39 C38 35 32 28 32 28Z" fill="${c.water}" opacity="0.9"/>
+       <ellipse cx="29.5" cy="37" rx="2" ry="3" fill="white" opacity="0.3" transform="rotate(-15 29.5 37)"/>`;
+
+  const dashStyle = status === "empty" ? `stroke-dasharray="5,3"` : "";
+
+  return `<svg width="48" height="56" viewBox="0 0 64 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="8" y="22" width="48" height="32" rx="4" fill="${c.bg}" stroke="${c.stroke}" stroke-width="2" ${dashStyle}/>
+    <rect x="4" y="16" width="56" height="8" rx="3" fill="${c.roof}" stroke="${c.stroke}" stroke-width="1.5"/>
+    <line x1="8" y1="32" x2="56" y2="32" stroke="${c.stroke}" stroke-width="0.5" stroke-dasharray="3,3" opacity="0.4"/>
+    <line x1="8" y1="42" x2="56" y2="42" stroke="${c.stroke}" stroke-width="0.5" stroke-dasharray="3,3" opacity="0.4"/>
+    ${waterLevel}
+    <rect x="26" y="54" width="6" height="8" rx="1" fill="${c.bg}" stroke="${c.stroke}" stroke-width="1.5"/>
+    <rect x="36" y="54" width="6" height="8" rx="1" fill="${c.bg}" stroke="${c.stroke}" stroke-width="1.5"/>
+    <rect x="20" y="62" width="24" height="4" rx="2" fill="${c.roof}" stroke="${c.stroke}" stroke-width="1"/>
+    ${badgeDot}
+  </svg>`;
+}
+
+function buildBptSVG(c: typeof STATUS_PALETTE["normal"], status: AnalysisStatus): string {
+  const badgeDot = status === "normal"
+    ? `<circle cx="50" cy="20" r="5" fill="${c.stroke}"/>
+       <circle cx="50" cy="20" r="5" fill="${c.stroke}" opacity="0.4">
+         <animate attributeName="r" from="5" to="11" dur="2s" repeatCount="indefinite"/>
+         <animate attributeName="opacity" from="0.4" to="0" dur="2s" repeatCount="indefinite"/>
+       </circle>`
+    : status === "warning"
+    ? `<circle cx="50" cy="20" r="5" fill="${c.stroke}"/>
+       <text x="50" y="24" text-anchor="middle" fill="white" font-size="7" font-weight="bold">!</text>`
+    : status === "critical"
+    ? `<circle cx="50" cy="20" r="5" fill="${c.stroke}">
+         <animate attributeName="opacity" values="1;0.3;1" dur="0.8s" repeatCount="indefinite"/>
+       </circle>
+       <text x="50" y="24" text-anchor="middle" fill="white" font-size="7" font-weight="bold">✕</text>`
+    : `<circle cx="50" cy="20" r="5" fill="${c.stroke}" opacity="0.5"/>`;
+
+  return `<svg width="48" height="56" viewBox="0 0 64 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="14" y="26" width="36" height="28" rx="4" fill="${c.bg}" stroke="${c.stroke}" stroke-width="2"/>
+    <rect x="10" y="20" width="44" height="8" rx="3" fill="${c.roof}" stroke="${c.stroke}" stroke-width="1.5"/>
+    <path d="M32 30 L32 44 M28 40 L32 44 L36 40" stroke="${c.stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="24" y="54" width="6" height="8" rx="1" fill="${c.bg}" stroke="${c.stroke}" stroke-width="1.5"/>
+    <rect x="34" y="54" width="6" height="8" rx="1" fill="${c.bg}" stroke="${c.stroke}" stroke-width="1.5"/>
+    <rect x="18" y="62" width="28" height="4" rx="2" fill="${c.roof}" stroke="${c.stroke}" stroke-width="1"/>
+    <text x="32" y="19" text-anchor="middle" fill="${c.stroke}" font-size="5.5" font-weight="bold" font-family="monospace">BPT</text>
+    ${badgeDot}
+  </svg>`;
+}
+
+function buildIpaSVG(c: typeof STATUS_PALETTE["normal"], status: AnalysisStatus): string {
+  const badgeDot = status === "normal"
+    ? `<circle cx="52" cy="18" r="5" fill="${c.stroke}"/>
+       <circle cx="52" cy="18" r="5" fill="${c.stroke}" opacity="0.4">
+         <animate attributeName="r" from="5" to="11" dur="2s" repeatCount="indefinite"/>
+         <animate attributeName="opacity" from="0.4" to="0" dur="2s" repeatCount="indefinite"/>
+       </circle>`
+    : status === "warning"
+    ? `<circle cx="52" cy="18" r="5" fill="${c.stroke}"/>
+       <text x="52" y="22" text-anchor="middle" fill="white" font-size="7" font-weight="bold">!</text>`
+    : status === "critical"
+    ? `<circle cx="52" cy="18" r="5" fill="${c.stroke}">
+         <animate attributeName="opacity" values="1;0.3;1" dur="0.8s" repeatCount="indefinite"/>
+       </circle>
+       <text x="52" y="22" text-anchor="middle" fill="white" font-size="7" font-weight="bold">✕</text>`
+    : `<circle cx="52" cy="18" r="5" fill="${c.stroke}" opacity="0.5"/>`;
+
+  return `<svg width="48" height="56" viewBox="0 0 64 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="6" y="28" width="52" height="26" rx="4" fill="${c.bg}" stroke="${c.stroke}" stroke-width="2"/>
+    <path d="M4 28 L32 12 L60 28Z" fill="${c.roof}" stroke="${c.stroke}" stroke-width="1.5"/>
+    <rect x="14" y="36" width="10" height="10" rx="2" fill="${c.roof}" stroke="${c.stroke}" stroke-width="1"/>
+    <rect x="40" y="36" width="10" height="10" rx="2" fill="${c.roof}" stroke="${c.stroke}" stroke-width="1"/>
+    <rect x="28" y="18" width="8" height="12" rx="1" fill="${c.roof}" stroke="${c.stroke}" stroke-width="1"/>
+    <path d="M32 36 C32 36 29 40 29 42 C29 43.7 30.3 45 32 45 C33.7 45 35 43.7 35 42 C35 40 32 36 32 36Z" fill="${c.stroke}"/>
+    <rect x="22" y="54" width="6" height="8" rx="1" fill="${c.bg}" stroke="${c.stroke}" stroke-width="1.5"/>
+    <rect x="36" y="54" width="6" height="8" rx="1" fill="${c.bg}" stroke="${c.stroke}" stroke-width="1.5"/>
+    <rect x="16" y="62" width="32" height="4" rx="2" fill="${c.roof}" stroke="${c.stroke}" stroke-width="1"/>
+    <text x="32" y="25" text-anchor="middle" fill="${c.stroke}" font-size="5" font-weight="bold" font-family="monospace">IPA</text>
+    ${badgeDot}
+  </svg>`;
+}
+
+// ─── Main icon factory ────────────────────────────────────────────────────────
+function createMonitoringIcon(status: AnalysisStatus, pointType: PointType = "reservoir") {
+  const c = STATUS_PALETTE[status];
+
+  let svgHtml: string;
+  if (pointType === "bpt")      svgHtml = buildBptSVG(c, status);
+  else if (pointType === "ipa") svgHtml = buildIpaSVG(c, status);
+  else                          svgHtml = buildReservoirSVG(c, status);
+
   return L.divIcon({
     className: "bg-transparent",
-    html: `
-      <div style="
-        width:36px;height:36px;border-radius:50% 50% 50% 0;
-        transform:rotate(-45deg);background:${color};
-        border:2px solid white;box-shadow:${glow};
-        display:flex;align-items:center;justify-content:center;
-      ">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
-             viewBox="0 0 24 24" fill="none" stroke="white"
-             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-             style="transform:rotate(45deg)">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-          <polyline points="9 22 9 12 15 12 15 22"/>
-        </svg>
-      </div>
-    `,
-    iconSize:   [36, 36],
-    iconAnchor: [18, 36],
+    html: `<div style="filter:drop-shadow(0 4px 12px ${c.stroke}66)">${svgHtml}</div>`,
+    iconSize:   [48, 56],
+    iconAnchor: [24, 56],
   });
 }
 
@@ -575,7 +682,7 @@ export function MonitoringLayer({ data, onSave, macroUrl, editMode = false }: Mo
           <Marker
             key={pt.id}
             position={[pt.lat, pt.lng]}
-            icon={createMonitoringIcon(status)}
+            icon={createMonitoringIcon(status, getPointType(pt.name))}
             eventHandlers={{ click: () => setOpenId(pt.id) }}
           >
             <Tooltip direction="top" offset={[0, -22]} opacity={1}
