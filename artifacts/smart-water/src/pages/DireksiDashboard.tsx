@@ -521,7 +521,7 @@ export default function DireksiDashboard() {
                 </div>
               </div>
             )}
-          </section>
+          </div>
 
           {/* ── 2. Daftar Titik Bermasalah ────────────────────────────── */}
           <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
