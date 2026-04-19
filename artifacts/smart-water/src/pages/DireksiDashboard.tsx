@@ -2,7 +2,7 @@
  * DireksiDashboard.tsx
  * Dashboard Direksi — Sistem Monitoring Distribusi Air PDAM TIARA
  */
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -10,10 +10,9 @@ import {
   ReferenceLine,
 } from "recharts";
 import {
-  ArrowLeft, AlertTriangle, TrendingUp, Users, FileDown,
-  Droplets, Gauge, Clock, Shield, ChevronDown, ChevronUp,
+  ArrowLeft, AlertTriangle, TrendingUp, FileDown,
+  Droplets, Clock, Moon, Sun,
 } from "lucide-react";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { MONITORING_POINTS, type MonitoringData, type MonitoringPoint } from "@/components/MonitoringLayer";
 import { useGetMonitoringData } from "@workspace/api-client-react";
 
@@ -269,9 +268,109 @@ function getPakarAdvice(selectedPointId: string, pointStatuses: PointStatus[], w
 }
 
 // ─── PDF Export ──────────────────────────────────────────────────────────────
-async function exportPDF(
-  statuses: PointStatus[],
-) {
+async function exportPDF(statuses: PointStatus[]) {
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) { alert("Popup blocker terdeteksi. Izinkan popup untuk export."); return; }
+
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("id-ID", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+  const timeStr = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+
+  const normalCount  = statuses.filter(s => s.status === "normal").length;
+  const warningCount = statuses.filter(s => s.status === "warning").length;
+  const criticalCount = statuses.filter(s => s.status === "critical").length;
+  const emptyCount   = statuses.filter(s => s.status === "empty").length;
+
+  const statusLabel = (s: PointStatus["status"]) =>
+    s === "normal" ? "Normal" : s === "warning" ? "Waspada" : s === "critical" ? "Kritis" : "Belum Input";
+
+  const rowsHtml = statuses.map((r, i) => `
+    <tr style="background:${i % 2 === 0 ? "#fff" : "#f8f9fa"};">
+      <td style="text-align:center;">${i + 1}</td>
+      <td><strong>${r.point.name}</strong><br/><span style="color:#6b7280;font-size:9pt;">${r.point.id}</span></td>
+      <td style="color:${
+        r.status === "normal" ? "#15803d" :
+        r.status === "warning" ? "#b45309" :
+        r.status === "critical" ? "#dc2626" : "#6b7280"
+      };font-weight:600;">${statusLabel(r.status)}</td>
+      <td>${r.tinggiAir != null ? r.tinggiAir + " cm" : "—"} / ${r.tekanan != null ? r.tekanan.toFixed(1) + " bar" : "—"}</td>
+      <td>${r.cause}</td>
+      <td>${r.prediksiKritis}</td>
+    </tr>
+  `).join("");
+
+  printWindow.document.write(`<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
+    <title>Laporan Harian PDAM TIARA — ${dateStr}</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font-family: 'Segoe UI', Arial, sans-serif; padding: 28px 32px; color: #111827; font-size: 10pt; }
+      /* Header */
+      .header-table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
+      .header-table td { padding: 4px 0; vertical-align: top; }
+      .header-table td:last-child { text-align: right; }
+      .title { font-size: 14pt; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; }
+      .subtitle { font-size: 9pt; color: #6b7280; margin-top: 2px; }
+      .divider { border: none; border-top: 2px solid #111827; margin: 10px 0 14px; }
+      /* Summary row */
+      .summary { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
+      .summary td { padding: 6px 12px; border: 1px solid #d1d5db; font-size: 10pt; text-align: center; }
+      .summary td:first-child { text-align: left; font-weight: 600; }
+      /* Main table */
+      .section-title { font-size: 10pt; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.05em; color: #374151; margin-bottom: 6px; }
+      table.data { width: 100%; border-collapse: collapse; }
+      table.data th {
+        background: #f3f4f6; text-align: left; padding: 6px 8px;
+        font-size: 9pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+        border: 1px solid #d1d5db;
+      }
+      table.data td { padding: 6px 8px; border: 1px solid #e5e7eb; font-size: 10pt; vertical-align: top; }
+      .footer { margin-top: 24px; border-top: 1px solid #d1d5db; padding-top: 8px;
+        text-align: center; color: #9ca3af; font-size: 8pt; }
+      @media print { body { padding: 12px 18px; } }
+    </style>
+  </head><body>
+    <table class="header-table"><tr>
+      <td>
+        <div class="title">Laporan Harian Distribusi Air</div>
+        <div class="subtitle">PDAM TIARA &mdash; Sistem Monitoring SPAM Aiq Bone</div>
+      </td>
+      <td>
+        <div style="font-weight:600;">${dateStr}</div>
+        <div style="color:#6b7280;font-size:9pt;">Dicetak pukul ${timeStr}</div>
+      </td>
+    </tr></table>
+    <hr class="divider"/>
+
+    <table class="summary"><tr>
+      <td>Ringkasan Status</td>
+      <td>Normal: <span style="color:#15803d;font-weight:700;">${normalCount}</span></td>
+      <td>Waspada: <span style="color:#b45309;font-weight:700;">${warningCount}</span></td>
+      <td>Kritis: <span style="color:#dc2626;font-weight:700;">${criticalCount}</span></td>
+      <td>Belum Input: <span style="color:#6b7280;font-weight:700;">${emptyCount}</span></td>
+      <td>Total: <span style="font-weight:700;">${statuses.length}</span></td>
+    </tr></table>
+
+    <div class="section-title">Data Seluruh Titik Monitoring</div>
+    <table class="data">
+      <thead><tr>
+        <th style="width:30px;text-align:center;">No</th>
+        <th>Nama Titik</th>
+        <th style="width:70px;">Status</th>
+        <th style="width:120px;">Tinggi / Tekanan</th>
+        <th>Detail Kondisi</th>
+        <th style="width:80px;">Prediksi</th>
+      </tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+
+    <div class="footer">
+      Dokumen ini dicetak otomatis oleh Tiara Manajemen Distribusi &bull; ${dateStr} &bull; ${timeStr}
+    </div>
+    <script>setTimeout(() => { window.print(); }, 400);</script>
+  </body></html>`);
+  printWindow.document.close();
+}
   // Use browser print as PDF — simple, reliable, no external lib
   const printWindow = window.open("", "_blank");
   if (!printWindow) { alert("Popup blocker terdeteksi. Izinkan popup untuk export."); return; }
@@ -364,6 +463,7 @@ async function exportPDF(
 export default function DireksiDashboard() {
   const [, navigate] = useLocation();
   const { data: rawMonitoringData } = useGetMonitoringData();
+  const [darkMode, setDarkMode] = useState(false);
 
   const monitoringData = useMemo(() => {
     const todayDateStr = new Date().toISOString().split("T")[0];
@@ -429,32 +529,50 @@ export default function DireksiDashboard() {
   const reservoirUtama = statuses.find(s => s.point.id === "MON-01");
 
   return (
-    <div style={{ fontFamily: "'Inter','Segoe UI',system-ui,sans-serif" }} className="min-h-screen bg-[#fafbfc]">
+    <div style={{ fontFamily: "'Inter','Segoe UI',system-ui,sans-serif" }} className={`min-h-screen transition-colors duration-300 ${darkMode ? "bg-gray-950 text-gray-100" : "bg-[#fafbfc] text-gray-900"}`}>
       {/* Top Nav */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+      <header className={`border-b sticky top-0 z-50 transition-colors duration-300 ${darkMode ? "bg-gray-900 border-gray-800" : "bg-white border-gray-200"}`}>
         <div className="flex items-center justify-between px-4 sm:px-8 h-14">
           <div className="flex items-center gap-6">
-            <button onClick={() => navigate("/")} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">
+            <button onClick={() => navigate("/")} className={`flex items-center gap-2 text-sm transition-colors ${darkMode ? "text-gray-400 hover:text-gray-100" : "text-gray-500 hover:text-gray-900"}`}>
               <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline font-medium">Kembali</span>
             </button>
-            <div className="h-5 w-px bg-gray-200 hidden sm:block" />
+            <div className={`h-5 w-px hidden sm:block ${darkMode ? "bg-gray-700" : "bg-gray-200"}`} />
             <div className="flex items-center gap-3">
               <img src="/logo.png" alt="PDAM TIARA Logo" className="h-8 w-auto object-contain" />
-              <span className="font-semibold text-gray-900 text-sm tracking-tight hidden sm:block">PDAM TIARA</span>
+              <span className={`font-semibold text-sm tracking-tight hidden sm:block ${darkMode ? "text-gray-100" : "text-gray-900"}`}>PDAM TIARA</span>
             </div>
             <nav className="hidden md:flex items-center gap-1 ml-4">
               {["Dashboard", "Peta", "Laporan"].map((item, i) => (
-                <span key={item} className={`px-3 py-1.5 text-sm rounded-md cursor-default ${i === 0 ? "font-semibold text-gray-900 bg-gray-100" : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"}`}>{item}</span>
+                <span key={item} className={`px-3 py-1.5 text-sm rounded-md cursor-default ${
+                  i === 0
+                    ? darkMode ? "font-semibold text-gray-100 bg-gray-800" : "font-semibold text-gray-900 bg-gray-100"
+                    : darkMode ? "text-gray-400 hover:text-gray-200" : "text-gray-500 hover:text-gray-700"
+                }`}>{item}</span>
               ))}
             </nav>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="hidden lg:flex items-center gap-2 text-xs text-gray-400">
+          <div className="flex items-center gap-3">
+            <div className={`hidden lg:flex items-center gap-2 text-xs ${darkMode ? "text-gray-500" : "text-gray-400"}`}>
               <Clock className="h-3.5 w-3.5" />
               <span>Last update: {timeStr}</span>
             </div>
-            <button onClick={() => exportPDF(statuses)} className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors active:scale-[0.98]">
+            {/* Dark mode toggle */}
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className={`flex items-center justify-center h-8 w-8 rounded-lg border transition-colors ${
+                darkMode
+                  ? "border-gray-700 bg-gray-800 text-yellow-400 hover:bg-gray-700"
+                  : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+              }`}
+              title={darkMode ? "Mode Terang" : "Mode Gelap"}
+            >
+              {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </button>
+            <button onClick={() => exportPDF(statuses)} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors active:scale-[0.98] ${
+              darkMode ? "bg-gray-100 text-gray-900 hover:bg-white" : "bg-gray-900 text-white hover:bg-gray-800"
+            }`}>
               <FileDown className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Export Laporan</span>
             </button>
@@ -462,7 +580,7 @@ export default function DireksiDashboard() {
         </div>
       </header>
 
-      <div className="bg-white border-b border-gray-100 px-4 sm:px-8 py-2.5 flex items-center gap-4 text-xs text-gray-400">
+      <div className={`border-b px-4 sm:px-8 py-2.5 flex items-center gap-4 text-xs transition-colors ${darkMode ? "bg-gray-900 border-gray-800 text-gray-500" : "bg-white border-gray-100 text-gray-400"}`}>
         <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" /> Sistem Aktif</span>
         <span>{dateStr}</span>
       </div>
@@ -475,7 +593,7 @@ export default function DireksiDashboard() {
           <div className="space-y-6">
             {/* Metric Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <div className={`rounded-xl border p-5 transition-colors ${darkMode ? "bg-gray-900 border-gray-800" : "bg-white border-gray-200"}`}>
                 <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">Efisiensi Distribusi</p>
                 <div className="flex items-end justify-between">
                   <div>
@@ -490,7 +608,7 @@ export default function DireksiDashboard() {
                   </div>
                 </div>
               </div>
-              <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <div className={`rounded-xl border p-5 transition-colors ${darkMode ? "bg-gray-900 border-gray-800" : "bg-white border-gray-200"}`}>
                 <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">Rata-Rata Tekanan</p>
                 <div className="flex items-end justify-between">
                   <p className="text-3xl font-bold text-gray-900 tracking-tight">{avgTekanan.toFixed(1)} <span className="text-lg font-medium text-gray-400">bar</span></p>
@@ -506,9 +624,9 @@ export default function DireksiDashboard() {
                   })}
                 </div>
               </div>
-              <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <div className={`rounded-xl border p-5 transition-colors ${darkMode ? "bg-gray-900 border-gray-800" : "bg-white border-gray-200"}`}>
                 <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">Titik Monitoring</p>
-                <p className="text-3xl font-bold text-gray-900 tracking-tight">{statuses.length}</p>
+                <p className={`text-3xl font-bold tracking-tight ${darkMode ? "text-gray-100" : "text-gray-900"}`}>{statuses.length}</p>
                 <div className="flex items-center gap-3 mt-3">
                   <span className="flex items-center gap-1.5 text-xs"><span className="h-2 w-2 rounded-full bg-green-500" /><span className="text-gray-500">{normalCount}</span></span>
                   <span className="flex items-center gap-1.5 text-xs"><span className="h-2 w-2 rounded-full bg-amber-500" /><span className="text-gray-500">{warningCount}</span></span>
@@ -518,10 +636,10 @@ export default function DireksiDashboard() {
             </div>
 
             {/* Chart */}
-            <div className="bg-white rounded-xl border border-gray-200">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                <h2 className="text-sm font-semibold text-gray-900">Tinggi Air & Tekanan</h2>
-                <select className="text-xs border border-gray-200 rounded-md px-2.5 py-1.5 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/30" value={selectedPointId} onChange={(e) => setSelectedPointId(e.target.value)}>
+            <div className={`rounded-xl border transition-colors ${darkMode ? "bg-gray-900 border-gray-800" : "bg-white border-gray-200"}`}>
+              <div className={`flex items-center justify-between px-6 py-4 border-b ${darkMode ? "border-gray-800" : "border-gray-100"}`}>
+                <h2 className={`text-sm font-semibold ${darkMode ? "text-gray-100" : "text-gray-900"}`}>Tinggi Air & Tekanan</h2>
+                <select className={`text-xs border rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer ${darkMode ? "bg-gray-800 border-gray-700 text-gray-200" : "bg-white border-gray-200 text-gray-600"}`} value={selectedPointId} onChange={(e) => setSelectedPointId(e.target.value)}>
                   <option value="all">Semua Titik</option>
                   {MONITORING_POINTS.map((pt) => (<option key={pt.id} value={pt.id}>{pt.name}</option>))}
                 </select>
@@ -530,12 +648,12 @@ export default function DireksiDashboard() {
                 <div className="h-[280px] sm:h-[320px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                      <XAxis dataKey="day" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={{ stroke: "#e5e7eb" }} tickLine={false} />
-                      <YAxis yAxisId="left" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} label={{ value: "Tinggi Air, cm", angle: -90, position: "insideLeft", style: { fontSize: 10, fill: "#9ca3af" }, offset: 20 }} />
-                      <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} label={{ value: "Tekanan, bar", angle: 90, position: "insideRight", style: { fontSize: 10, fill: "#9ca3af" }, offset: 20 }} />
-                      <RechartsTooltip contentStyle={{ borderRadius: 10, fontSize: 12, border: "1px solid #e5e7eb", boxShadow: "0 4px 16px rgba(0,0,0,0.06)", padding: "10px 14px" }} formatter={(val: any, name: string) => [val == null ? "-" : typeof val === "number" ? val.toFixed(2) : val, name]} />
-                      <Legend wrapperStyle={{ fontSize: 11, paddingTop: 12 }} iconType="circle" iconSize={8} />
+                      <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? "#1f2937" : "#f1f5f9"} vertical={false} />
+                      <XAxis dataKey="day" tick={{ fontSize: 11, fill: darkMode ? "#6b7280" : "#9ca3af" }} axisLine={{ stroke: darkMode ? "#374151" : "#e5e7eb" }} tickLine={false} />
+                      <YAxis yAxisId="left" tick={{ fontSize: 10, fill: darkMode ? "#6b7280" : "#9ca3af" }} axisLine={false} tickLine={false} label={{ value: "Tinggi Air, cm", angle: -90, position: "insideLeft", style: { fontSize: 10, fill: darkMode ? "#6b7280" : "#9ca3af" }, offset: 20 }} />
+                      <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: darkMode ? "#6b7280" : "#9ca3af" }} axisLine={false} tickLine={false} label={{ value: "Tekanan, bar", angle: 90, position: "insideRight", style: { fontSize: 10, fill: darkMode ? "#6b7280" : "#9ca3af" }, offset: 20 }} />
+                      <RechartsTooltip contentStyle={{ borderRadius: 10, fontSize: 12, border: `1px solid ${darkMode ? "#374151" : "#e5e7eb"}`, background: darkMode ? "#1f2937" : "#fff", color: darkMode ? "#f3f4f6" : "#111", boxShadow: "0 4px 16px rgba(0,0,0,0.1)", padding: "10px 14px" }} formatter={(val: any, name: string) => [val == null ? "-" : typeof val === "number" ? val.toFixed(2) : val, name]} />
+                      <Legend wrapperStyle={{ fontSize: 11, paddingTop: 12, color: darkMode ? "#9ca3af" : undefined }} iconType="circle" iconSize={8} />
                       <Line yAxisId="left" type="monotone" dataKey="tinggiAir" stroke="#22c55e" strokeWidth={2} dot={{ r: 3, fill: "#22c55e", strokeWidth: 0 }} name="Tinggi Air (cm)" connectNulls />
                       <Line yAxisId="right" type="monotone" dataKey="tekanan" stroke="#ef4444" strokeWidth={2} dot={{ r: 3, fill: "#ef4444", strokeWidth: 0 }} name="Tekanan (bar)" connectNulls />
                       <Line yAxisId="left" type="monotone" dataKey="predTinggi" stroke="#22c55e" strokeWidth={1.5} strokeDasharray="6 4" dot={{ r: 2.5, fill: "#bbf7d0", stroke: "#22c55e", strokeWidth: 1 }} name="Prediksi T.Air" connectNulls />
@@ -555,8 +673,8 @@ export default function DireksiDashboard() {
 
             {/* Bottom Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-white rounded-xl border border-gray-200 p-5">
-                <h3 className="text-sm font-semibold text-gray-900 mb-4">Kategori Masalah</h3>
+              <div className={`rounded-xl border p-5 transition-colors ${darkMode ? "bg-gray-900 border-gray-800" : "bg-white border-gray-200"}`}>
+                <h3 className={`text-sm font-semibold mb-4 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>Kategori Masalah</h3>
                 <div className="flex w-full h-3 rounded-full overflow-hidden mb-4 bg-gray-100">
                   {issueCategories.map((cat, i) => (<div key={i} style={{ width: `${(cat.count / totalIssues) * 100}%`, background: cat.color }} className="transition-all" />))}
                 </div>
@@ -569,8 +687,8 @@ export default function DireksiDashboard() {
                   ))}
                 </div>
               </div>
-              <div className="bg-white rounded-xl border border-gray-200 p-5">
-                <h3 className="text-sm font-semibold text-gray-900 mb-4">Reservoir Induk (IPA)</h3>
+              <div className={`rounded-xl border p-5 transition-colors ${darkMode ? "bg-gray-900 border-gray-800" : "bg-white border-gray-200"}`}>
+                <h3 className={`text-sm font-semibold mb-4 ${darkMode ? "text-gray-100" : "text-gray-900"}`}>Reservoir Induk (IPA)</h3>
                 <div className="grid grid-cols-3 gap-3 mb-4">
                   <div className="text-center"><p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Level</p><p className="text-xl font-bold text-gray-900">{reservoirUtama?.tinggiAir ?? "-"}<span className="text-xs text-gray-400 ml-0.5">cm</span></p></div>
                   <div className="text-center"><p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Tekanan</p><p className="text-xl font-bold text-gray-900">{reservoirUtama?.tekanan?.toFixed(1) ?? "-"}<span className="text-xs text-gray-400 ml-0.5">bar</span></p></div>
@@ -585,15 +703,15 @@ export default function DireksiDashboard() {
           </div>
 
           {/* RIGHT COL — Table */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-900">Pantauan Titik Real-Time</h2>
+          <div className={`rounded-xl border overflow-hidden flex flex-col transition-colors ${darkMode ? "bg-gray-900 border-gray-800" : "bg-white border-gray-200"}`}>
+            <div className={`px-5 py-4 border-b flex items-center justify-between ${darkMode ? "border-gray-800" : "border-gray-100"}`}>
+              <h2 className={`text-sm font-semibold ${darkMode ? "text-gray-100" : "text-gray-900"}`}>Pantauan Titik Real-Time</h2>
               <span className="text-[11px] text-gray-400">{statuses.length} titik</span>
             </div>
             <div className="flex-1 overflow-y-auto">
               <table className="w-full text-left">
-                <thead className="sticky top-0 bg-white">
-                  <tr className="border-b border-gray-100">
+                <thead className={`sticky top-0 ${darkMode ? "bg-gray-900" : "bg-white"}`}>
+                  <tr className={`border-b ${darkMode ? "border-gray-800" : "border-gray-100"}`}>
                     <th className="px-5 py-2.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Nama</th>
                     <th className="px-3 py-2.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Status</th>
                     <th className="px-3 py-2.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider text-right">Level</th>
@@ -602,8 +720,8 @@ export default function DireksiDashboard() {
                 </thead>
                 <tbody>
                   {statuses.map((row) => (
-                    <tr key={row.point.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                      <td className="px-5 py-3"><p className="text-sm font-medium text-gray-900 leading-tight">{row.point.name}</p><p className="text-[11px] text-gray-400 mt-0.5">{row.point.id}</p></td>
+                    <tr key={row.point.id} className={`border-b transition-colors ${darkMode ? "border-gray-800 hover:bg-gray-800/60" : "border-gray-50 hover:bg-gray-50/50"}`}>
+                      <td className="px-5 py-3"><p className={`text-sm font-medium leading-tight ${darkMode ? "text-gray-100" : "text-gray-900"}`}>{row.point.name}</p><p className="text-[11px] text-gray-500 mt-0.5">{row.point.id}</p></td>
                       <td className="px-3 py-3">
                         <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${row.status === "normal" ? "bg-green-50 text-green-700" : row.status === "warning" ? "bg-amber-50 text-amber-700" : row.status === "critical" ? "bg-red-50 text-red-700" : "bg-gray-50 text-gray-500"}`}>
                           <span className={`h-1.5 w-1.5 rounded-full ${row.status === "normal" ? "bg-green-500" : row.status === "warning" ? "bg-amber-500" : row.status === "critical" ? "bg-red-500 animate-pulse" : "bg-gray-400"}`} />
@@ -617,7 +735,7 @@ export default function DireksiDashboard() {
                 </tbody>
               </table>
             </div>
-            <div className="px-5 py-3 border-t border-gray-100 text-[11px] text-gray-400 flex justify-between">
+            <div className={`px-5 py-3 border-t text-[11px] text-gray-400 flex justify-between ${darkMode ? "border-gray-800" : "border-gray-100"}`}>
               <span>{statuses.length} titik</span>
               <span>Update: {timeStr}</span>
             </div>
