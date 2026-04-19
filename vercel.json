@@ -5,7 +5,7 @@
   "outputDirectory": "artifacts/smart-water/dist/public",
   "functions": {
     "api/index.ts": {
-      "maxDuration": 10
+      "maxDuration": 60
     }
   },
   "rewrites": [

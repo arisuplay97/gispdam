@@ -469,9 +469,15 @@ export default function DireksiDashboard() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chartRaw, pointName, period: periodLabel })
     })
-    .then(r => r.json())
+    .then(async (r) => {
+      const data = await r.json().catch(() => null);
+      if (!r.ok) {
+        throw new Error(data?.error || `HTTP ${r.status}`);
+      }
+      return data;
+    })
     .then(data => {
-      if (data.advice) {
+      if (data && data.advice) {
         setAdviceText(data.advice);
       } else {
         throw new Error("No advice provided");
@@ -480,7 +486,7 @@ export default function DireksiDashboard() {
     .catch(err => {
       console.error(err);
       const fallback = getFallbackAdvice(selectedPointId, statuses, chartRaw, tReg, pReg);
-      setAdviceText("[AI Timeout/Offline] " + fallback);
+      setAdviceText(`[Error: ${err.message}] ${fallback}`);
     });
 
   }, [chartRaw, selectedPointId, chartPeriod, activePoints, statuses, tReg, pReg]);
