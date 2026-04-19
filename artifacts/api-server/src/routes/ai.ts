@@ -13,7 +13,7 @@ aiRouter.post("/api/ai-advice", async (req, res) => {
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `Anda adalah sistem pakar / engineer senior manajemen distribusi air PDAM.
 Berikut adalah rekap historis grafik PDAM rentang waktu: "${period}" untuk lokasi pengamatan: "${pointName}".

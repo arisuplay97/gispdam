@@ -451,6 +451,7 @@ export default function DireksiDashboard() {
   const criticalCount = statuses.filter((s) => s.status === "critical").length;
 
   const [adviceText, setAdviceText] = useState("Memuat analisa AI...");
+  const [lastAnalyzedData, setLastAnalyzedData] = useState<string>("");
 
   // Setup React useEffect untuk fetch AI Analysis
   useEffect(() => {
@@ -458,6 +459,11 @@ export default function DireksiDashboard() {
       setAdviceText("Pilih titik untuk memuat saran sistem.");
       return;
     }
+
+    // Hindari re-fetch jika data yang dianalisis sama persis (mencegah loop/boros kuota akibat polling)
+    const currentDataStr = JSON.stringify({ chartRaw, selectedPointId, chartPeriod });
+    if (currentDataStr === lastAnalyzedData) return;
+
 
     setAdviceText("🤖 Sedang dianalisis oleh Gemini AI...");
 
@@ -480,6 +486,7 @@ export default function DireksiDashboard() {
     .then(data => {
       if (data && data.advice) {
         setAdviceText(data.advice);
+        setLastAnalyzedData(currentDataStr);
       } else {
         throw new Error("No advice provided");
       }
