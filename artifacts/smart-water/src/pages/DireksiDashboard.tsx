@@ -486,8 +486,15 @@ export default function DireksiDashboard() {
     })
     .catch(err => {
       console.error(err);
+      let errorMsg = err.message;
+      if (errorMsg.includes("429") || errorMsg.includes("Quota exceeded")) {
+        errorMsg = "Batas penggunaan gratis Gemini AI (Rate Limit) sedang penuh. Mohon tunggu sekitar 1 menit.";
+      } else if (errorMsg.includes("403") || errorMsg.includes("API key not valid")) {
+        errorMsg = "API Key Gemini tidak valid atau belum diatur.";
+      }
+      
       const fallback = getFallbackAdvice(selectedPointId, statuses, chartRaw, tReg, pReg);
-      setAdviceText(`[Error: ${err.message}] ${fallback}`);
+      setAdviceText(`[Warning: ${errorMsg}] ${fallback}`);
     });
 
   }, [chartRaw, selectedPointId, chartPeriod, activePoints, statuses, tReg, pReg]);
