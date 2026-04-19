@@ -768,7 +768,7 @@ export default function DireksiDashboard() {
                       )}
                       <div className="flex-1 min-w-0">
                         <div className={`flex items-center gap-2 mb-1 ${isAIPowered ? "text-white/60" : darkMode ? "text-gray-500" : "text-gray-400"}`}>
-                          <span className="text-[10px] font-bold uppercase tracking-widest">{isAIPowered ? "Groq AI · Llama 3.3 70B" : "Analisis Sistem"}</span>
+                          <span className="text-[10px] font-bold uppercase tracking-widest">{isAIPowered ? "Groq AI · DeepSeek-R1 70B" : "Analisis Sistem"}</span>
                           {isAIPowered && <span className="flex items-center gap-1 text-[10px] bg-white/10 text-blue-400 px-1.5 py-0.5 rounded-full font-medium"><span className="h-1 w-1 rounded-full bg-blue-400" />AI</span>}
                         </div>
                         <p className={`text-[13px] leading-relaxed ${
@@ -784,7 +784,7 @@ export default function DireksiDashboard() {
                         )}
                         {isAIPowered && !isAILoading && (
                           <p className={`text-[11px] mt-2 italic text-white/40`}>
-                            Prediksi grafik dihitung oleh <span className="font-semibold not-italic">AI Llama 3.3 70B</span>
+                            Prediksi grafik dihitung oleh <span className="font-semibold not-italic">AI DeepSeek-R1 70B</span>
                           </p>
                         )}
                       </div>

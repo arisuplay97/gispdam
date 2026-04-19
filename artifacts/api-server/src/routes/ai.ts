@@ -33,9 +33,9 @@ Pastikan angka predictions realistis berdasarkan tren data historis. Jangan pern
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
+        model: "deepseek-r1-distill-llama-70b",
         messages: [{ role: "user", content: prompt }],
-        temperature: 0.4,
+        temperature: 0.6,
         max_tokens: 700,
         response_format: { type: "json_object" }
       })
