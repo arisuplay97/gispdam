@@ -33,7 +33,7 @@ Pastikan angka predictions realistis berdasarkan tren data historis. Jangan pern
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "qwen-2.5-32b",
+        model: "qwen/qwen3-32b",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.6,
         max_tokens: 700,
