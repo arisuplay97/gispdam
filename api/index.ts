@@ -865,8 +865,7 @@ Pastikan angka predictions realistis berdasarkan tren data historis. Jangan pern
         model: "qwen/qwen3-32b",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.6,
-        max_tokens: 700,
-        response_format: { type: "json_object" }
+        max_tokens: 700
       })
     });
 
@@ -879,7 +878,9 @@ Pastikan angka predictions realistis berdasarkan tren data historis. Jangan pern
     const rawText = result.choices?.[0]?.message?.content || "{}";
     
     try {
-      const parsed = JSON.parse(rawText);
+      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : rawText;
+      const parsed = JSON.parse(jsonStr);
       res.json({ advice: parsed.advice || "Gagal mendapatkan saran dari AI.", predictions: parsed.predictions || [] });
     } catch {
       res.json({ advice: rawText, predictions: [] });
