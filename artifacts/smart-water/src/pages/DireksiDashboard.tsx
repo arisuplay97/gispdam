@@ -440,10 +440,8 @@ export default function DireksiDashboard() {
             </button>
             <div className="h-5 w-px bg-gray-200 hidden sm:block" />
             <div className="flex items-center gap-3">
-              <div className="h-7 w-7 rounded-md bg-gray-900 flex items-center justify-center">
-                <Droplets className="h-4 w-4 text-white" />
-              </div>
-              <span className="font-semibold text-gray-900 text-sm tracking-tight">PDAM TIARA</span>
+              <img src="/logo.png" alt="PDAM TIARA Logo" className="h-8 w-auto object-contain" />
+              <span className="font-semibold text-gray-900 text-sm tracking-tight hidden sm:block">PDAM TIARA</span>
             </div>
             <nav className="hidden md:flex items-center gap-1 ml-4">
               {["Dashboard", "Peta", "Laporan"].map((item, i) => (
