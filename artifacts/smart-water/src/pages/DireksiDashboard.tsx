@@ -29,6 +29,9 @@ interface PointStatus {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const HARI = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+const BULAN = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Ags","Sep","Okt","Nov","Des"];
+
+type ChartPeriod = "daily" | "weekly" | "monthly";
 
 // Data bayangan bawaan per titik — variasi status berbeda
 // Akan dipakai sebagai fallback jika belum ada data asli dari database
@@ -40,50 +43,97 @@ const SHADOW_DATA: Record<string, { tinggiAir: number; tekanan: number }> = {
   "MON-05": { tinggiAir: 220, tekanan: 5.0 },  // Reservoir Pagesangan — NORMAL
 };
 
-function generateWeeklyData(monitoringData: Record<string, MonitoringData>, selectedPointId: string) {
+// ─── Aggregate helpers for chart data generation ─────────────────────────────
+function getBaseValues(pt: MonitoringPoint, monitoringData: Record<string, MonitoringData>) {
+  const ptData = monitoringData[pt.id];
+  const session = ptData?.sore ?? ptData?.pagi;
+  const shadow = SHADOW_DATA[pt.id];
+  return {
+    tinggiAir: session?.tinggiAir ?? shadow?.tinggiAir ?? null,
+    tekanan:   session?.tekanan   ?? shadow?.tekanan   ?? null,
+  };
+}
+
+function aggregatePoints(
+  points: MonitoringPoint[],
+  monitoringData: Record<string, MonitoringData>,
+  selectedPointId: string,
+  noiseIdx: number,
+) {
+  let tT = 0, tP = 0, cT = 0, cP = 0;
+  points.forEach(pt => {
+    if (selectedPointId !== "all" && pt.id !== selectedPointId) return;
+    const { tinggiAir, tekanan } = getBaseValues(pt, monitoringData);
+    if (tinggiAir != null) {
+      const n = Math.sin(noiseIdx * 1.7 + pt.lat * 100) * 12;
+      tT += tinggiAir + n * (noiseIdx > 0 ? 1 : 0); cT++;
+    }
+    if (tekanan != null) {
+      const n = Math.sin(noiseIdx * 2.3 + pt.lng * 100) * 0.25;
+      tP += tekanan + n * (noiseIdx > 0 ? 1 : 0); cP++;
+    }
+  });
+  return {
+    tinggiAir: cT > 0 ? Number((tT / cT).toFixed(1)) : null,
+    tekanan:   cP > 0 ? Number((tP / cP).toFixed(2)) : null,
+  };
+}
+
+function generateChartData(
+  monitoringData: Record<string, MonitoringData>,
+  selectedPointId: string,
+  period: ChartPeriod,
+) {
   const now = new Date();
-  const data = [];
+  const data: any[] = [];
 
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(now.getDate() - i);
-    const dayName = HARI[d.getDay()];
-    const dateStr = `${d.getDate()}/${d.getMonth() + 1}`;
-
-    let totalTinggi = 0, totalTekanan = 0, countT = 0, countP = 0;
-
-    MONITORING_POINTS.forEach((pt) => {
-      if (selectedPointId !== "all" && pt.id !== selectedPointId) return;
-
-      const ptData = monitoringData[pt.id];
-      const session = ptData?.sore ?? ptData?.pagi;
-      const shadow = SHADOW_DATA[pt.id];
-
-      // Pakai data asli jika ada, kalau kosong gunakan bayangan
-      const baseTinggi = session?.tinggiAir ?? shadow?.tinggiAir ?? null;
-      const baseTekanan = session?.tekanan ?? shadow?.tekanan ?? null;
-
-      if (baseTinggi != null) {
-        const noise = Math.sin(i * 1.7 + pt.lat * 100) * 12;
-        totalTinggi += baseTinggi + noise * (i > 0 ? 1 : 0);
-        countT++;
+  if (period === "daily") {
+    // 7 hari terakhir
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(); d.setDate(now.getDate() - i);
+      const dayName = HARI[d.getDay()];
+      const dateStr = `${d.getDate()}/${d.getMonth() + 1}`;
+      const vals = aggregatePoints(MONITORING_POINTS, monitoringData, selectedPointId, i);
+      data.push({ ...vals, label: dayName, sublabel: dateStr });
+    }
+  } else if (period === "weekly") {
+    // 4 minggu terakhir
+    for (let w = 3; w >= 0; w--) {
+      let tT = 0, tP = 0, cnt = 0;
+      for (let d = 0; d < 7; d++) {
+        const idx = w * 7 + d;
+        const vals = aggregatePoints(MONITORING_POINTS, monitoringData, selectedPointId, idx);
+        if (vals.tinggiAir != null) { tT += vals.tinggiAir; cnt++; }
+        if (vals.tekanan != null)   { tP += vals.tekanan; }
       }
-      if (baseTekanan != null) {
-        const noise = Math.sin(i * 2.3 + pt.lng * 100) * 0.25;
-        totalTekanan += baseTekanan + noise * (i > 0 ? 1 : 0);
-        countP++;
+      const weekStart = new Date(); weekStart.setDate(now.getDate() - w * 7 - 6);
+      const weekEnd = new Date(); weekEnd.setDate(now.getDate() - w * 7);
+      data.push({
+        label: `Mgg ${4 - w}`,
+        sublabel: `${weekStart.getDate()}/${weekStart.getMonth() + 1}-${weekEnd.getDate()}/${weekEnd.getMonth() + 1}`,
+        tinggiAir: cnt > 0 ? Number((tT / cnt).toFixed(1)) : null,
+        tekanan:   cnt > 0 ? Number((tP / cnt).toFixed(2)) : null,
+      });
+    }
+  } else {
+    // 6 bulan terakhir
+    for (let m = 5; m >= 0; m--) {
+      const target = new Date(now.getFullYear(), now.getMonth() - m, 1);
+      let tT = 0, tP = 0, cnt = 0;
+      // simulate ~30 days worth
+      for (let d = 0; d < 30; d++) {
+        const vals = aggregatePoints(MONITORING_POINTS, monitoringData, selectedPointId, m * 30 + d);
+        if (vals.tinggiAir != null) { tT += vals.tinggiAir; cnt++; }
+        if (vals.tekanan != null)   { tP += vals.tekanan; }
       }
-    });
-
-    data.push({
-      name: `${dayName}\n${dateStr}`,
-      day: dayName,
-      date: dateStr,
-      tinggiAir: countT > 0 ? Number((totalTinggi / countT).toFixed(1)) : null,
-      tekanan: countP > 0 ? Number((totalTekanan / countP).toFixed(2)) : null,
-    });
+      data.push({
+        label: BULAN[target.getMonth()],
+        sublabel: `${target.getFullYear()}`,
+        tinggiAir: cnt > 0 ? Number((tT / cnt).toFixed(1)) : null,
+        tekanan:   cnt > 0 ? Number((tP / cnt).toFixed(2)) : null,
+      });
+    }
   }
-
   return data;
 }
 
@@ -99,44 +149,34 @@ function linearRegression(data: { x: number; y: number }[]) {
   return { slope, intercept };
 }
 
-function addPredictions(weeklyData: any[]) {
-  const tinggiPts = weeklyData
-    .map((d, i) => ({ x: i, y: d.tinggiAir }))
-    .filter((p) => p.y != null);
-  const tekananPts = weeklyData
-    .map((d, i) => ({ x: i, y: d.tekanan }))
-    .filter((p) => p.y != null);
+const PRED_LABELS: Record<ChartPeriod, string[]> = {
+  daily:   ["+1 Hari", "+2 Hari", "+3 Hari"],
+  weekly:  ["+1 Mgg", "+2 Mgg"],
+  monthly: ["+1 Bln", "+2 Bln"],
+};
+
+function addPredictions(rawData: any[], period: ChartPeriod) {
+  const tinggiPts = rawData.map((d, i) => ({ x: i, y: d.tinggiAir })).filter(p => p.y != null);
+  const tekananPts = rawData.map((d, i) => ({ x: i, y: d.tekanan })).filter(p => p.y != null);
 
   const tReg = linearRegression(tinggiPts);
   const pReg = linearRegression(tekananPts);
 
-  const predictions = [];
-  const now = new Date();
-  for (let i = 1; i <= 3; i++) {
-    const d = new Date();
-    d.setDate(now.getDate() + i);
-    const dayName = HARI[d.getDay()];
-    const dateStr = `${d.getDate()}/${d.getMonth() + 1}`;
-    const xVal = weeklyData.length - 1 + i;
-    predictions.push({
-      name: `${dayName}\n${dateStr}`,
-      day: dayName,
-      date: dateStr,
+  const labels = PRED_LABELS[period];
+  const predictions = labels.map((lbl, i) => {
+    const xVal = rawData.length - 1 + i + 1;
+    return {
+      label: lbl,
+      sublabel: "pred",
       tinggiAir: null,
       tekanan: null,
       predTinggi: Number((tReg.slope * xVal + tReg.intercept).toFixed(1)),
       predTekanan: Number((pReg.slope * xVal + pReg.intercept).toFixed(2)),
       isPrediction: true,
-    });
-  }
+    };
+  });
 
-  // Add pred columns to actual data
-  const merged = weeklyData.map((d, i) => ({
-    ...d,
-    predTinggi: null,
-    predTekanan: null,
-    isPrediction: false,
-  }));
+  const merged = rawData.map(d => ({ ...d, predTinggi: null, predTekanan: null, isPrediction: false }));
 
   // Bridge: last actual point also gets prediction value for continuous line
   if (merged.length > 0) {
@@ -213,9 +253,9 @@ function getPointStatuses(
   });
 }
 
-function getPakarAdvice(selectedPointId: string, pointStatuses: PointStatus[], weeklyData: any[], tReg: ReturnType<typeof linearRegression>, pReg: ReturnType<typeof linearRegression>): string {
-  const lastTinggi = weeklyData[weeklyData.length - 1]?.tinggiAir;
-  const lastTekanan = weeklyData[weeklyData.length - 1]?.tekanan;
+function getPakarAdvice(selectedPointId: string, pointStatuses: PointStatus[], chartRaw: any[], tReg: ReturnType<typeof linearRegression>, pReg: ReturnType<typeof linearRegression>): string {
+  const lastTinggi = chartRaw[chartRaw.length - 1]?.tinggiAir;
+  const lastTekanan = chartRaw[chartRaw.length - 1]?.tekanan;
 
   if (selectedPointId === "all") {
     let msg = "";
@@ -417,9 +457,10 @@ export default function DireksiDashboard() {
   }, [rawMonitoringData]);
 
   const [selectedPointId, setSelectedPointId] = useState<string>("all");
+  const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("daily");
 
-  const weeklyRaw = useMemo(() => generateWeeklyData(monitoringData, selectedPointId), [monitoringData, selectedPointId]);
-  const { data: chartData, tReg, pReg } = useMemo(() => addPredictions(weeklyRaw), [weeklyRaw]);
+  const chartRaw = useMemo(() => generateChartData(monitoringData, selectedPointId, chartPeriod), [monitoringData, selectedPointId, chartPeriod]);
+  const { data: chartData, tReg, pReg } = useMemo(() => addPredictions(chartRaw, chartPeriod), [chartRaw, chartPeriod]);
   const statuses = useMemo(() => getPointStatuses(monitoringData, activePoints), [monitoringData, activePoints]);
 
   const normalCount = statuses.filter((s) => s.status === "normal").length;
@@ -427,8 +468,8 @@ export default function DireksiDashboard() {
   const criticalCount = statuses.filter((s) => s.status === "critical").length;
 
   const advice = useMemo(
-    () => getPakarAdvice(selectedPointId, statuses, weeklyRaw, tReg, pReg),
-    [selectedPointId, statuses, weeklyRaw, tReg, pReg]
+    () => getPakarAdvice(selectedPointId, statuses, chartRaw, tReg, pReg),
+    [selectedPointId, statuses, chartRaw, tReg, pReg]
   );
   const cleanAdvice = advice.replace(/^[\u2713\u26a0\ufe0f\ud83d\udea8\ud83d\uded1\u2139\ufe0f\ud83d\udca1]\s?/u, "");
 
@@ -535,9 +576,9 @@ export default function DireksiDashboard() {
                     <p className="text-xs text-gray-400 mt-1">{normalCount}/{statuses.length} titik aman</p>
                   </div>
                   <div className="flex items-end gap-[2px] h-10">
-                    {weeklyRaw.slice(-7).map((d: any, i: number) => {
+                    {chartRaw.map((d: any, i: number) => {
                       const h = Math.max(4, ((d.tinggiAir ?? 0) / 400) * 36);
-                      return <div key={i} className="w-[5px] rounded-sm bg-green-400" style={{ height: h }} />;
+                      return <div key={i} className="flex-1 max-w-[8px] rounded-sm bg-green-400" style={{ height: h }} />;
                     })}
                   </div>
                 </div>
@@ -551,7 +592,7 @@ export default function DireksiDashboard() {
                   </span>
                 </div>
                 <div className="flex gap-[2px] mt-3">
-                  {weeklyRaw.slice(-7).map((d: any, i: number) => {
+                  {chartRaw.map((d: any, i: number) => {
                     const v = d.tekanan ?? 0;
                     const color = v >= 2 ? "#22c55e" : v >= 0.5 ? "#f59e0b" : "#ef4444";
                     return <div key={i} className="flex-1 h-1.5 rounded-sm" style={{ background: color, opacity: 0.4 + (v / 8) * 0.6 }} />;
@@ -571,22 +612,39 @@ export default function DireksiDashboard() {
 
             {/* Chart */}
             <div className={`rounded-xl border transition-colors ${darkMode ? "bg-gray-900 border-gray-800" : "bg-white border-gray-200"}`}>
-              <div className={`flex items-center justify-between px-6 py-4 border-b ${darkMode ? "border-gray-800" : "border-gray-100"}`}>
+              <div className={`flex flex-wrap gap-4 items-center justify-between px-6 py-4 border-b ${darkMode ? "border-gray-800" : "border-gray-100"}`}>
                 <h2 className={`text-sm font-semibold ${darkMode ? "text-gray-100" : "text-gray-900"}`}>Tinggi Air & Tekanan</h2>
-                <select className={`text-xs border rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer ${darkMode ? "bg-gray-800 border-gray-700 text-gray-200" : "bg-white border-gray-200 text-gray-600"}`} value={selectedPointId} onChange={(e) => setSelectedPointId(e.target.value)}>
-                  <option value="all">Semua Titik</option>
-                  {activePoints.map((pt) => (<option key={pt.id} value={pt.id}>{pt.name}</option>))}
-                </select>
+                <div className="flex items-center gap-3">
+                  <div className={`flex rounded-lg p-1 ${darkMode ? "bg-gray-800" : "bg-gray-100"}`}>
+                    {(["daily", "weekly", "monthly"] as ChartPeriod[]).map(p => (
+                      <button
+                        key={p}
+                        onClick={() => setChartPeriod(p)}
+                        className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 ${
+                          chartPeriod === p
+                            ? (darkMode ? "bg-gray-700 text-white shadow-sm" : "bg-white text-gray-900 shadow-sm")
+                            : (darkMode ? "text-gray-400 hover:text-gray-200" : "text-gray-500 hover:text-gray-700")
+                        }`}
+                      >
+                        {p === "daily" ? "Harian" : p === "weekly" ? "Mingguan" : "Bulanan"}
+                      </button>
+                    ))}
+                  </div>
+                  <select className={`text-xs border rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer ${darkMode ? "bg-gray-800 border-gray-700 text-gray-200" : "bg-white border-gray-200 text-gray-600"}`} value={selectedPointId} onChange={(e) => setSelectedPointId(e.target.value)}>
+                    <option value="all">Semua Titik</option>
+                    {activePoints.map((pt) => (<option key={pt.id} value={pt.id}>{pt.name}</option>))}
+                  </select>
+                </div>
               </div>
               <div className="px-4 sm:px-6 pt-4 pb-2">
                 <div className="h-[280px] sm:h-[320px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? "#1f2937" : "#f1f5f9"} vertical={false} />
-                      <XAxis dataKey="day" tick={{ fontSize: 11, fill: darkMode ? "#6b7280" : "#9ca3af" }} axisLine={{ stroke: darkMode ? "#374151" : "#e5e7eb" }} tickLine={false} />
+                      <XAxis dataKey="label" tick={{ fontSize: 11, fill: darkMode ? "#6b7280" : "#9ca3af" }} axisLine={{ stroke: darkMode ? "#374151" : "#e5e7eb" }} tickLine={false} />
                       <YAxis yAxisId="left" tick={{ fontSize: 10, fill: darkMode ? "#6b7280" : "#9ca3af" }} axisLine={false} tickLine={false} label={{ value: "Tinggi Air, cm", angle: -90, position: "insideLeft", style: { fontSize: 10, fill: darkMode ? "#6b7280" : "#9ca3af" }, offset: 20 }} />
                       <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: darkMode ? "#6b7280" : "#9ca3af" }} axisLine={false} tickLine={false} label={{ value: "Tekanan, bar", angle: 90, position: "insideRight", style: { fontSize: 10, fill: darkMode ? "#6b7280" : "#9ca3af" }, offset: 20 }} />
-                      <RechartsTooltip contentStyle={{ borderRadius: 10, fontSize: 12, border: `1px solid ${darkMode ? "#374151" : "#e5e7eb"}`, background: darkMode ? "#1f2937" : "#fff", color: darkMode ? "#f3f4f6" : "#111", boxShadow: "0 4px 16px rgba(0,0,0,0.1)", padding: "10px 14px" }} formatter={(val: any, name: string) => [val == null ? "-" : typeof val === "number" ? val.toFixed(2) : val, name]} />
+                      <RechartsTooltip labelFormatter={(lbl, pl) => pl[0]?.payload?.sublabel ? \`\${lbl} (\${pl[0].payload.sublabel})\` : lbl} contentStyle={{ borderRadius: 10, fontSize: 12, border: \`1px solid \${darkMode ? "#374151" : "#e5e7eb"}\`, background: darkMode ? "#1f2937" : "#fff", color: darkMode ? "#f3f4f6" : "#111", boxShadow: "0 4px 16px rgba(0,0,0,0.1)", padding: "10px 14px" }} formatter={(val: any, name: string) => [val == null ? "-" : typeof val === "number" ? val.toFixed(2) : val, name]} />
                       <Legend wrapperStyle={{ fontSize: 11, paddingTop: 12, color: darkMode ? "#9ca3af" : undefined }} iconType="circle" iconSize={8} />
                       <Line yAxisId="left" type="monotone" dataKey="tinggiAir" stroke="#22c55e" strokeWidth={2} dot={{ r: 3, fill: "#22c55e", strokeWidth: 0 }} name="Tinggi Air (cm)" connectNulls />
                       <Line yAxisId="right" type="monotone" dataKey="tekanan" stroke="#ef4444" strokeWidth={2} dot={{ r: 3, fill: "#ef4444", strokeWidth: 0 }} name="Tekanan (bar)" connectNulls />
