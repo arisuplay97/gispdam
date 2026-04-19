@@ -465,7 +465,7 @@ export default function DireksiDashboard() {
     if (currentDataStr === lastAnalyzedData) return;
 
 
-    setAdviceText("🤖 Sedang dianalisis oleh Gemini AI...");
+    setAdviceText("🤖 Sedang dianalisis oleh Groq AI (Llama 3.3)...");
 
     const pointName = selectedPointId === "all" ? "Seluruh Jaringan PDAM" : activePoints.find(p => p.id === selectedPointId)?.name;
     const periodLabel = chartPeriod === "daily" ? "7 hari terakhir" : chartPeriod === "weekly" ? "4 minggu terakhir" : "6 bulan terakhir";
@@ -494,10 +494,10 @@ export default function DireksiDashboard() {
     .catch(err => {
       console.error(err);
       let errorMsg = err.message;
-      if (errorMsg.includes("429") || errorMsg.includes("Quota exceeded")) {
-        errorMsg = "Batas penggunaan gratis Gemini AI (Rate Limit) sedang penuh. Mohon tunggu sekitar 1 menit.";
-      } else if (errorMsg.includes("403") || errorMsg.includes("API key not valid")) {
-        errorMsg = "API Key Gemini tidak valid atau belum diatur.";
+      if (errorMsg.includes("429") || errorMsg.includes("Quota") || errorMsg.includes("Rate limit")) {
+        errorMsg = "Batas penggunaan Groq AI (Rate Limit) sedang penuh. Mohon tunggu sekitar 1 menit.";
+      } else if (errorMsg.includes("403") || errorMsg.includes("API key") || errorMsg.includes("401")) {
+        errorMsg = "API Key Groq tidak valid atau belum diatur.";
       }
       
       const fallback = getFallbackAdvice(selectedPointId, statuses, chartRaw, tReg, pReg);
