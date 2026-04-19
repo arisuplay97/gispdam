@@ -31,6 +31,16 @@ interface PointStatus {
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const HARI = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 
+// Data bayangan bawaan per titik — variasi status berbeda
+// Akan dipakai sebagai fallback jika belum ada data asli dari database
+const SHADOW_DATA: Record<string, { tinggiAir: number; tekanan: number }> = {
+  "MON-01": { tinggiAir: 280, tekanan: 5.8 },  // Reservoir Induk — NORMAL (sehat)
+  "MON-02": { tinggiAir: 85,  tekanan: 0.8 },  // BPT Airvale — WASPADA (tekanan redup)
+  "MON-03": { tinggiAir: 310, tekanan: 6.2 },  // Reservoir Airbaku — NORMAL (baik)
+  "MON-04": { tinggiAir: 42,  tekanan: 0.3 },  // BPT Montong Terep — KRITIS (drop)
+  "MON-05": { tinggiAir: 220, tekanan: 5.0 },  // Reservoir Pagesangan — NORMAL
+};
+
 function generateWeeklyData(monitoringData: Record<string, MonitoringData>, selectedPointId: string) {
   const now = new Date();
   const data = [];
@@ -41,7 +51,6 @@ function generateWeeklyData(monitoringData: Record<string, MonitoringData>, sele
     const dayName = HARI[d.getDay()];
     const dateStr = `${d.getDate()}/${d.getMonth() + 1}`;
 
-    // Aggregate all monitoring points
     let totalTinggi = 0, totalTekanan = 0, countT = 0, countP = 0;
 
     MONITORING_POINTS.forEach((pt) => {
@@ -49,15 +58,20 @@ function generateWeeklyData(monitoringData: Record<string, MonitoringData>, sele
 
       const ptData = monitoringData[pt.id];
       const session = ptData?.sore ?? ptData?.pagi;
-      if (session?.tinggiAir != null) {
-        // Add some day-variance for historical simulation
-        const noise = Math.sin(i * 1.7 + pt.lat * 100) * 15;
-        totalTinggi += session.tinggiAir + noise * (i > 0 ? 1 : 0);
+      const shadow = SHADOW_DATA[pt.id];
+
+      // Pakai data asli jika ada, kalau kosong gunakan bayangan
+      const baseTinggi = session?.tinggiAir ?? shadow?.tinggiAir ?? null;
+      const baseTekanan = session?.tekanan ?? shadow?.tekanan ?? null;
+
+      if (baseTinggi != null) {
+        const noise = Math.sin(i * 1.7 + pt.lat * 100) * 12;
+        totalTinggi += baseTinggi + noise * (i > 0 ? 1 : 0);
         countT++;
       }
-      if (session?.tekanan != null) {
-        const noise = Math.sin(i * 2.3 + pt.lng * 100) * 0.3;
-        totalTekanan += session.tekanan + noise * (i > 0 ? 1 : 0);
+      if (baseTekanan != null) {
+        const noise = Math.sin(i * 2.3 + pt.lng * 100) * 0.25;
+        totalTekanan += baseTekanan + noise * (i > 0 ? 1 : 0);
         countP++;
       }
     });
@@ -141,8 +155,13 @@ function getPointStatuses(
   return MONITORING_POINTS.map((pt) => {
     const d = monitoringData[pt.id];
     const session = d?.sore ?? d?.pagi;
+    const shadow = SHADOW_DATA[pt.id];
 
-    if (!d || (!session?.tinggiAir && !session?.tekanan)) {
+    // Pakai data asli, kalau kosong fallback ke bayangan
+    const effectiveTinggi = session?.tinggiAir ?? shadow?.tinggiAir;
+    const effectiveTekanan = session?.tekanan ?? shadow?.tekanan;
+
+    if (effectiveTinggi == null && effectiveTekanan == null) {
       return {
         point: pt,
         status: "empty" as const,
@@ -157,19 +176,19 @@ function getPointStatuses(
     let status: "normal" | "warning" | "critical" = "normal";
     let cause = "Dalam batas normal";
 
-    if (session?.tekanan != null) {
-      if (session.tekanan < 0.5) { status = "critical"; cause = "Tekanan sangat rendah (< 0.5 bar)"; }
-      else if (session.tekanan < 1.0) { status = "warning"; cause = "Tekanan mulai turun (< 1.0 bar)"; }
+    if (effectiveTekanan != null) {
+      if (effectiveTekanan < 0.5) { status = "critical"; cause = `Tekanan sangat rendah (${effectiveTekanan} bar)`; }
+      else if (effectiveTekanan < 1.0) { status = "warning"; cause = `Tekanan mulai turun (${effectiveTekanan} bar)`; }
     }
-    if (session?.tinggiAir != null) {
-      if (session.tinggiAir < 50) { status = "critical"; cause = "Tinggi air kritis (< 50 cm)"; }
-      else if (session.tinggiAir < 100) {
-        if (status !== "critical") { status = "warning"; cause = "Tinggi air rendah (< 100 cm)"; }
+    if (effectiveTinggi != null) {
+      if (effectiveTinggi < 50) { status = "critical"; cause = `Tinggi air kritis (${effectiveTinggi} cm)`; }
+      else if (effectiveTinggi < 100) {
+        if (status !== "critical") { status = "warning"; cause = `Tinggi air rendah (${effectiveTinggi} cm)`; }
       }
     }
 
     // Anomali penurunan
-    if (d.pagi?.tinggiAir != null && d.sore?.tinggiAir != null) {
+    if (d?.pagi?.tinggiAir != null && d?.sore?.tinggiAir != null) {
       const drop = d.pagi.tinggiAir - d.sore.tinggiAir;
       if (drop > 100 && status !== "critical") {
         status = "warning";
@@ -185,8 +204,8 @@ function getPointStatuses(
       cause,
       since: "Hari ini",
       prediksiKritis: predDays,
-      tinggiAir: session?.tinggiAir,
-      tekanan: session?.tekanan,
+      tinggiAir: effectiveTinggi,
+      tekanan: effectiveTekanan,
     };
   }).sort((a, b) => {
     const order = { critical: 0, warning: 1, empty: 2, normal: 3 };
@@ -344,7 +363,27 @@ async function exportPDF(
 // ─── Main Component ─────────────────────────────────────────────────────────
 export default function DireksiDashboard() {
   const [, navigate] = useLocation();
-  const [monitoringData] = useLocalStorage<Record<string, MonitoringData>>("gis-monitoring-data", {});
+  const { data: rawMonitoringData } = useGetMonitoringData();
+
+  // Proses data dari API database menjadi format per-titik
+  const monitoringData = useMemo(() => {
+    const todayDateStr = new Date().toISOString().split("T")[0];
+    const result: Record<string, MonitoringData> = {};
+    if (rawMonitoringData) {
+      rawMonitoringData.forEach((row) => {
+        const rowDateStr = new Date(row.date).toISOString().split("T")[0];
+        if (rowDateStr === todayDateStr) {
+          if (!result[row.pointId]) result[row.pointId] = {};
+          (result[row.pointId] as any)[row.session] = {
+            tinggiAir: row.tinggiAir ?? undefined,
+            tekanan: row.tekanan ?? undefined,
+          };
+        }
+      });
+    }
+    return result;
+  }, [rawMonitoringData]);
+
   const [expandedChart, setExpandedChart] = useState(true);
   const [expandedProblems, setExpandedProblems] = useState(true);
   const [selectedPointId, setSelectedPointId] = useState<string>("all");
