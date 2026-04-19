@@ -715,23 +715,78 @@ export default function DireksiDashboard() {
                   }`} />
                   <div className="px-4 py-3.5">
                     <div className="flex items-start gap-3">
-                      <div className={`flex items-center justify-center h-8 w-8 rounded-lg shrink-0 mt-0.5 ${
-                        isAIPowered
-                          ? "bg-white/10 text-white"
-                          : darkMode ? "bg-gray-700 text-gray-400" : "bg-gray-200 text-gray-500"
-                      }`}>
-                        {isAILoading ? <Loader2 className="h-4 w-4 animate-spin" /> : isAIPowered ? <Sparkles className="h-4 w-4" /> : <TrendingUp className="h-4 w-4" />}
-                      </div>
+                      {/* Icon: Robot AI SVG (animated) when AI powered, TrendingUp otherwise */}
+                      {isAILoading ? (
+                        <div className={`flex items-center justify-center h-8 w-8 rounded-lg shrink-0 mt-0.5 ${isAIPowered ? "bg-white/10" : darkMode ? "bg-gray-700" : "bg-gray-200"}`}>
+                          <Loader2 className={`h-4 w-4 animate-spin ${isAIPowered ? "text-white" : darkMode ? "text-gray-400" : "text-gray-500"}`} />
+                        </div>
+                      ) : isAIPowered ? (
+                        <div className="shrink-0 mt-0.5">
+                          <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <style>{`
+                              @keyframes aiBlink { 0%,90%,100%{transform:scaleY(1)} 95%{transform:scaleY(0.1)} }
+                              @keyframes aiPulse { 0%,100%{opacity:0.4;transform:scale(1)} 50%{opacity:0.8;transform:scale(1.1)} }
+                              @keyframes aiAntenna { 0%,100%{transform:rotate(-5deg)} 50%{transform:rotate(5deg)} }
+                              .ai-eye-l{animation:aiBlink 4s infinite;transform-origin:center}
+                              .ai-eye-r{animation:aiBlink 4s infinite 0.1s;transform-origin:center}
+                              .ai-pulse{animation:aiPulse 2s infinite}
+                              .ai-antenna{animation:aiAntenna 2s infinite ease-in-out;transform-origin:bottom center}
+                            `}</style>
+                            <g className="ai-antenna">
+                              <line x1="32" y1="4" x2="32" y2="12" stroke={darkMode ? "#60a5fa" : "#3b82f6"} strokeWidth="2" strokeLinecap="round"/>
+                              <circle cx="32" cy="3" r="3" fill={darkMode ? "#60a5fa" : "#3b82f6"}>
+                                <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite"/>
+                              </circle>
+                            </g>
+                            <rect x="12" y="12" width="40" height="28" rx="8" fill={darkMode ? "#1e3a5f" : "#dbeafe"} stroke={darkMode ? "#60a5fa" : "#3b82f6"} strokeWidth="1.5"/>
+                            <g className="ai-eye-l">
+                              <circle cx="23" cy="24" r="6" fill={darkMode ? "#0c4a6e" : "#bfdbfe"}/>
+                              <circle cx="23" cy="24" r="4" fill={darkMode ? "#60a5fa" : "#3b82f6"} opacity="0.9"/>
+                              <circle cx="25" cy="22" r="1.5" fill="white" opacity="0.8"/>
+                            </g>
+                            <g className="ai-eye-r">
+                              <circle cx="41" cy="24" r="6" fill={darkMode ? "#0c4a6e" : "#bfdbfe"}/>
+                              <circle cx="41" cy="24" r="4" fill={darkMode ? "#60a5fa" : "#3b82f6"} opacity="0.9"/>
+                              <circle cx="43" cy="22" r="1.5" fill="white" opacity="0.8"/>
+                            </g>
+                            <rect x="20" y="33" width="24" height="4" rx="2" fill={darkMode ? "#0c4a6e" : "#bfdbfe"}/>
+                            <rect x="22" y="34" width="4" height="2" rx="1" fill={darkMode ? "#60a5fa" : "#3b82f6"}/>
+                            <rect x="28" y="34" width="4" height="2" rx="1" fill={darkMode ? "#60a5fa" : "#3b82f6"}/>
+                            <rect x="34" y="34" width="4" height="2" rx="1" fill={darkMode ? "#60a5fa" : "#3b82f6"}/>
+                            <rect x="40" y="34" width="2" height="2" rx="1" fill={darkMode ? "#60a5fa" : "#3b82f6"}/>
+                            <rect x="16" y="42" width="32" height="18" rx="6" fill={darkMode ? "#1e3a5f" : "#dbeafe"} stroke={darkMode ? "#60a5fa" : "#3b82f6"} strokeWidth="1.5"/>
+                            <text x="32" y="55" textAnchor="middle" fill={darkMode ? "#60a5fa" : "#3b82f6"} fontSize="9" fontWeight="bold" fontFamily="monospace">AI</text>
+                            <rect x="8" y="18" width="5" height="10" rx="2" fill={darkMode ? "#1e3a5f" : "#dbeafe"} stroke={darkMode ? "#60a5fa" : "#3b82f6"} strokeWidth="1.5"/>
+                            <rect x="51" y="18" width="5" height="10" rx="2" fill={darkMode ? "#1e3a5f" : "#dbeafe"} stroke={darkMode ? "#60a5fa" : "#3b82f6"} strokeWidth="1.5"/>
+                            <circle className="ai-pulse" cx="32" cy="3" r="6" stroke={darkMode ? "#60a5fa" : "#3b82f6"} strokeWidth="1" fill="none"/>
+                          </svg>
+                        </div>
+                      ) : (
+                        <div className={`flex items-center justify-center h-8 w-8 rounded-lg shrink-0 mt-0.5 ${darkMode ? "bg-gray-700 text-gray-400" : "bg-gray-200 text-gray-500"}`}>
+                          <TrendingUp className="h-4 w-4" />
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
                         <div className={`flex items-center gap-2 mb-1 ${isAIPowered ? "text-white/60" : darkMode ? "text-gray-500" : "text-gray-400"}`}>
                           <span className="text-[10px] font-bold uppercase tracking-widest">{isAIPowered ? "Groq AI · Llama 3.3 70B" : "Analisis Sistem"}</span>
-                          {isAIPowered && <span className="flex items-center gap-1 text-[10px] bg-white/10 text-emerald-400 px-1.5 py-0.5 rounded-full font-medium"><span className="h-1 w-1 rounded-full bg-emerald-400" />AI</span>}
+                          {isAIPowered && <span className="flex items-center gap-1 text-[10px] bg-white/10 text-blue-400 px-1.5 py-0.5 rounded-full font-medium"><span className="h-1 w-1 rounded-full bg-blue-400" />AI</span>}
                         </div>
                         <p className={`text-[13px] leading-relaxed ${
                           isAIPowered ? "text-white/90" : darkMode ? "text-gray-300" : "text-gray-700"
                         }`}>
                           {isAILoading ? "Sedang menganalisis data dan menghitung prediksi..." : cleanAdvice}
                         </p>
+                        {/* Keterangan metode prediksi */}
+                        {!isAIPowered && !isAILoading && (
+                          <p className={`text-[11px] mt-2 italic ${darkMode ? "text-gray-500" : "text-gray-400"}`}>
+                            Prediksi grafik menggunakan metode <span className="font-semibold not-italic">Regresi Linear</span> (y = mx + b)
+                          </p>
+                        )}
+                        {isAIPowered && !isAILoading && (
+                          <p className={`text-[11px] mt-2 italic text-white/40`}>
+                            Prediksi grafik dihitung oleh <span className="font-semibold not-italic">AI Llama 3.3 70B</span>
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
