@@ -862,7 +862,7 @@ PENTING: Anda WAJIB berpikir dan merespons SEPENUHNYA dalam Bahasa Indonesia. Pa
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "qwen/qwen3-32b",
+        model: "openai/gpt-oss-120b",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.6,
         max_tokens: 700
