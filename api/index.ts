@@ -841,7 +841,7 @@ app.post("/api/ai-advice", async (req: any, res: any) => {
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     // Format prompt
     const prompt = `Anda adalah sistem pakar / engineer senior manajemen distribusi air PDAM.
