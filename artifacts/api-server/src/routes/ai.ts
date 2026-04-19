@@ -35,7 +35,7 @@ LOGIKA ANALISA TEKNIS (Wajib Diikuti):
 
 TUGAS: Jawab HANYA dalam format JSON MURNI (tanpa markdown, tanpa backtick, tanpa penjelasan tambahan) dengan struktur berikut:
 {
-  "advice": "[STATUS]: NORMAL/WASPADA/KRITIS. [ANALISA]: Maks 5 kalimat teknis kondisi saat ini. [EVIDENCE]: Sebutkan Hari/Tanggal saat anomali paling signifikan. [PREDIKSI]: Tren 24-72 jam ke depan berdasarkan statistik data, jika pola anomali terlihat berulang beri peringatan keras. [CONFIDENCE]: High/Medium/Low. [SARAN LAPANGAN]: Instruksi spesifik untuk petugas (misal: Cek Air Valve, manual flushing, pantau bukaan katup). [SARAN DIREKSI]: Rekomendasi kebijakan/eskalasi.",
+  "advice": "[STATUS]: NORMAL/WASPADA/KRITIS. [ANALISA]: Maks 5 kalimat teknis kondisi saat ini. [BUKTI DATA]: Sebutkan Hari/Tanggal saat anomali paling signifikan beserta angka spesifiknya. [PREDIKSI]: Tren 24-72 jam ke depan berdasarkan statistik data, jika pola anomali terlihat berulang beri peringatan keras. [CONFIDENCE]: Skor 0-100% disertai alasan singkat (contoh: 90% - data historis 7 hari sangat konsisten). [SARAN LAPANGAN]: Instruksi spesifik untuk petugas (misal: Cek Air Valve, manual flushing, pantau bukaan katup). [SARAN DIREKSI]: Rekomendasi kebijakan/eskalasi.",
   "predictions": [${Array.from({length: numPred}, (_, i) => `{"predTinggi": <angka prediksi tinggi air cm titik ke-${i+1}>, "predTekanan": <angka prediksi tekanan bar titik ke-${i+1}>}`).join(', ')}]
 }
 
