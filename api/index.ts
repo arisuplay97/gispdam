@@ -100,6 +100,13 @@ const monitoringPointsTable = pgTable("monitoring_points", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+const networkNodeNamesTable = pgTable("network_node_names", {
+  id: serial("id").primaryKey(),
+  nodeId: text("node_id").notNull().unique(),
+  name: text("name").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // PostGIS Geometry custom type
 const geometryPoint = customType<{ data: string; driverData: string }>({
   dataType() {
@@ -118,8 +125,6 @@ const customersTable = pgTable("customers", {
   elevasi_m: doublePrecision("elevasi_m"),
   spam_name: text("spam_name").notNull().default("SPAM Aiq Bone"),
   piutang: doublePrecision("piutang").notNull().default(0),
-  // Instead of querying raw PostGIS purely, we store lat/lng for easy Node serialization, 
-  // and maintain geom via trigger/sync or write it manually. To keep it rock solid in Drizzle:
   geom: geometryPoint("geom"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -130,7 +135,7 @@ app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-// ─── Auto-init customers + monitoring tables ────────────────────────────────
+// ─── Auto-init tables + seed ────────────────────────────────────────────────
 (async () => {
   try {
     await db.execute(sql`CREATE EXTENSION IF NOT EXISTS postgis;`);
@@ -148,7 +153,6 @@ app.use(express.urlencoded({ limit: "50mb", extended: true }));
       );
     `);
     await db.execute(sql`ALTER TABLE customers ADD COLUMN IF NOT EXISTS piutang DOUBLE PRECISION DEFAULT 0;`);
-    // Auto-create monitoring_data table
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS monitoring_data (
         id SERIAL PRIMARY KEY,
@@ -161,7 +165,6 @@ app.use(express.urlencoded({ limit: "50mb", extended: true }));
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `);
-    // Auto-create monitoring_points table
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS monitoring_points (
         id SERIAL PRIMARY KEY,
@@ -173,7 +176,17 @@ app.use(express.urlencoded({ limit: "50mb", extended: true }));
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `);
-    // Seed monitoring points default jika kosong
+    // Network node names table for persistent renaming
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS network_node_names (
+        id SERIAL PRIMARY KEY,
+        node_id TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    // Seed monitoring points
     const mpRes = await db.execute(sql`SELECT count(*) as c FROM monitoring_points`);
     if (Number((mpRes.rows[0] as any).c) === 0) {
       const defaultPoints = [
@@ -191,7 +204,57 @@ app.use(express.urlencoded({ limit: "50mb", extended: true }));
         `);
       }
     }
-    // Seed pelanggan dummy jika kosong
+
+    // Seed 7 days of dummy monitoring_data for all manometers + reservoirs
+    const mdRes = await db.execute(sql`SELECT count(*) as c FROM monitoring_data`);
+    if (Number((mdRes.rows[0] as any).c) === 0) {
+      console.log("[seed] Inserting 7-day dummy monitoring data...");
+      const now = new Date();
+      // Base values for each point (pointId -> { tinggiAir, tekanan })
+      const bases: Record<string, { tinggiAir: number | null; tekanan: number | null }> = {
+        "RES-01": { tinggiAir: 280, tekanan: null },
+        "RES-02": { tinggiAir: 310, tekanan: null },
+        "RES-03": { tinggiAir: 85,  tekanan: null },
+        "MAN-01": { tinggiAir: null, tekanan: 4.2 },
+        "MAN-02": { tinggiAir: null, tekanan: 0.8 },
+        "MAN-03": { tinggiAir: null, tekanan: 1.5 },
+        "MAN-04": { tinggiAir: null, tekanan: 3.1 },
+        "MAN-05": { tinggiAir: null, tekanan: 0.4 },
+        "MAN-06": { tinggiAir: null, tekanan: 5.0 },
+        "MAN-07": { tinggiAir: null, tekanan: 2.8 },
+        "MAN-08": { tinggiAir: null, tekanan: 3.5 },
+        "MAN-09": { tinggiAir: null, tekanan: 1.2 },
+      };
+      for (let day = 6; day >= 0; day--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - day);
+        const dateStr = d.toISOString().split("T")[0];
+        for (const [pointId, base] of Object.entries(bases)) {
+          for (const session of ["pagi", "sore"]) {
+            // Add realistic noise
+            const noise = Math.sin(day * 1.7 + pointId.charCodeAt(4) * 0.3 + (session === "sore" ? 1.5 : 0)) * 0.3;
+            const dayDrift = (day - 3) * 0.08; // slight drift over time
+            let tinggiAir: number | null = null;
+            let tekanan: number | null = null;
+            if (base.tinggiAir !== null) {
+              tinggiAir = Math.round((base.tinggiAir + noise * 30 + dayDrift * 15 + (session === "sore" ? -8 : 0)) * 10) / 10;
+            }
+            if (base.tekanan !== null) {
+              tekanan = Math.round((base.tekanan + noise + dayDrift + (session === "sore" ? -0.1 : 0)) * 100) / 100;
+              if (tekanan < 0) tekanan = 0.1;
+            }
+            await db.execute(sql`
+              INSERT INTO monitoring_data (point_id, session, date, tinggi_air, tekanan)
+              VALUES (${pointId}, ${session}, ${dateStr}, ${tinggiAir}, ${tekanan})
+              ON CONFLICT DO NOTHING;
+            `);
+          }
+        }
+      }
+      console.log("[seed] Dummy monitoring data inserted.");
+    }
+
+    // Seed customers
     const custRes = await db.execute(sql`SELECT count(*) as c FROM customers`);
     if (Number((custRes.rows[0] as any).c) === 0) {
       const seeds = [
@@ -229,6 +292,53 @@ function getStatus(pressure: number): string {
 
 // Health
 app.get("/api/health", (_req: any, res: any) => res.json({ status: "ok" }));
+
+// ─── Network Node Names (persistent rename) ─────────────────────────────────
+app.get("/api/network-node-names", async (_req: any, res: any) => {
+  try {
+    const rows = await db.select().from(networkNodeNamesTable);
+    // Return as { [nodeId]: name }
+    const map: Record<string, string> = {};
+    rows.forEach(r => { map[r.nodeId] = r.name; });
+    res.json(map);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put("/api/network-node-names/:nodeId", async (req: any, res: any) => {
+  try {
+    const { nodeId } = req.params;
+    const { name } = req.body;
+    if (!name?.trim()) return res.status(400).json({ error: "name wajib diisi" });
+    // Upsert
+    const existing = await db.select().from(networkNodeNamesTable).where(eq(networkNodeNamesTable.nodeId, nodeId));
+    if (existing.length > 0) {
+      const [updated] = await db.update(networkNodeNamesTable)
+        .set({ name: name.trim(), updatedAt: new Date() })
+        .where(eq(networkNodeNamesTable.nodeId, nodeId))
+        .returning();
+      res.json(updated);
+    } else {
+      const [inserted] = await db.insert(networkNodeNamesTable)
+        .values({ nodeId, name: name.trim() })
+        .returning();
+      res.status(201).json(inserted);
+    }
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── Monitoring Data (GET all with point IDs from network) ───────────────────
+app.get("/api/monitoring/network", async (_req: any, res: any) => {
+  try {
+    const data = await db.select().from(monitoringDataTable).orderBy(desc(monitoringDataTable.date));
+    res.json(data);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
 // ─── Valves ──────────────────────────────────────────────────────────────────
 app.get("/api/valves", async (_req: any, res: any) => {

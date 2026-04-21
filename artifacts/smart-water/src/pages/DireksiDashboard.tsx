@@ -467,11 +467,14 @@ async function exportPDF(statuses: PointStatus[]) {
   printWindow.document.close();
 }
 
+import { useNetworkNodeNames } from "@/hooks/useNetworkNodes";
+
 // ─── Main Component ─────────────────────────────────────────────────────────
 export default function DireksiDashboard() {
   const [, navigate] = useLocation();
   const { data: rawMonitoringData } = useGetMonitoringData();
   const { data: dbPoints } = useListMonitoringPoints();
+  const { data: customNames } = useNetworkNodeNames();
   const [darkMode, setDarkMode] = useState(false);
 
   // Gunakan titik dari DB; jika kosong fallback ke MONITORING_POINTS hardcoded
@@ -691,9 +694,10 @@ export default function DireksiDashboard() {
                 <div className="mt-1 space-y-0.5">
                   {criticalMans.map(m => {
                     const area = getAffectedArea(m.id);
+                    const mName = customNames?.[m.id] || m.name;
                     return (
                       <p key={m.id} className={`text-xs ${darkMode ? "text-red-400" : "text-red-700"}`}>
-                        <span className="font-semibold">{m.name}</span> — Tekanan {m.tekanan} bar
+                        <span className="font-semibold">{mName}</span> — Tekanan {m.tekanan} bar
                         {area && <span> → Wilayah terdampak: <strong>{area}</strong></span>}
                       </p>
                     );
@@ -713,17 +717,14 @@ export default function DireksiDashboard() {
           <div className="space-y-6">
 
             {/* ── Jaringan Distribusi Section ───────────────────────── */}
-            <div className={`rounded-[24px] border p-6 transition-colors shadow-sm relative overflow-hidden ${darkMode ? "bg-gray-900 border-gray-800" : "bg-white border-gray-100"}`}>
-              {/* Subtle background glow */}
-              {!darkMode && <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-50 rounded-full blur-[80px] pointer-events-none" />}
-              
-              <div className="flex items-center justify-between mb-6 relative z-10">
-                <div className="flex items-center gap-3">
-                  <div className={`flex items-center justify-center w-10 h-10 rounded-xl shadow-inner ${darkMode ? "bg-blue-900/40 text-blue-400" : "bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-600 border border-blue-100"}`}>
-                    <Gauge className="h-5 w-5" />
+            <div className={`rounded-xl border p-5 shadow-sm relative overflow-hidden ${darkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"}`}>
+              <div className="flex items-center justify-between mb-5 relative z-10">
+                <div className="flex items-center gap-2">
+                  <div className={`flex items-center justify-center w-8 h-8 rounded-lg shadow-sm ${darkMode ? "bg-slate-800 text-blue-400" : "bg-slate-50 text-slate-700 border border-slate-200"}`}>
+                    <Gauge className="h-4 w-4" />
                   </div>
                   <div>
-                    <h3 className="text-base font-extrabold tracking-tight">Jaringan Distribusi</h3>
+                    <h3 className="text-sm font-bold text-slate-800">Jaringan Distribusi</h3>
                     <p className={`text-[11px] font-medium ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Pemantauan Tekanan & Tinggi Air</p>
                   </div>
                 </div>
@@ -784,7 +785,7 @@ export default function DireksiDashboard() {
               </div>
 
               {/* Manometer detail table */}
-              <div className={`rounded-[16px] border overflow-hidden shadow-sm relative z-10 ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+              <div className={`rounded-lg border overflow-hidden shadow-sm ${darkMode ? "border-slate-800" : "border-slate-200"}`}>
                 <table className="w-full text-xs text-left border-collapse">
                   <thead>
                     <tr className={darkMode ? "bg-gray-800 border-b border-gray-700" : "bg-slate-50 border-b border-gray-200/80"}>
@@ -799,16 +800,20 @@ export default function DireksiDashboard() {
                       const jalur = JALUR_PIPA.find(j => j.manometerIds.includes(m.id));
                       const res = jalur ? getReservoir(jalur.reservoirId) : null;
                       const dop = jalur ? getDopend(jalur.dopendId) : null;
+                      const mName = customNames?.[m.id] || m.name;
+                      const resName = res ? (customNames?.[res.id] || res.name) : null;
+                      const dopName = dop ? (customNames?.[dop.id] || dop.name) : null;
                       const color = STATUS_COLORS[m.status];
+
                       return (
                         <tr key={m.id} className={`border-b last:border-0 ${
-                          darkMode ? "border-gray-700/50 hover:bg-gray-800/80" : "border-gray-100 hover:bg-gray-50/80"
+                          darkMode ? "border-slate-800 hover:bg-slate-800" : "border-slate-100 hover:bg-slate-50"
                         } transition-colors`}>
-                          <td className="px-4 py-3 font-semibold">{m.name}</td>
-                          <td className={`px-4 py-3 font-medium ${darkMode ? "text-gray-500" : "text-gray-500"}`}>
-                            <span className="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded text-[10px] mr-1">{res?.name?.replace("Reservoir ", "")}</span> 
+                          <td className="px-4 py-3 font-semibold text-slate-800">{mName}</td>
+                          <td className={`px-4 py-3 font-medium ${darkMode ? "text-slate-400" : "text-slate-500"}`}>
+                            <span className="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded text-[10px] mr-1">{resName?.replace("Reservoir ", "")}</span> 
                             → 
-                            <span className="bg-rose-50 text-rose-600 px-1.5 py-0.5 rounded text-[10px] ml-1">{dop?.name?.replace("Dopend ", "")}</span>
+                            <span className="bg-rose-50 text-rose-600 px-1.5 py-0.5 rounded text-[10px] ml-1">{dopName?.replace("Dopend ", "")}</span>
                           </td>
                           <td className="px-4 py-3 text-center">
                             <span className="font-extrabold text-sm" style={{ color }}>{m.tekanan !== null ? m.tekanan : "—"}</span>

@@ -18,6 +18,7 @@ import {
   type Reservoir, type Manometer, type ManometerStatus,
 } from "@/data/networkData";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { useNetworkNodeNames } from "@/hooks/useNetworkNodes";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 type Step = "identitas" | "pilih-reservoir" | "dashboard-titik" | "form-titik" | "selesai";
@@ -32,6 +33,7 @@ const PETUGAS_LIST = [
 export default function InputPage() {
   const [, navigate] = useLocation();
   const [macroUrl] = useLocalStorage<string>("gis-macro-url", "");
+  const { data: customNames } = useNetworkNodeNames();
 
   // Step state machine
   const [step, setStep] = useState<Step>("identitas");
@@ -51,7 +53,12 @@ export default function InputPage() {
   const [tinggiAirInput, setTinggiAirInput] = useState("");
   const [manometerInputs, setManometerInputs] = useState<Record<string, string>>({});
 
-  const selectedReservoir = selectedReservoirId ? getReservoir(selectedReservoirId) : null;
+  const selectedReservoir = useMemo(() => {
+    if (!selectedReservoirId) return null;
+    const r = getReservoir(selectedReservoirId);
+    if (!r) return null;
+    return { ...r, name: customNames?.[r.id] || r.name };
+  }, [selectedReservoirId, customNames]);
   
   const jalurList = useMemo(() => {
     if (!selectedReservoirId) return [];
@@ -63,12 +70,13 @@ export default function InputPage() {
     jalurList.forEach((jalur, ji) => {
       const manometers = getManometersForJalur(jalur.id);
       const dopend = getDopend(jalur.dopendId);
+      const dName = dopend ? (customNames?.[dopend.id] || dopend.name) : "?";
       manometers.forEach(m => {
-        result.push({ manometer: m, jalurIndex: ji, dopendName: dopend?.name ?? "?" });
+        result.push({ manometer: { ...m, name: customNames?.[m.id] || m.name }, jalurIndex: ji, dopendName: dName });
       });
     });
     return result;
-  }, [jalurList]);
+  }, [jalurList, customNames]);
 
   // ─── Auto-routing dari Map ────────────────────────────────────────────────
   useEffect(() => {
@@ -343,6 +351,7 @@ export default function InputPage() {
                 const jalurs = getJalurForReservoir(r.id);
                 const manCount = jalurs.reduce((acc, j) => acc + getManometersForJalur(j.id).length, 0);
                 const stColor = r.status === "normal" ? "#16a34a" : r.status === "waspada" ? "#d97706" : "#dc2626";
+                const rName = customNames?.[r.id] || r.name;
 
                 return (
                   <button
@@ -356,7 +365,7 @@ export default function InputPage() {
                           <Droplets className="h-4.5 w-4.5 text-blue-600" />
                         </div>
                         <div>
-                          <h3 className="text-sm font-bold text-slate-800">{r.name}</h3>
+                          <h3 className="text-sm font-bold text-slate-800">{rName}</h3>
                           <div className="flex items-center gap-2 mt-0.5">
                             <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ color: stColor, background: `${stColor}14` }}>
                               {r.tinggiAir} cm · {r.status === "normal" ? "Normal" : r.status === "waspada" ? "Waspada" : "Kritis"}

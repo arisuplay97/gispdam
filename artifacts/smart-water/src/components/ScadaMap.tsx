@@ -43,6 +43,7 @@ import { toast } from "sonner";
 import { Valve, Pipe, WaterSource, PressureRecord } from "@workspace/api-client-react";
 import { useListCustomers } from "../hooks/useCustomers";
 import { useUpdateSource } from "../hooks/useSources";
+import { useNetworkNodeNames, useUpdateNodeName } from "../hooks/useNetworkNodes";
 import React, { useState, useRef, useMemo } from "react";
 
 // ─── Fix default Leaflet icon URLs ─────────────────────────────────────────
@@ -377,7 +378,7 @@ function ValvePopupContent({
 }
 
 // ─── Local UI Mock Components for Static Assets ──────────────────────────────
-function ReservoirMarkerLocal({ r, editMode }: { r: any, editMode: boolean }) {
+function ReservoirMarkerLocal({ r, editMode, onSaveName }: { r: any, editMode: boolean, onSaveName?: (id: string, name: string) => void }) {
   const [localName, setLocalName] = React.useState(r.name);
   const [, setLocation] = useLocation();
   const statusColor = r.status === "normal" ? "#16a34a" : r.status === "waspada" ? "#d97706" : "#dc2626";
@@ -428,7 +429,7 @@ function ReservoirMarkerLocal({ r, editMode }: { r: any, editMode: boolean }) {
             <div className="space-y-2">
               <label className="text-[11px] font-medium text-slate-500 block">Nama:</label>
               <input type="text" value={localName} onChange={(e) => setLocalName(e.target.value)} className="w-full border border-slate-200 rounded px-2 py-1 text-xs outline-none focus:border-blue-400" />
-              <button onClick={() => toast.success("Perubahan disimpan")} className="w-full bg-blue-600 text-white text-[11px] font-semibold py-1.5 rounded hover:bg-blue-700 transition-colors">Simpan</button>
+              <button onClick={() => { if (onSaveName) onSaveName(r.id, localName); else toast.success("Perubahan disimpan"); }} className="w-full bg-blue-600 text-white text-[11px] font-semibold py-1.5 rounded hover:bg-blue-700 transition-colors">Simpan</button>
             </div>
           )}
         </div>
@@ -445,7 +446,7 @@ function ReservoirMarkerLocal({ r, editMode }: { r: any, editMode: boolean }) {
   );
 }
 
-function DopendMarkerLocal({ d, editMode }: { d: any, editMode: boolean }) {
+function DopendMarkerLocal({ d, editMode, onSaveName }: { d: any, editMode: boolean, onSaveName?: (id: string, name: string) => void }) {
   const [localName, setLocalName] = React.useState(d.name);
   const icon = React.useMemo(() => L.divIcon({
     className: "bg-transparent",
@@ -471,7 +472,7 @@ function DopendMarkerLocal({ d, editMode }: { d: any, editMode: boolean }) {
           ) : (
             <div className="space-y-2">
               <input type="text" value={localName} onChange={(e) => setLocalName(e.target.value)} className="w-full border border-slate-200 rounded px-2 py-1 text-xs outline-none focus:border-indigo-400" />
-              <button onClick={() => toast.success("Perubahan disimpan")} className="w-full bg-indigo-600 text-white text-[11px] font-semibold py-1.5 rounded hover:bg-indigo-700 transition-colors">Simpan</button>
+              <button onClick={() => { if (onSaveName) onSaveName(d.id, localName); else toast.success("Perubahan disimpan"); }} className="w-full bg-indigo-600 text-white text-[11px] font-semibold py-1.5 rounded hover:bg-indigo-700 transition-colors">Simpan</button>
             </div>
           )}
         </div>
@@ -485,7 +486,7 @@ function DopendMarkerLocal({ d, editMode }: { d: any, editMode: boolean }) {
   );
 }
 
-function ManometerMarkerLocal({ m, editMode }: { m: any, editMode: boolean }) {
+function ManometerMarkerLocal({ m, editMode, onSaveName }: { m: any, editMode: boolean, onSaveName?: (id: string, name: string) => void }) {
   const [localName, setLocalName] = React.useState(m.name);
   const [, setLocation] = useLocation();
   const color = STATUS_COLORS[m.status as ManometerStatus];
@@ -547,7 +548,7 @@ function ManometerMarkerLocal({ m, editMode }: { m: any, editMode: boolean }) {
             <div className="space-y-2">
               <label className="text-[11px] font-medium text-slate-500 block">Nama:</label>
               <input type="text" value={localName} onChange={(e) => setLocalName(e.target.value)} className="w-full border border-slate-200 rounded px-2 py-1 text-xs outline-none focus:border-indigo-400" />
-              <button onClick={() => toast.success("Perubahan disimpan")} className="w-full bg-indigo-600 text-white text-[11px] font-semibold py-1.5 rounded hover:bg-indigo-700 transition-colors">Simpan</button>
+              <button onClick={() => { if (onSaveName) onSaveName(m.id, localName); else toast.success("Perubahan disimpan"); }} className="w-full bg-indigo-600 text-white text-[11px] font-semibold py-1.5 rounded hover:bg-indigo-700 transition-colors">Simpan</button>
             </div>
           )}
         </div>
@@ -596,6 +597,19 @@ export function ScadaMap({
   const deleteValve = useDeleteValve();
   const updateValve = useUpdateValve();
   const deletePipe = useDeletePipe();
+
+  // Persistent network node names
+  const { data: customNames } = useNetworkNodeNames();
+  const updateNodeName = useUpdateNodeName();
+
+  const handleSaveNodeName = async (id: string, name: string) => {
+    try {
+      await updateNodeName.mutateAsync({ nodeId: id, name });
+      toast.success("Nama berhasil diperbarui");
+    } catch (e: any) {
+      toast.error("Gagal menyimpan nama: " + e.message);
+    }
+  };
 
   const { data: rawCustomers } = useListCustomers();
   const customers = Array.isArray(rawCustomers) ? rawCustomers : [];
@@ -1072,17 +1086,17 @@ export function ScadaMap({
 
             {/* Reservoir Markers */}
             {RESERVOIRS.map(r => (
-              <ReservoirMarkerLocal key={`res-${r.id}`} r={r} editMode={editMode} />
+              <ReservoirMarkerLocal key={`res-${r.id}`} r={{ ...r, name: customNames?.[r.id] || r.name }} editMode={editMode} onSaveName={handleSaveNodeName} />
             ))}
 
             {/* Dopend Markers */}
             {DOPENDS.map(d => (
-              <DopendMarkerLocal key={`dop-${d.id}`} d={d} editMode={editMode} />
+              <DopendMarkerLocal key={`dop-${d.id}`} d={{ ...d, name: customNames?.[d.id] || d.name }} editMode={editMode} onSaveName={handleSaveNodeName} />
             ))}
 
             {/* Manometer Markers */}
             {MANOMETERS.map(m => (
-              <ManometerMarkerLocal key={`man-${m.id}`} m={m} editMode={editMode} />
+              <ManometerMarkerLocal key={`man-${m.id}`} m={{ ...m, name: customNames?.[m.id] || m.name }} editMode={editMode} onSaveName={handleSaveNodeName} />
             ))}
           </>
         )}
