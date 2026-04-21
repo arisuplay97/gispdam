@@ -380,81 +380,64 @@ function ValvePopupContent({
 function ReservoirMarkerLocal({ r, editMode }: { r: any, editMode: boolean }) {
   const [localName, setLocalName] = React.useState(r.name);
   const [, setLocation] = useLocation();
-  const statusColor = r.status === "normal" ? "#22c55e" : r.status === "waspada" ? "#f59e0b" : "#ef4444";
-  const gradient = r.status === "normal" ? "from-emerald-500 to-emerald-400" :
-                   r.status === "waspada" ? "from-amber-500 to-amber-400" :
-                   "from-rose-500 to-rose-400";
+  const statusColor = r.status === "normal" ? "#16a34a" : r.status === "waspada" ? "#d97706" : "#dc2626";
+  const statusLabel = r.status === "normal" ? "Normal" : r.status === "waspada" ? "Waspada" : "Kritis";
   const icon = React.useMemo(() => L.divIcon({
     className: "bg-transparent",
-    html: `<div style="position:relative;width:32px;height:32px"><div style="width:32px;height:32px;border-radius:6px;background:${statusColor};border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg></div></div>`,
-    iconSize: [32, 32], iconAnchor: [16, 16],
+    html: `<div style="width:28px;height:28px;border-radius:6px;background:${statusColor};border:2.5px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg></div>`,
+    iconSize: [28, 28], iconAnchor: [14, 14],
   }), [statusColor]);
 
   return (
     <Marker position={[r.lat, r.lng]} icon={icon}>
-      <Popup minWidth={260} className="premium-popup">
-        <div className="w-[260px] -mx-4 -my-3 bg-white rounded-xl overflow-hidden shadow-2xl">
-          <div className={`p-4 bg-gradient-to-r ${gradient} flex items-center gap-3`}>
-            <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm shadow-sm">
-              <Droplets className="h-5 w-5 text-white" />
+      <Popup minWidth={200} className="premium-popup">
+        <div style={{ minWidth: 190 }}>
+          <div className="flex items-center gap-2 mb-2.5 pb-2 border-b border-slate-100">
+            <div className="w-5 h-5 rounded flex items-center justify-center" style={{ background: statusColor }}>
+              <Droplets className="h-3 w-3 text-white" />
             </div>
-            <div className="flex-1 text-white">
-              <h3 className="font-black text-[13px] leading-tight drop-shadow-sm tracking-wide">{localName}</h3>
-              <p className="text-[9px] font-bold text-white/80 mt-0.5 uppercase tracking-widest">Reservoir PDAM</p>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-slate-800 text-xs leading-tight truncate">{localName}</h3>
+              <p className="text-[9px] text-slate-400">Reservoir</p>
             </div>
           </div>
-
-          <div className="p-4 space-y-4">
-            {!editMode ? (
-              <>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 shadow-inner">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Tinggi Air</span>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-2xl font-black text-slate-800 leading-none">{r.tinggiAir}</span>
-                      <span className="text-[10px] font-bold text-slate-400">cm</span>
-                    </div>
-                  </div>
-                  <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 shadow-inner">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Kapasitas</span>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-xl font-black text-slate-600 leading-none">{r.kapasitas}</span>
-                      <span className="text-[10px] font-bold text-slate-400">cm</span>
-                    </div>
-                  </div>
+          {!editMode ? (
+            <>
+              <div className="space-y-1.5 text-[11px]">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500">Tinggi Air</span>
+                  <span className="font-bold text-slate-800">{r.tinggiAir} <span className="text-slate-400 text-[10px]">cm</span></span>
                 </div>
-                
-                <div className="flex items-center justify-between border-t border-slate-100 pt-3">
-                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Status Terkini</span>
-                  <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-[inset_0_1px_4px_rgba(0,0,0,0.1)] border border-black/5" style={{ background: statusColor, color: 'white' }}>
-                    {r.status}
-                  </span>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500">Kapasitas</span>
+                  <span className="font-semibold text-slate-600">{r.kapasitas} <span className="text-slate-400 text-[10px]">cm</span></span>
                 </div>
-
-                <div className="pt-2">
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); localStorage.setItem('pending_input_point', r.id); setLocation('/input'); }}
-                    className="w-full flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded-xl shadow-md text-xs transition-all active:scale-95"
-                  >
-                    <ClipboardEdit className="h-4 w-4" /> Entri Laporan Cek
-                  </button>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500">Status</span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ color: statusColor, background: `${statusColor}14` }}>{statusLabel}</span>
                 </div>
-              </>
-            ) : (
-              <div className="space-y-4 py-1">
-                <label className="text-xs font-semibold text-slate-600 block">Ubah Nama Reservoir:</label>
-                <input type="text" value={localName} onChange={(e) => setLocalName(e.target.value)} className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-semibold" />
-                <button onClick={() => toast.success("Sistem: Nama diubah secara lokal. (Mode Edit Statis)")} className="w-full bg-blue-600 text-white text-xs font-bold py-2.5 rounded-xl hover:bg-blue-700 shadow-md transition-all active:scale-95">Simpan Modifikasi</button>
               </div>
-            )}
-          </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); localStorage.setItem('pending_input_point', r.id); setLocation('/input'); }}
+                className="mt-3 w-full flex items-center justify-center gap-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-1.5 rounded-md text-[11px] transition-colors"
+              >
+                <ClipboardEdit className="h-3 w-3" /> Input Data
+              </button>
+            </>
+          ) : (
+            <div className="space-y-2">
+              <label className="text-[11px] font-medium text-slate-500 block">Nama:</label>
+              <input type="text" value={localName} onChange={(e) => setLocalName(e.target.value)} className="w-full border border-slate-200 rounded px-2 py-1 text-xs outline-none focus:border-blue-400" />
+              <button onClick={() => toast.success("Perubahan disimpan")} className="w-full bg-blue-600 text-white text-[11px] font-semibold py-1.5 rounded hover:bg-blue-700 transition-colors">Simpan</button>
+            </div>
+          )}
         </div>
       </Popup>
       {!editMode && (
-        <LeafletTooltip direction="top" offset={[0, -18]} opacity={1} className="!bg-white !border-0 !shadow-xl !rounded-xl !font-sans !px-3 !py-2">
+        <LeafletTooltip direction="top" offset={[0, -16]} opacity={1} className="!bg-white !border-0 !shadow-lg !rounded-lg !font-sans !px-2 !py-1">
           <div className="text-center">
-            <p className="font-bold text-xs text-slate-900">{localName}</p>
-            <p className="text-[10px] font-semibold" style={{ color: statusColor }}>{r.tinggiAir} cm</p>
+            <p className="font-semibold text-[10px] text-slate-800">{localName}</p>
+            <p className="text-[9px] font-medium" style={{ color: statusColor }}>{r.tinggiAir} cm</p>
           </div>
         </LeafletTooltip>
       )}
@@ -466,37 +449,36 @@ function DopendMarkerLocal({ d, editMode }: { d: any, editMode: boolean }) {
   const [localName, setLocalName] = React.useState(d.name);
   const icon = React.useMemo(() => L.divIcon({
     className: "bg-transparent",
-    html: `<div style="width:22px;height:22px;border-radius:4px;background:#6366f1;border:2.5px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div>`,
-    iconSize: [22, 22], iconAnchor: [11, 11],
+    html: `<div style="width:20px;height:20px;border-radius:4px;background:#6366f1;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div>`,
+    iconSize: [20, 20], iconAnchor: [10, 10],
   }), []);
 
   return (
     <Marker position={[d.lat, d.lng]} icon={icon}>
-      <Popup minWidth={220}>
-        <div className="w-[220px] -mx-4 -my-3 bg-white rounded-xl overflow-hidden shadow-xl border border-slate-100">
-          <div className="p-3 bg-gradient-to-r from-indigo-600 to-blue-500 flex items-center gap-3">
-             <div className="bg-white/20 p-1.5 rounded-lg text-white backdrop-blur-sm shadow-sm"><MapPin className="h-5 w-5 text-white" /></div>
-             <div className="text-white flex-1">
-               <h3 className="font-black text-[13px] leading-tight shadow-sm tracking-wide">{localName}</h3>
-               <p className="text-[9px] text-white/80 font-bold uppercase tracking-widest mt-0.5">Dopend Jaringan</p>
-             </div>
+      <Popup minWidth={160}>
+        <div style={{ minWidth: 150 }}>
+          <div className="flex items-center gap-2 mb-2 pb-1.5 border-b border-slate-100">
+            <div className="w-4 h-4 rounded bg-indigo-500 flex items-center justify-center">
+              <MapPin className="h-2.5 w-2.5 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="font-bold text-slate-800 text-xs truncate">{localName}</h3>
+              <p className="text-[9px] text-slate-400">Dopend</p>
+            </div>
           </div>
-          <div className="p-4">
-             {!editMode ? (
-               <div className="text-center text-slate-500 text-xs py-2 opacity-80">Titik akhir pemantauan distribusi</div>
-             ) : (
-               <div className="space-y-4">
-                 <label className="text-xs font-semibold text-slate-600 block">Ubah Nama Dopend:</label>
-                 <input type="text" value={localName} onChange={(e) => setLocalName(e.target.value)} className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 font-semibold" />
-                 <button onClick={() => toast.success("Sistem: Nama diubah secara lokal. (Mode Edit Statis)")} className="w-full bg-indigo-600 text-white text-xs font-bold py-2.5 rounded-xl hover:bg-indigo-700 shadow-md transition-all active:scale-95">Simpan Perubahan</button>
-               </div>
-             )}
-          </div>
+          {!editMode ? (
+            <p className="text-[11px] text-slate-500">Titik akhir distribusi</p>
+          ) : (
+            <div className="space-y-2">
+              <input type="text" value={localName} onChange={(e) => setLocalName(e.target.value)} className="w-full border border-slate-200 rounded px-2 py-1 text-xs outline-none focus:border-indigo-400" />
+              <button onClick={() => toast.success("Perubahan disimpan")} className="w-full bg-indigo-600 text-white text-[11px] font-semibold py-1.5 rounded hover:bg-indigo-700 transition-colors">Simpan</button>
+            </div>
+          )}
         </div>
       </Popup>
       {!editMode && (
-        <LeafletTooltip direction="top" offset={[0, -14]} opacity={1} className="!bg-white !border-0 !shadow-xl !rounded-xl !font-sans !px-2 !py-1">
-          <p className="font-bold text-[10px] text-slate-900">{localName}</p>
+        <LeafletTooltip direction="top" offset={[0, -12]} opacity={1} className="!bg-white !border-0 !shadow-lg !rounded-lg !font-sans !px-2 !py-1">
+          <p className="font-semibold text-[10px] text-slate-800">{localName}</p>
         </LeafletTooltip>
       )}
     </Marker>
@@ -509,90 +491,72 @@ function ManometerMarkerLocal({ m, editMode }: { m: any, editMode: boolean }) {
   const color = STATUS_COLORS[m.status as ManometerStatus];
   const affectedArea = getAffectedArea(m.id);
   const pulse = m.status === 'kritis' ? 'animation:criticalPulse 1.1s ease-in-out infinite;' : '';
-  const gradient = m.status === "normal" ? "from-emerald-500 to-emerald-400" :
-                   m.status === "waspada" ? "from-amber-500 to-amber-400" :
-                   "from-rose-600 to-red-500";
   const icon = React.useMemo(() => L.divIcon({
     className: "bg-transparent",
-    html: `<div style="position:relative;width:24px;height:24px"><div style="width:24px;height:24px;border-radius:50%;background:white;border:3px solid ${color};box-shadow:0 2px 8px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;${pulse}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round"><circle cx="12" cy="14" r="8"/><line x1="12" y1="14" x2="12" y2="8"/><line x1="12" y1="14" x2="16" y2="11"/></svg></div></div>`,
-    iconSize: [24, 24], iconAnchor: [12, 12],
+    html: `<div style="width:22px;height:22px;border-radius:50%;background:white;border:2.5px solid ${color};box-shadow:0 1px 4px rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;${pulse}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round"><circle cx="12" cy="14" r="8"/><line x1="12" y1="14" x2="12" y2="8"/><line x1="12" y1="14" x2="16" y2="11"/></svg></div>`,
+    iconSize: [22, 22], iconAnchor: [11, 11],
   }), [color, pulse]);
 
   return (
     <Marker position={[m.lat, m.lng]} icon={icon}>
-      <Popup minWidth={260} className="premium-popup">
-        <div className="w-[260px] -mx-4 -my-3 bg-white rounded-xl overflow-hidden shadow-2xl">
-          {/* Header */}
-          <div className={`p-4 bg-gradient-to-r ${gradient} flex items-center gap-3 relative overflow-hidden`}>
-            <Gauge className="absolute -right-3 -bottom-3 h-20 w-20 text-white opacity-10" />
-            <div className="bg-white/20 p-2 rounded-lg backdrop-blur-md relative z-10 shadow-sm border border-white/10">
-              <Gauge className="h-5 w-5 text-white" />
+      <Popup minWidth={210} className="premium-popup">
+        <div style={{ minWidth: 200 }}>
+          <div className="flex items-center gap-2 mb-2.5 pb-2 border-b border-slate-100">
+            <div className="w-5 h-5 rounded flex items-center justify-center" style={{ background: color }}>
+              <Gauge className="h-3 w-3 text-white" />
             </div>
-            <div className="relative z-10 flex-1">
-              <h3 className="font-black text-white text-[13px] leading-tight drop-shadow-sm tracking-wide">{localName}</h3>
-              <p className="text-[9px] text-white/90 font-bold uppercase tracking-widest mt-0.5">Pemantauan Tekanan</p>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-slate-800 text-xs leading-tight truncate">{localName}</h3>
+              <p className="text-[9px] text-slate-400">Manometer</p>
             </div>
           </div>
 
-          <div className="p-4 space-y-4 relative">
-            {!editMode ? (
-              <>
-                <div className="flex bg-slate-50 rounded-xl shadow-inner border border-slate-100 overflow-hidden">
-                  <div className="flex-1 p-3 text-center border-r border-slate-200/60 flex flex-col justify-center">
-                    <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Tekanan</span>
-                    <div className="flex items-baseline justify-center gap-1">
-                      <span className="text-3xl font-black text-slate-800 leading-none tracking-tighter" style={{ color: color }}>{m.tekanan ?? '—'}</span>
-                      <span className="text-[11px] font-bold text-slate-400">bar</span>
-                    </div>
-                  </div>
-                  <div className="flex-1 p-3 text-center flex flex-col justify-center items-center bg-white/50">
-                    <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">Status Air</span>
-                    <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-sm border border-black/5" style={{ background: color, color: 'white' }}>
-                      {STATUS_LABELS[m.status as ManometerStatus]}
-                    </span>
-                  </div>
+          {!editMode ? (
+            <>
+              <div className="space-y-1.5 text-[11px]">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500">Tekanan</span>
+                  <span className="font-bold" style={{ color }}>{m.tekanan ?? '—'} <span className="text-slate-400 text-[10px]">bar</span></span>
                 </div>
-
-                <div className="flex justify-between items-center px-1 border-b border-slate-100 pb-3">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1.5 tracking-wider">
-                    <MapPin className="h-3 w-3" /> Lokasi Ruas
-                  </span>
-                  <span className="font-black text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[10px] shadow-sm">KM {m.posisiKm}</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500">Status</span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ color, background: `${color}14` }}>{STATUS_LABELS[m.status as ManometerStatus]}</span>
                 </div>
-
-                {(m.status === 'waspada' || m.status === 'kritis') && affectedArea && (
-                  <div className={`p-3 rounded-xl text-[10.5px] font-medium leading-relaxed border border-l-[4px] ${
-                    m.status === 'kritis' ? 'bg-red-50 border-red-200 border-l-red-500 text-red-900' : 'bg-amber-50 border-amber-200 border-l-amber-500 text-amber-900'
-                  }`}>
-                    <strong className="block mb-1 text-xs">⚠️ Peringatan Distribusi</strong>
-                    Debit air di <strong className="font-extrabold px-1 rounded bg-white/50">{affectedArea}</strong> berindikasi menurun drastis.
-                  </div>
-                )}
-                
-                <div className="pt-1">
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); localStorage.setItem('pending_input_point', m.id); setLocation('/input'); }}
-                    className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl shadow-[0_4px_14px_rgba(79,70,229,0.39)] text-xs transition-all active:scale-95"
-                  >
-                    <ClipboardEdit className="h-4 w-4" /> Entri Laporan Cek
-                  </button>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500">Posisi</span>
+                  <span className="font-semibold text-slate-700 text-[10px]">KM {m.posisiKm}</span>
                 </div>
-              </>
-            ) : (
-              <div className="space-y-4 py-1">
-                <label className="text-xs font-semibold text-slate-600 block">Ubah Nama Manometer:</label>
-                <input type="text" value={localName} onChange={(e) => setLocalName(e.target.value)} className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 font-semibold" />
-                <button onClick={() => toast.success("Sistem: Nama diubah secara lokal. (Mode Edit Statis)")} className="w-full bg-indigo-600 text-white text-xs font-bold py-2.5 rounded-xl hover:bg-indigo-700 shadow-md transition-all active:scale-95">Simpan Modifikasi</button>
               </div>
-            )}
-          </div>
+
+              {(m.status === 'waspada' || m.status === 'kritis') && affectedArea && (
+                <div className={`mt-2 p-2 rounded text-[10px] leading-snug border-l-[3px] ${
+                  m.status === 'kritis' ? 'bg-red-50 border-l-red-500 text-red-700' : 'bg-amber-50 border-l-amber-500 text-amber-700'
+                }`}>
+                  ⚠ Distribusi ke <strong>{affectedArea}</strong> terganggu
+                </div>
+              )}
+
+              <button
+                onClick={(e) => { e.stopPropagation(); localStorage.setItem('pending_input_point', m.id); setLocation('/input'); }}
+                className="mt-3 w-full flex items-center justify-center gap-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-1.5 rounded-md text-[11px] transition-colors"
+              >
+                <ClipboardEdit className="h-3 w-3" /> Input Data
+              </button>
+            </>
+          ) : (
+            <div className="space-y-2">
+              <label className="text-[11px] font-medium text-slate-500 block">Nama:</label>
+              <input type="text" value={localName} onChange={(e) => setLocalName(e.target.value)} className="w-full border border-slate-200 rounded px-2 py-1 text-xs outline-none focus:border-indigo-400" />
+              <button onClick={() => toast.success("Perubahan disimpan")} className="w-full bg-indigo-600 text-white text-[11px] font-semibold py-1.5 rounded hover:bg-indigo-700 transition-colors">Simpan</button>
+            </div>
+          )}
         </div>
       </Popup>
       {!editMode && (
-        <LeafletTooltip direction="top" offset={[0, -14]} opacity={1} className="!bg-white !border-0 !shadow-xl !rounded-xl !font-sans !px-2 !py-1">
+        <LeafletTooltip direction="top" offset={[0, -13]} opacity={1} className="!bg-white !border-0 !shadow-lg !rounded-lg !font-sans !px-2 !py-1">
           <div className="text-center">
-            <p className="font-bold text-[10px] text-slate-900">{localName}</p>
-            <p className="text-[10px] font-bold" style={{ color }}>{m.tekanan !== null ? `${m.tekanan} bar` : '—'}</p>
+            <p className="font-semibold text-[10px] text-slate-800">{localName}</p>
+            <p className="text-[9px] font-medium" style={{ color }}>{m.tekanan !== null ? `${m.tekanan} bar` : '—'}</p>
           </div>
         </LeafletTooltip>
       )}
