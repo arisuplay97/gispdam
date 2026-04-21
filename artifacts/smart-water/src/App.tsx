@@ -24,11 +24,14 @@ const queryClient = new QueryClient({
   },
 });
 
+import DataBulanan from "@/pages/DataBulanan";
+
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/dashboard" component={DireksiDashboard} />
+      <Route path="/data-bulanan" component={DataBulanan} />
       <Route path="/input" component={InputPage} />
       <Route component={NotFound} />
     </Switch>

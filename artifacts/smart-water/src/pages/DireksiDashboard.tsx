@@ -630,13 +630,9 @@ export default function DireksiDashboard() {
               <span className={`font-semibold text-sm tracking-tight hidden sm:block ${darkMode ? "text-gray-100" : "text-gray-900"}`}>PDAM TIARA</span>
             </div>
             <nav className="hidden md:flex items-center gap-1 ml-4">
-              {["Dashboard", "Peta", "Laporan"].map((item, i) => (
-                <span key={item} className={`px-3 py-1.5 text-sm rounded-md cursor-default ${
-                  i === 0
-                    ? darkMode ? "font-semibold text-gray-100 bg-gray-800" : "font-semibold text-gray-900 bg-gray-100"
-                    : darkMode ? "text-gray-400 hover:text-gray-200" : "text-gray-500 hover:text-gray-700"
-                }`}>{item}</span>
-              ))}
+              <span className={`px-3 py-1.5 text-sm rounded-md cursor-default ${darkMode ? "font-semibold text-gray-100 bg-gray-800" : "font-semibold text-gray-900 bg-gray-100"}`}>Dashboard</span>
+              <span className={`px-3 py-1.5 text-sm rounded-md cursor-pointer ${darkMode ? "text-gray-400 hover:text-gray-200" : "text-gray-500 hover:text-gray-700"}`}>Peta</span>
+              <span onClick={() => navigate("/data-bulanan")} className={`px-3 py-1.5 text-sm rounded-md cursor-pointer ${darkMode ? "text-blue-400 hover:text-blue-300 bg-blue-900/30" : "text-blue-600 hover:text-blue-800 bg-blue-50"}`}>Laporan Tabular</span>
             </nav>
           </div>
           <div className="flex items-center gap-3">
