@@ -325,8 +325,6 @@ export default function Home() {
             </span>
           )}
         </div>
-
-        </div>
       </main>
     </div>
   );
