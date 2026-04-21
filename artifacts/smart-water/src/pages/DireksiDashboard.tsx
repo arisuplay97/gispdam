@@ -735,49 +735,53 @@ export default function DireksiDashboard() {
                 {RESERVOIRS.map(r => {
                   const jalurs = getJalurForReservoir(r.id);
                   const allMans = jalurs.flatMap(j => getManometersForJalur(j.id));
-                  const kritisCount = allMans.filter(m => m.status === "kritis").length;
-                  const waspadaCount = allMans.filter(m => m.status === "waspada").length;
-                  const statusColor = r.status === "normal" ? (darkMode ? "#4ade80" : "#16a34a") : r.status === "waspada" ? "#f59e0b" : "#ef4444";
-                  const statusBg = r.status === "normal" ? (darkMode ? "rgba(74,222,128,0.1)" : "#f0fdf4") : r.status === "waspada" ? (darkMode ? "rgba(245,158,11,0.1)" : "#fffbeb") : (darkMode ? "rgba(239,68,68,0.1)" : "#fef2f2");
+                  const avgTekanan = allMans.length ? (allMans.reduce((acc, m) => acc + (m.tekanan ?? 0), 0) / allMans.length).toFixed(1) : "—";
+                  
+                  const statusColor = r.status === "normal" ? "#16a34a" : r.status === "waspada" ? "#d97706" : "#dc2626";
+                  const statusBg = r.status === "normal" ? "#dcfce7" : r.status === "waspada" ? "#fef3c7" : "#fee2e2";
                   const pct = Math.round((r.tinggiAir / r.kapasitas) * 100);
+                  const rName = customNames?.[r.id] || r.name;
 
                   return (
-                    <div key={r.id} className={`relative rounded-[20px] border p-5 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 ${darkMode ? "bg-gray-800/80 border-gray-700 hover:border-gray-600" : "bg-white border-gray-100 hover:border-indigo-100"}`}>
-                      <div className="absolute right-0 top-0 w-24 h-24 rounded-tr-[20px] rounded-bl-full pointer-events-none" style={{ background: `radial-gradient(circle at top right, ${statusBg}, transparent 70%)` }} />
-                      
-                      <div className="flex items-center gap-2.5 mb-3 relative z-10">
-                        <div className="flex items-center justify-center w-8 h-8 rounded-lg shadow-sm" style={{ background: statusBg }}>
-                          <Droplets className="h-4 w-4" style={{ color: statusColor }} />
+                    <div key={r.id} className={`rounded-xl border p-4 shadow-sm ${darkMode ? "bg-slate-800 border-slate-700" : "bg-white border-slate-200"}`}>
+                      {/* Titik / Nama */}
+                      <h4 className={`text-[13px] font-bold mb-4 ${darkMode ? "text-slate-200" : "text-slate-800"}`}>
+                        {rName}
+                      </h4>
+
+                      {/* 3 Columns: Level, Tekanan, Status */}
+                      <div className="grid grid-cols-3 gap-2 mb-3">
+                        <div>
+                          <p className={`text-[10px] font-bold uppercase tracking-wider mb-0.5 ${darkMode ? "text-slate-400" : "text-slate-400"}`}>Level</p>
+                          <div className="flex items-baseline gap-1">
+                            <span className={`text-xl font-bold ${darkMode ? "text-slate-100" : "text-slate-900"}`}>{r.tinggiAir}</span>
+                            <span className={`text-[10px] font-semibold ${darkMode ? "text-slate-500" : "text-slate-400"}`}>cm</span>
+                          </div>
                         </div>
-                        <span className="text-sm font-bold truncate">{r.name}</span>
-                      </div>
-                      <div className="flex items-baseline gap-2 mb-3 relative z-10">
-                        <span className="text-3xl font-black tracking-tight" style={{ color: statusColor }}>{r.tinggiAir}</span>
-                        <span className={`text-[11px] font-semibold ${darkMode ? "text-gray-500" : "text-gray-400"}`}>cm / {r.kapasitas}</span>
-                      </div>
-                      {/* Progress bar */}
-                      <div className={`h-2 w-full rounded-full mb-3 shadow-inner ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
-                        <div className="h-full rounded-full transition-all duration-700 ease-out relative overflow-hidden" style={{ width: `${Math.min(100, pct)}%`, background: statusColor }}>
-                          <div className="absolute inset-0 bg-white/20" />
+                        <div>
+                          <p className={`text-[10px] font-bold uppercase tracking-wider mb-0.5 ${darkMode ? "text-slate-400" : "text-slate-400"}`}>Tekanan</p>
+                          <div className="flex items-baseline gap-1">
+                            <span className={`text-xl font-bold ${darkMode ? "text-slate-100" : "text-slate-900"}`}>{avgTekanan}</span>
+                            <span className={`text-[10px] font-semibold ${darkMode ? "text-slate-500" : "text-slate-400"}`}>bar</span>
+                          </div>
                         </div>
-                      </div>
-                      {/* Manometer summary */}
-                      <div className="flex items-center gap-2 text-[10px]">
-                        <span className={darkMode ? "text-gray-500" : "text-gray-400"}>{allMans.length} manometer</span>
-                        {kritisCount > 0 && <span className="text-red-500 font-bold">{kritisCount} kritis</span>}
-                        {waspadaCount > 0 && <span className="text-amber-500 font-bold">{waspadaCount} waspada</span>}
-                        {kritisCount === 0 && waspadaCount === 0 && <span className="text-emerald-500 font-semibold">✓ semua normal</span>}
-                      </div>
-                      {/* Dopend targets */}
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {jalurs.map(j => {
-                          const dop = getDopend(j.dopendId);
-                          return dop ? (
-                            <span key={j.id} className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${darkMode ? "bg-gray-700 text-gray-400" : "bg-gray-200 text-gray-500"}`}>
-                              → {dop.name}
+                        <div>
+                          <p className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${darkMode ? "text-slate-400" : "text-slate-400"}`}>Status</p>
+                          <div 
+                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full"
+                            style={{ backgroundColor: statusBg }}
+                          >
+                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: statusColor }} />
+                            <span className="text-[11px] font-bold" style={{ color: statusColor }}>
+                              {r.status === "normal" ? "Normal" : r.status === "waspada" ? "Waspada" : "Kritis"}
                             </span>
-                          ) : null;
-                        })}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Progress bar */}
+                      <div className={`h-2.5 w-full rounded-full overflow-hidden ${darkMode ? "bg-slate-700" : "bg-slate-100"}`}>
+                        <div className="h-full rounded-full transition-all duration-700 ease-out" style={{ width: `${Math.min(100, pct)}%`, backgroundColor: statusColor }} />
                       </div>
                     </div>
                   );
