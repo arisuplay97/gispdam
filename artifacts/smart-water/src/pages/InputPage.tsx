@@ -25,8 +25,7 @@ type Step = "identitas" | "pilih-reservoir" | "dashboard-titik" | "form-titik" |
 
 // ─── Petugas names (dummy) ──────────────────────────────────────────────────
 const PETUGAS_LIST = [
-  "Ahmad Fauzi", "Budi Santoso", "Cahya Pratama",
-  "Dian Kurniawan", "Eko Wahyudi", "Faisal Rahman",
+  "Ari Baskara", "Hendra", "Doni Ndut"
 ];
 
 // ─── Component ──────────────────────────────────────────────────────────────
