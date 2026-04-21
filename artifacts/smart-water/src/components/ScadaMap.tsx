@@ -857,7 +857,8 @@ export function ScadaMap({
                   }
                 }
 
-                const color = foundCritical ? "#ef4444" : "#3b82f6";
+                // Use the user's selected pipelineColor from props instead of hardcoding #3b82f6
+                const color = foundCritical ? "#ef4444" : pipelineColor;
                 const dashArray = foundCritical ? "8 8" : undefined;
                 segments.push({
                   positions: [coords[i], coords[i + 1]],
@@ -872,7 +873,7 @@ export function ScadaMap({
                   positions={seg.positions}
                   pathOptions={{
                     color: seg.color,
-                    weight: 8,
+                    weight: pipelineWeight, // Use the prop for dynamic thickness
                     opacity: 0.95,
                     dashArray: seg.dashArray,
                     className: seg.dashArray ? undefined : "pipeline-animated",
