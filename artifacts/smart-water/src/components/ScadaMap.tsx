@@ -376,6 +376,192 @@ function ValvePopupContent({
   );
 }
 
+// ─── Local UI Mock Components for Static Assets ──────────────────────────────
+function ReservoirMarkerLocal({ r, editMode }: { r: any, editMode: boolean }) {
+  const [localName, setLocalName] = React.useState(r.name);
+  const [, setLocation] = useLocation();
+  const statusColor = r.status === "normal" ? "#22c55e" : r.status === "waspada" ? "#f59e0b" : "#ef4444";
+  const statusBg = r.status === "normal" ? "#f0fdf4" : r.status === "waspada" ? "#fffbeb" : "#fef2f2";
+  const icon = React.useMemo(() => L.divIcon({
+    className: "bg-transparent",
+    html: `<div style="position:relative;width:32px;height:32px"><div style="width:32px;height:32px;border-radius:6px;background:${statusColor};border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg></div></div>`,
+    iconSize: [32, 32], iconAnchor: [16, 16],
+  }), [statusColor]);
+
+  return (
+    <Marker position={[r.lat, r.lng]} icon={icon}>
+      <Popup minWidth={220}>
+        <div className="text-slate-800 p-1 mb-1" style={{ minWidth: 200 }}>
+          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
+            <div className="h-6 w-6 rounded-md flex items-center justify-center shadow-sm" style={{ background: statusColor }}>
+              <Droplets className="h-3.5 w-3.5 text-white" />
+            </div>
+            <h3 className="font-extrabold text-slate-800 text-sm tracking-tight">{localName}</h3>
+          </div>
+          {!editMode ? (
+            <>
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between items-center bg-slate-50 p-1.5 rounded-md">
+                   <span className="text-slate-500 font-bold uppercase text-[9px] tracking-wider">Tinggi Air</span>
+                   <span className="font-black text-sm" style={{ color: statusColor }}>{r.tinggiAir} <span className="text-[10px] opacity-70">cm</span></span>
+                </div>
+                <div className="flex justify-between items-center px-1.5">
+                   <span className="text-slate-500 font-bold uppercase text-[9px] tracking-wider">Kapasitas</span>
+                   <span className="font-semibold text-slate-600">{r.kapasitas} <span className="text-[10px] opacity-70">cm</span></span>
+                </div>
+                <div className="flex justify-between items-center px-1.5">
+                   <span className="text-slate-500 font-bold uppercase text-[9px] tracking-wider">Status</span>
+                   <span className="font-bold text-[10px] px-2 py-0.5 rounded shadow-sm" style={{ background: statusBg, color: statusColor }}>
+                     {r.status === 'normal' ? 'Normal' : r.status === 'waspada' ? 'Waspada' : 'Kritis'}
+                   </span>
+                </div>
+              </div>
+              <button 
+                onClick={(e) => { e.stopPropagation(); localStorage.setItem('pending_input_point', r.id); setLocation('/input'); }}
+                className="mt-4 w-full flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold py-1.5 px-3 rounded-lg shadow-sm text-[11px] transition-colors active:scale-95"
+              >
+                <ClipboardEdit className="h-3 w-3" /> Input Data Saat Ini
+              </button>
+            </>
+          ) : (
+            <div className="space-y-3 mt-1">
+              <label className="text-xs font-semibold text-slate-600 block">Ubah Nama Reservoir:</label>
+              <input type="text" value={localName} onChange={(e) => setLocalName(e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+              <button onClick={() => toast.success("Sistem: Nama diubah secara lokal. (Mode Edit Statis)")} className="w-full bg-blue-600 text-white text-xs font-semibold py-1.5 rounded hover:bg-blue-700 transition">Simpan Perubahan</button>
+            </div>
+          )}
+        </div>
+      </Popup>
+      {!editMode && (
+        <LeafletTooltip direction="top" offset={[0, -18]} opacity={1} className="!bg-white !border-0 !shadow-xl !rounded-xl !font-sans !px-3 !py-2">
+          <div className="text-center">
+            <p className="font-bold text-xs text-slate-900">{localName}</p>
+            <p className="text-[10px] font-semibold" style={{ color: statusColor }}>{r.tinggiAir} cm</p>
+          </div>
+        </LeafletTooltip>
+      )}
+    </Marker>
+  );
+}
+
+function DopendMarkerLocal({ d, editMode }: { d: any, editMode: boolean }) {
+  const [localName, setLocalName] = React.useState(d.name);
+  const icon = React.useMemo(() => L.divIcon({
+    className: "bg-transparent",
+    html: `<div style="width:22px;height:22px;border-radius:4px;background:#6366f1;border:2.5px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div>`,
+    iconSize: [22, 22], iconAnchor: [11, 11],
+  }), []);
+
+  return (
+    <Marker position={[d.lat, d.lng]} icon={icon}>
+      <Popup minWidth={180}>
+        <div className="text-slate-800 p-1 mb-1" style={{ minWidth: 160 }}>
+          {!editMode ? (
+            <>
+              <h3 className="font-bold text-indigo-700 text-sm">{localName}</h3>
+              <p className="text-xs text-slate-500 mt-1">Titik akhir distribusi</p>
+            </>
+          ) : (
+            <div className="space-y-3 mt-1">
+              <label className="text-xs font-semibold text-slate-600 block">Ubah Nama Dopend:</label>
+              <input type="text" value={localName} onChange={(e) => setLocalName(e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+              <button onClick={() => toast.success("Sistem: Nama diubah secara lokal. (Mode Edit Statis)")} className="w-full bg-indigo-600 text-white text-xs font-semibold py-1.5 rounded hover:bg-indigo-700 transition">Simpan Perubahan</button>
+            </div>
+          )}
+        </div>
+      </Popup>
+      {!editMode && (
+        <LeafletTooltip direction="top" offset={[0, -14]} opacity={1} className="!bg-white !border-0 !shadow-xl !rounded-xl !font-sans !px-2 !py-1">
+          <p className="font-bold text-[10px] text-slate-900">{localName}</p>
+        </LeafletTooltip>
+      )}
+    </Marker>
+  );
+}
+
+function ManometerMarkerLocal({ m, editMode }: { m: any, editMode: boolean }) {
+  const [localName, setLocalName] = React.useState(m.name);
+  const [, setLocation] = useLocation();
+  const color = STATUS_COLORS[m.status as ManometerStatus];
+  const affectedArea = getAffectedArea(m.id);
+  const pulse = m.status === 'kritis' ? 'animation:criticalPulse 1.1s ease-in-out infinite;' : '';
+  const icon = React.useMemo(() => L.divIcon({
+    className: "bg-transparent",
+    html: `<div style="position:relative;width:24px;height:24px"><div style="width:24px;height:24px;border-radius:50%;background:white;border:3px solid ${color};box-shadow:0 2px 8px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;${pulse}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round"><circle cx="12" cy="14" r="8"/><line x1="12" y1="14" x2="12" y2="8"/><line x1="12" y1="14" x2="16" y2="11"/></svg></div></div>`,
+    iconSize: [24, 24], iconAnchor: [12, 12],
+  }), [color, pulse]);
+
+  return (
+    <Marker position={[m.lat, m.lng]} icon={icon}>
+      <Popup minWidth={240}>
+        <div className="text-slate-800 p-1 mb-1" style={{ minWidth: 220 }}>
+          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
+            <div className="h-6 w-6 rounded-md flex items-center justify-center shadow-sm" style={{ background: color }}>
+              <Gauge className="h-3.5 w-3.5 text-white" />
+            </div>
+            <h3 className="font-extrabold text-slate-800 text-sm tracking-tight leading-snug">{localName}</h3>
+          </div>
+
+          {!editMode ? (
+            <>
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between items-center bg-slate-50 p-1.5 rounded-md border border-slate-100/50">
+                  <span className="text-slate-500 font-bold uppercase text-[9px] tracking-wider">Tekanan</span>
+                  <span className="font-black text-sm" style={{ color }}>{m.tekanan !== null ? m.tekanan : '—'} <span className="text-[10px] opacity-70">bar</span></span>
+                </div>
+                <div className="flex justify-between items-center px-1.5 pt-1">
+                  <span className="text-slate-500 font-bold uppercase text-[9px] tracking-wider">Status</span>
+                  <span className="font-bold px-2 py-0.5 rounded shadow-sm text-[10px]" style={{
+                    color,
+                    background: m.status === 'normal' ? '#f0fdf4' : m.status === 'waspada' ? '#fffbeb' : m.status === 'kritis' ? '#fef2f2' : '#f8fafc'
+                  }}>{STATUS_LABELS[m.status as ManometerStatus]}</span>
+                </div>
+                <div className="flex justify-between items-center px-1.5">
+                  <span className="text-slate-500 font-bold uppercase text-[9px] tracking-wider">Posisi</span>
+                  <span className="font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded text-[10px]">KM {m.posisiKm}</span>
+                </div>
+              </div>
+
+              {/* Box Gangguan dengan overflow-hidden agar radius sesuai */}
+              {(m.status === 'waspada' || m.status === 'kritis') && affectedArea && (
+                <div className={`mt-3 p-2.5 rounded-xl overflow-hidden text-[10px] font-medium leading-relaxed shadow-inner border border-l-[4px] ${
+                  m.status === 'kritis' ? 'bg-red-50 border-red-200 border-l-red-500 text-red-800' : 'bg-amber-50 border-amber-200 border-l-amber-500 text-amber-800'
+                }`}>
+                  <strong className="block mb-0.5">⚠️ Gangguan Distribusi</strong>
+                  Wilayah <strong className="font-black">{affectedArea}</strong> berpotensi turun debit airnya.
+                </div>
+              )}
+              
+              <div className="mt-4 pt-1">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); localStorage.setItem('pending_input_point', m.id); setLocation('/input'); }}
+                  className="w-full flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 px-3 rounded-lg shadow-sm text-[11px] transition-colors active:scale-95"
+                >
+                  <ClipboardEdit className="h-3 w-3" /> Input Data Titik Ini
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-3 mt-1">
+              <label className="text-xs font-semibold text-slate-600 block">Ubah Nama Manometer:</label>
+              <input type="text" value={localName} onChange={(e) => setLocalName(e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+              <button onClick={() => toast.success("Sistem: Nama diubah secara lokal. (Mode Edit Statis)")} className="w-full bg-indigo-600 text-white text-xs font-semibold py-1.5 rounded hover:bg-indigo-700 transition">Simpan Perubahan</button>
+            </div>
+          )}
+        </div>
+      </Popup>
+      {!editMode && (
+        <LeafletTooltip direction="top" offset={[0, -14]} opacity={1} className="!bg-white !border-0 !shadow-xl !rounded-xl !font-sans !px-2 !py-1">
+          <div className="text-center">
+            <p className="font-bold text-[10px] text-slate-900">{localName}</p>
+            <p className="text-[10px] font-bold" style={{ color }}>{m.tekanan !== null ? `${m.tekanan} bar` : '—'}</p>
+          </div>
+        </LeafletTooltip>
+      )}
+    </Marker>
+  );
+}
+
 // ─── Main ScadaMap component ─────────────────────────────────────────────────
 export function ScadaMap({
   valves,
@@ -540,8 +726,8 @@ export function ScadaMap({
         {/* Zoom control moved to bottom-right */}
         <ZoomControl position="bottomright" />
 
-        {/* ── Custom Control: Fullscreen Button (Top-right, under layer selector) ── */}
-        <div className="absolute top-[56px] right-2.5 z-[1000] flex flex-col gap-2">
+        {/* ── Custom Control: Fullscreen Button (Moved down so it does not conflict with Leaflet Draw/Layers) ── */}
+        <div className="absolute top-[136px] right-2.5 z-[1000] flex flex-col gap-2">
           <button
             onClick={toggleFullscreen}
             title={isFullscreen ? "Keluar Fullscreen" : "Layar Penuh"}
@@ -883,172 +1069,19 @@ export function ScadaMap({
             })}
 
             {/* Reservoir Markers */}
-            {RESERVOIRS.map(r => {
-              const statusColor = r.status === "normal" ? "#22c55e" : r.status === "waspada" ? "#f59e0b" : "#ef4444";
-              const statusBg = r.status === "normal" ? "#f0fdf4" : r.status === "waspada" ? "#fffbeb" : "#fef2f2";
-              const icon = L.divIcon({
-                className: "bg-transparent",
-                html: `<div style="position:relative;width:32px;height:32px">
-                  <div style="width:32px;height:32px;border-radius:6px;background:${statusColor};border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
-                  </div>
-                </div>`,
-                iconSize: [32, 32],
-                iconAnchor: [16, 16],
-              });
-              return (
-                <Marker key={`res-${r.id}`} position={[r.lat, r.lng]} icon={icon}>
-                  <Popup minWidth={220} className="premium-popup">
-                    <div className="text-slate-800 p-1" style={{ minWidth: 200 }}>
-                      <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
-                        <div className="h-6 w-6 rounded-md flex items-center justify-center shadow-sm" style={{ background: statusColor }}>
-                          <Droplets className="h-3.5 w-3.5 text-white" />
-                        </div>
-                        <h3 className="font-extrabold text-slate-800 text-sm tracking-tight">{r.name}</h3>
-                      </div>
-                      <div className="space-y-2 text-xs">
-                        <div className="flex justify-between items-center bg-slate-50 p-1.5 rounded-md">
-                           <span className="text-slate-500 font-bold uppercase text-[9px] tracking-wider">Tinggi Air</span>
-                           <span className="font-black text-sm" style={{ color: statusColor }}>{r.tinggiAir} <span className="text-[10px] opacity-70">cm</span></span>
-                        </div>
-                        <div className="flex justify-between items-center px-1.5">
-                           <span className="text-slate-500 font-bold uppercase text-[9px] tracking-wider">Kapasitas</span>
-                           <span className="font-semibold text-slate-600">{r.kapasitas} <span className="text-[10px] opacity-70">cm</span></span>
-                        </div>
-                        <div className="flex justify-between items-center px-1.5">
-                           <span className="text-slate-500 font-bold uppercase text-[9px] tracking-wider">Status</span>
-                           <span className="font-bold text-[10px] px-2 py-0.5 rounded shadow-sm" style={{ background: statusBg, color: statusColor }}>
-                             {r.status === 'normal' ? 'Normal' : r.status === 'waspada' ? 'Waspada' : 'Kritis'}
-                           </span>
-                        </div>
-                      </div>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          localStorage.setItem('pending_input_point', r.id);
-                          setLocation('/input');
-                        }}
-                        className="mt-4 w-full flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold py-1.5 px-3 rounded-lg shadow-sm text-[11px] transition-colors active:scale-95"
-                      >
-                        <ClipboardEdit className="h-3 w-3" /> Input Data Saat Ini
-                      </button>
-                    </div>
-                  </Popup>
-                  <LeafletTooltip direction="top" offset={[0, -18]} opacity={1}
-                    className="!bg-white !border-0 !shadow-xl !rounded-xl !font-sans !px-3 !py-2">
-                    <div className="text-center">
-                      <p className="font-bold text-xs text-slate-900">{r.name}</p>
-                      <p className="text-[10px] font-semibold" style={{ color: statusColor }}>{r.tinggiAir} cm</p>
-                    </div>
-                  </LeafletTooltip>
-                </Marker>
-              );
-            })}
+            {RESERVOIRS.map(r => (
+              <ReservoirMarkerLocal key={`res-${r.id}`} r={r} editMode={editMode} />
+            ))}
 
             {/* Dopend Markers */}
-            {DOPENDS.map(d => {
-              const icon = L.divIcon({
-                className: "bg-transparent",
-                html: `<div style="width:22px;height:22px;border-radius:4px;background:#6366f1;border:2.5px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-                </div>`,
-                iconSize: [22, 22],
-                iconAnchor: [11, 11],
-              });
-              return (
-                <Marker key={`dop-${d.id}`} position={[d.lat, d.lng]} icon={icon}>
-                  <Popup>
-                    <div className="text-slate-800" style={{ minWidth: 150 }}>
-                      <h3 className="font-bold text-indigo-700 text-sm">{d.name}</h3>
-                      <p className="text-xs text-slate-500 mt-1">Titik akhir distribusi</p>
-                    </div>
-                  </Popup>
-                  <LeafletTooltip direction="top" offset={[0, -14]} opacity={1}
-                    className="!bg-white !border-0 !shadow-xl !rounded-xl !font-sans !px-2 !py-1">
-                    <p className="font-bold text-[10px] text-slate-900">{d.name}</p>
-                  </LeafletTooltip>
-                </Marker>
-              );
-            })}
+            {DOPENDS.map(d => (
+              <DopendMarkerLocal key={`dop-${d.id}`} d={d} editMode={editMode} />
+            ))}
 
             {/* Manometer Markers */}
-            {MANOMETERS.map(m => {
-              const color = STATUS_COLORS[m.status];
-              const icon = L.divIcon({
-                className: "bg-transparent",
-                html: `<div style="position:relative;width:24px;height:24px">
-                  <div style="width:24px;height:24px;border-radius:50%;background:white;border:3px solid ${color};box-shadow:0 2px 8px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;${m.status === 'kritis' ? 'animation:criticalPulse 1.1s ease-in-out infinite;' : ''}">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round">
-                      <circle cx="12" cy="14" r="8"/>
-                      <line x1="12" y1="14" x2="12" y2="8"/>
-                      <line x1="12" y1="14" x2="16" y2="11"/>
-                    </svg>
-                  </div>
-                </div>`,
-                iconSize: [24, 24],
-                iconAnchor: [12, 12],
-              });
-
-              const affectedArea = getAffectedArea(m.id);
-
-              return (
-                <Marker key={`man-${m.id}`} position={[m.lat, m.lng]} icon={icon}>
-                  <Popup minWidth={240} className="premium-popup">
-                    <div className="text-slate-800 p-1" style={{ minWidth: 220 }}>
-                      <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
-                        <div className="h-6 w-6 rounded-md flex items-center justify-center shadow-sm" style={{ background: color }}>
-                          <Gauge className="h-3.5 w-3.5 text-white" />
-                        </div>
-                        <h3 className="font-extrabold text-slate-800 text-sm tracking-tight">{m.name}</h3>
-                      </div>
-                      <div className="space-y-2 text-xs">
-                        <div className="flex justify-between items-center bg-slate-50 p-1.5 rounded-md border border-slate-100/50">
-                          <span className="text-slate-500 font-bold uppercase text-[9px] tracking-wider">Tekanan</span>
-                          <span className="font-black text-sm" style={{ color }}>{m.tekanan !== null ? m.tekanan : '—'} <span className="text-[10px] opacity-70">bar</span></span>
-                        </div>
-                        <div className="flex justify-between items-center px-1.5 pt-1">
-                          <span className="text-slate-500 font-bold uppercase text-[9px] tracking-wider">Status</span>
-                          <span className="font-bold px-2 py-0.5 rounded shadow-sm text-[10px]" style={{
-                            color,
-                            background: m.status === 'normal' ? '#f0fdf4' : m.status === 'waspada' ? '#fffbeb' : m.status === 'kritis' ? '#fef2f2' : '#f8fafc'
-                          }}>{STATUS_LABELS[m.status]}</span>
-                        </div>
-                        <div className="flex justify-between items-center px-1.5">
-                          <span className="text-slate-500 font-bold uppercase text-[9px] tracking-wider">Posisi</span>
-                          <span className="font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded text-[10px]">KM {m.posisiKm}</span>
-                        </div>
-                      </div>
-                      {(m.status === 'waspada' || m.status === 'kritis') && affectedArea && (
-                        <div className={`mt-3 p-2.5 rounded-xl text-[10px] font-medium leading-relaxed shadow-inner border border-l-[3px] ${
-                          m.status === 'kritis' ? 'bg-red-50 border-red-200 border-l-red-500 text-red-800' : 'bg-amber-50 border-amber-200 border-l-amber-500 text-amber-800'
-                        }`}>
-                          <strong className="block mb-0.5">⚠️ Gangguan Distribusi</strong>
-                          Wilayah <strong className="font-black">{affectedArea}</strong> berpotensi turun debit airnya.
-                        </div>
-                      )}
-                      
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          localStorage.setItem('pending_input_point', m.id);
-                          setLocation('/input');
-                        }}
-                        className="mt-4 w-full flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 px-3 rounded-lg shadow-sm text-[11px] transition-colors active:scale-95"
-                      >
-                        <ClipboardEdit className="h-3 w-3" /> Input Data Titik Ini
-                      </button>
-                    </div>
-                  </Popup>
-                  <LeafletTooltip direction="top" offset={[0, -14]} opacity={1}
-                    className="!bg-white !border-0 !shadow-xl !rounded-xl !font-sans !px-2 !py-1">
-                    <div className="text-center">
-                      <p className="font-bold text-[10px] text-slate-900">{m.name}</p>
-                      <p className="text-[10px] font-bold" style={{ color }}>{m.tekanan !== null ? `${m.tekanan} bar` : '—'}</p>
-                    </div>
-                  </LeafletTooltip>
-                </Marker>
-              );
-            })}
+            {MANOMETERS.map(m => (
+              <ManometerMarkerLocal key={`man-${m.id}`} m={m} editMode={editMode} />
+            ))}
           </>
         )}
       </MapContainer>
