@@ -23,6 +23,10 @@ import {
   Trash2,
   ExternalLink,
   Link as LinkIcon,
+  Layers,
+  Palette,
+  MapPin,
+  Gauge
 } from "lucide-react";
 import {
   useImportGeoJson,
@@ -67,6 +71,14 @@ interface DashboardSidebarProps {
   setMacroUrl: (v: string) => void;
   spreadsheetUrl: string;
   setSpreadsheetUrl: (v: string) => void;
+  pipelineWeight: number;
+  setPipelineWeight: (v: number) => void;
+  pipelineColor: string;
+  setPipelineColor: (v: string) => void;
+  pipeWeight: number;
+  setPipeWeight: (v: number) => void;
+  pipeColor: string;
+  setPipeColor: (v: string) => void;
   // Mobile
   onMobileClose?: () => void;
 }
@@ -94,6 +106,14 @@ export function DashboardSidebar({
   setMacroUrl,
   spreadsheetUrl,
   setSpreadsheetUrl,
+  pipelineWeight,
+  setPipelineWeight,
+  pipelineColor,
+  setPipelineColor,
+  pipeWeight,
+  setPipeWeight,
+  pipeColor,
+  setPipeColor,
   onMobileClose,
 }: DashboardSidebarProps) {
   const [minimized, setMinimized] = useState(true);
@@ -103,6 +123,9 @@ export function DashboardSidebar({
   // Using generic fetch or standard hook for createSource if exists, otherwise fallback to fetch
   // Wait, useCreateSource should be exported from api-client-react.
   // Actually, we'll import it at the top. Let's just assume we can add it to imports later or use `window.fetch` if it's missing to avoid crashing.
+
+  // ── Edit Modes Extended ─────────────────────────────────────────────
+  const [addModeTarget, setAddModeTarget] = useState<"valve"|"reservoir"|"dopend"|"manometer"|"pipeline"|null>(null);
 
   // ── Add Valve form state ─────────────────────────────────────────────
   const [formName, setFormName] = useState("");
@@ -529,7 +552,7 @@ export function DashboardSidebar({
 
             {/* Edit mode toggle */}
             <div className="flex items-center justify-between">
-              <Label htmlFor="edit-mode" className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+              <Label htmlFor="edit-mode" className="flex cursor-pointer items-center gap-2 text-sm text-slate-700 font-bold">
                 <Map className="h-4 w-4 text-blue-700" /> Mode Edit Peta
               </Label>
               <Switch
@@ -537,33 +560,149 @@ export function DashboardSidebar({
                 checked={editMode}
                 onCheckedChange={(v) => {
                   setEditMode(v);
-                  if (v) setAddValveMode(false); // mutually exclusive
+                  if (!v) {
+                    setAddValveMode(false);
+                    setAddModeTarget(null);
+                  }
                 }}
                 className="data-[state=checked]:bg-blue-700"
               />
             </div>
 
-            <div className="h-px w-full bg-slate-200" />
+            {/* Jika Edit Mode Aktif, Tampilkan Pengaturan Gaya & Tambah Titik */}
+            {editMode && (
+              <div className="mt-4 pt-4 border-t border-slate-100 space-y-5 animate-in slide-in-from-top-2 fade-in duration-300">
+                
+                {/* Visual Settings: Gaya Pipa */}
+                <div>
+                  <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-1.5"><Palette className="h-3.5 w-3.5 text-blue-500" /> Gaya Garis Peta</h3>
+                  <div className="bg-slate-50/80 rounded-xl p-3 border border-slate-100 space-y-4">
+                    
+                    {/* Pipa Utama */}
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center gap-1.5">
+                          <Layers className="h-3 w-3 text-blue-500" />
+                          <span className="text-[11px] font-semibold text-slate-700">Pipa Utama</span>
+                        </div>
+                        <input
+                          type="color"
+                          value={pipelineColor}
+                          onChange={(e) => setPipelineColor(e.target.value)}
+                          className="h-6 w-6 cursor-pointer border-0 p-0 bg-transparent rounded-sm overflow-hidden shadow-sm"
+                          title="Warna Pipa Utama"
+                        />
+                      </div>
+                      <span className="text-[10px] font-medium text-slate-400 mb-1 block">Ketebalan: {pipelineWeight}px</span>
+                      <input
+                        type="range" min={2} max={15} step={1}
+                        value={pipelineWeight}
+                        onChange={(e) => setPipelineWeight(Number(e.target.value))}
+                        className="h-1.5 w-full cursor-pointer accent-blue-600"
+                      />
+                    </div>
 
-            {/* Add Valve mode toggle */}
+                    <div className="h-px bg-slate-200" />
+
+                    {/* Pipa Tambahan */}
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center gap-1.5">
+                          <Layers className="h-3 w-3 text-purple-500" />
+                          <span className="text-[11px] font-semibold text-slate-700">Pipa Tambahan</span>
+                        </div>
+                        <input
+                          type="color"
+                          value={pipeColor}
+                          onChange={(e) => setPipeColor(e.target.value)}
+                          className="h-6 w-6 cursor-pointer border-0 p-0 bg-transparent rounded-sm overflow-hidden shadow-sm"
+                          title="Warna Pipa Tambahan"
+                        />
+                      </div>
+                      <span className="text-[10px] font-medium text-slate-400 mb-1 block">Ketebalan: {pipeWeight}px</span>
+                      <input
+                        type="range" min={2} max={15} step={1}
+                        value={pipeWeight}
+                        onChange={(e) => setPipeWeight(Number(e.target.value))}
+                        className="h-1.5 w-full cursor-pointer accent-purple-600"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Add Data Controls */}
+                <div>
+                  <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-1.5"><Plus className="h-3.5 w-3.5 text-emerald-500" /> Tambah Data Jaringan</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* Placeholder Buttons for Adding Modes */}
+                    <button 
+                      onClick={() => setAddModeTarget(addModeTarget === "reservoir" ? null : "reservoir")}
+                      className={`flex flex-col items-center gap-1.5 p-2 rounded-xl border text-[10px] font-semibold transition-colors ${addModeTarget === "reservoir" ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300"}`}
+                    >
+                      <Droplets className="h-4 w-4" />
+                      Reservoir
+                    </button>
+                    <button 
+                      onClick={() => setAddModeTarget(addModeTarget === "dopend" ? null : "dopend")}
+                      className={`flex flex-col items-center gap-1.5 p-2 rounded-xl border text-[10px] font-semibold transition-colors ${addModeTarget === "dopend" ? "bg-rose-50 border-rose-200 text-rose-700" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300"}`}
+                    >
+                      <MapPin className="h-4 w-4" />
+                      Dopend
+                    </button>
+                    <button 
+                      onClick={() => setAddModeTarget(addModeTarget === "manometer" ? null : "manometer")}
+                      className={`flex flex-col items-center gap-1.5 p-2 rounded-xl border text-[10px] font-semibold transition-colors ${addModeTarget === "manometer" ? "bg-purple-50 border-purple-200 text-purple-700" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300"}`}
+                    >
+                      <Gauge className="h-4 w-4" />
+                      Manometer
+                    </button>
+                    <button 
+                      onClick={() => setAddModeTarget(addModeTarget === "pipeline" ? null : "pipeline")}
+                      className={`flex flex-col items-center gap-1.5 p-2 rounded-xl border text-[10px] font-semibold transition-colors ${addModeTarget === "pipeline" ? "bg-cyan-50 border-cyan-200 text-cyan-700" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300"}`}
+                    >
+                      <Layers className="h-4 w-4" />
+                      Jaringan Distribusi
+                    </button>
+                  </div>
+                  {/* Warning Note if a tool is active */}
+                  {addModeTarget && (
+                    <div className="mt-2 text-[10px] font-medium text-slate-500 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100 flex items-start gap-1.5">
+                      <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0 mt-0.5" />
+                      (Work in Progress) Mode tambah {addModeTarget} diaktifkan. Fitur ini akan mendeteksi klik peta di masa depan.
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            )}
+            
+            <div className="h-px w-full bg-slate-200 mt-4 mb-2" />
+
+            {/* Add Valve mode toggle (Legacy/Existing) */}
             <div className="flex items-center justify-between">
               <Label htmlFor="add-valve-mode" className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
-                <Crosshair className="h-4 w-4 text-emerald-600" /> Mode Tambah Valve
+                <Crosshair className="h-4 w-4 text-emerald-600" /> Tambah Valve / Sensor Bebas
               </Label>
               <Switch
                 id="add-valve-mode"
                 checked={addValveMode}
-                onCheckedChange={handleToggleAddValve}
+                onCheckedChange={(v) => {
+                  handleToggleAddValve(v);
+                  if (v) {
+                    setEditMode(false); // Mutually exclusive if needed
+                    setAddModeTarget(null);
+                  }
+                }}
                 className="data-[state=checked]:bg-emerald-600"
               />
             </div>
 
             {/* Add Valve form — appears when mode is active */}
             {addValveMode && (
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 space-y-3">
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 space-y-3 mt-3">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold text-emerald-800 flex items-center gap-1.5">
-                    <Plus className="h-3.5 w-3.5" /> Form Tambah Valve
+                    <Plus className="h-3.5 w-3.5" /> Form Tambah Valve Manual
                   </p>
                   <button
                     onClick={() => { setAddValveMode(false); setSelectedCoords(null); }}
