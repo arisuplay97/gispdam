@@ -1,15 +1,15 @@
 /**
  * InputPage.tsx
  * Halaman form input khusus petugas lapangan — mobile-first
- * Alur: Identitas → Pilih Reservoir → Input Tinggi Air → Input Manometer satu per satu → Ringkasan → Konfirmasi
+ * Alur: Identitas → Pilih Reservoir → Dashboard Titik (Grid Acak) → Form Titik → Selesai
  * UI: Modern, premium glassmorphism & soft shadows (Dribbble style)
  */
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
 import {
   ArrowLeft, ArrowRight, Check, CheckCircle2, AlertTriangle,
   Droplets, Gauge, MapPin, User, Clock, Send, Home, BarChart3,
-  Map as MapIcon, ChevronRight, Activity
+  Map as MapIcon, ChevronRight, Activity, Edit3
 } from "lucide-react";
 import {
   RESERVOIRS, JALUR_PIPA, MANOMETERS, DOPENDS,
@@ -21,12 +21,7 @@ import {
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
-interface ManometerInput {
-  id: string;
-  tekanan: string; // string for form input
-}
-
-type Step = "identitas" | "pilih-reservoir" | "input-reservoir" | "input-manometer" | "ringkasan" | "selesai";
+type Step = "identitas" | "pilih-reservoir" | "dashboard-titik" | "form-titik" | "selesai";
 
 // ─── Petugas names (dummy) ──────────────────────────────────────────────────
 const PETUGAS_LIST = [
@@ -49,17 +44,16 @@ export default function InputPage() {
     weekday: "long", day: "2-digit", month: "long", year: "numeric",
   });
 
-  // Step 2: Pilih Reservoir
+  // Flow State
   const [selectedReservoirId, setSelectedReservoirId] = useState<string | null>(null);
+  const [targetPointId, setTargetPointId] = useState<string | null>(null); // To know which form to open
 
-  // Step 3: Input Reservoir
+  // Inputs State
   const [tinggiAirInput, setTinggiAirInput] = useState("");
+  const [manometerInputs, setManometerInputs] = useState<Record<string, string>>({});
 
-  // Step 4: Input Manometer
-  const [currentManometerIndex, setCurrentManometerIndex] = useState(0);
-  const [manometerInputs, setManometerInputs] = useState<ManometerInput[]>([]);
-
-  // Derived: jalur & manometer for selected reservoir
+  const selectedReservoir = selectedReservoirId ? getReservoir(selectedReservoirId) : null;
+  
   const jalurList = useMemo(() => {
     if (!selectedReservoirId) return [];
     return getJalurForReservoir(selectedReservoirId);
@@ -77,84 +71,84 @@ export default function InputPage() {
     return result;
   }, [jalurList]);
 
-  const currentManometer = allManometersInOrder[currentManometerIndex];
-  const selectedReservoir = selectedReservoirId ? getReservoir(selectedReservoirId) : null;
+  // ─── Auto-routing dari Map ────────────────────────────────────────────────
+  useEffect(() => {
+    const pendingPoint = localStorage.getItem('pending_input_point');
+    if (pendingPoint) {
+      localStorage.removeItem('pending_input_point');
+      setPetugas(PETUGAS_LIST[0]); // Set default petugas as bypass
+      
+      const res = getReservoir(pendingPoint);
+      if (res) {
+        setSelectedReservoirId(res.id);
+        setTargetPointId(res.id);
+        setStep("form-titik");
+      } else {
+        const man = MANOMETERS.find(m => m.id === pendingPoint);
+        if (man) {
+          const jalur = JALUR_PIPA.find(j => j.manometerIds.includes(man.id));
+          if (jalur) {
+            setSelectedReservoirId(jalur.reservoirId);
+            setTargetPointId(man.id);
+            setStep("form-titik");
+          }
+        }
+      }
+    }
+  }, []);
 
   // ─── Handlers ─────────────────────────────────────────────────────────────
   const handleSelectReservoir = (id: string) => {
     setSelectedReservoirId(id);
-    setTinggiAirInput("");
-    setCurrentManometerIndex(0);
-    setManometerInputs([]);
-    setStep("input-reservoir");
+    setStep("dashboard-titik");
   };
 
-  const handleReservoirDone = () => {
-    const inputs: ManometerInput[] = allManometersInOrder.map(({ manometer }) => ({
-      id: manometer.id,
-      tekanan: "",
-    }));
-    setManometerInputs(inputs);
-    setCurrentManometerIndex(0);
-    setStep("input-manometer");
+  const openForm = (id: string) => {
+    setTargetPointId(id);
+    setStep("form-titik");
   };
 
-  const handleManometerNext = () => {
-    if (currentManometerIndex < allManometersInOrder.length - 1) {
-      setCurrentManometerIndex(prev => prev + 1);
-    } else {
-      setStep("ringkasan");
-    }
-  };
-
-  const handleManometerPrev = () => {
-    if (currentManometerIndex > 0) {
-      setCurrentManometerIndex(prev => prev - 1);
-    } else {
-      setStep("input-reservoir");
-    }
-  };
-
-  const updateManometerInput = (value: string) => {
-    setManometerInputs(prev => {
-      const next = [...prev];
-      next[currentManometerIndex] = { ...next[currentManometerIndex], tekanan: value };
-      return next;
-    });
+  const closeForm = () => {
+    setTargetPointId(null);
+    setStep("dashboard-titik");
   };
 
   const handleSubmit = useCallback(async () => {
     if (!selectedReservoir) return;
     const todayStr = new Date().toISOString().split("T")[0];
 
-    try {
-      await fetch("/api/monitoring", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          pointId: selectedReservoir.id,
-          session: sesi,
-          date: todayStr,
-          tinggiAir: tinggiAirInput ? Number(tinggiAirInput) : null,
-          tekanan: null,
-        }),
-      });
-    } catch (e) {
-      console.error("Failed to save reservoir data:", e);
-    }
-
-    for (const mi of manometerInputs) {
-      if (!mi.tekanan) continue;
+    // Kirim reservoir jika ada isinya
+    if (tinggiAirInput) {
       try {
         await fetch("/api/monitoring", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            pointId: mi.id,
+            pointId: selectedReservoir.id,
+            session: sesi,
+            date: todayStr,
+            tinggiAir: Number(tinggiAirInput),
+            tekanan: null,
+          }),
+        });
+      } catch (e) {
+        console.error("Failed to save reservoir data:", e);
+      }
+    }
+
+    // Kirim manometer yang diisi
+    for (const [mId, val] of Object.entries(manometerInputs)) {
+      if (!val) continue;
+      try {
+        await fetch("/api/monitoring", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            pointId: mId,
             session: sesi,
             date: todayStr,
             tinggiAir: null,
-            tekanan: Number(mi.tekanan),
+            tekanan: Number(val),
           }),
         });
       } catch (e) {
@@ -162,31 +156,34 @@ export default function InputPage() {
       }
     }
 
+    // Spreadsheet Bypass
     if (macroUrl?.trim().startsWith("https://script.google.com/")) {
       try {
-        await fetch(macroUrl.trim(), {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({
-            lokasi: selectedReservoir.name,
-            sesi,
-            tinggiAir: tinggiAirInput || "",
-            tekanan: "",
-            petugas,
-            tipe: "reservoir",
-          }),
-        });
-        for (const mi of manometerInputs) {
-          if (!mi.tekanan) continue;
-          const man = MANOMETERS.find(m => m.id === mi.id);
+        if (tinggiAirInput) {
+           await fetch(macroUrl.trim(), {
+             method: "POST",
+             headers: { "Content-Type": "text/plain;charset=utf-8" },
+             body: JSON.stringify({
+               lokasi: selectedReservoir.name,
+               sesi,
+               tinggiAir: tinggiAirInput,
+               tekanan: "",
+               petugas,
+               tipe: "reservoir",
+             }),
+           });
+        }
+        for (const [mId, val] of Object.entries(manometerInputs)) {
+          if (!val) continue;
+          const man = MANOMETERS.find(m => m.id === mId);
           await fetch(macroUrl.trim(), {
             method: "POST",
             headers: { "Content-Type": "text/plain;charset=utf-8" },
             body: JSON.stringify({
-              lokasi: man?.name ?? mi.id,
+              lokasi: man?.name ?? mId,
               sesi,
               tinggiAir: "",
-              tekanan: mi.tekanan,
+              tekanan: val,
               petugas,
               tipe: "manometer",
             }),
@@ -204,24 +201,22 @@ export default function InputPage() {
     setStep("pilih-reservoir");
     setSelectedReservoirId(null);
     setTinggiAirInput("");
-    setCurrentManometerIndex(0);
-    setManometerInputs([]);
+    setManometerInputs({});
   };
 
-  // ─── Render Helpers ───────────────────────────────────────────────────────
-  const currentTekananVal = manometerInputs[currentManometerIndex]?.tekanan ?? "";
+  // ─── Variables for Form Titik ─────────────────────────────────────────────
+  const isFormReservoir = targetPointId === selectedReservoirId;
+  const targetManometerInfo = isFormReservoir ? null : allManometersInOrder.find(m => m.manometer.id === targetPointId);
+  const currentTekananVal = isFormReservoir ? "" : (targetPointId ? (manometerInputs[targetPointId] ?? "") : "");
   const currentTekananNum = currentTekananVal ? Number(currentTekananVal) : null;
-  const currentTekananStatus: ManometerStatus = getManometerStatus(currentTekananNum);
-
   const tinggiAirNum = tinggiAirInput ? Number(tinggiAirInput) : null;
 
-  // ─── Stepper ──────────────────────────────────────────────────────────────
+  // ─── Stepper progress ─────────────────────────────────────────────────────
   const steps: { key: Step; label: string }[] = [
     { key: "identitas", label: "Petugas" },
     { key: "pilih-reservoir", label: "Reservoir" },
-    { key: "input-reservoir", label: "Tinggi Air" },
-    { key: "input-manometer", label: "Manometer" },
-    { key: "ringkasan", label: "Ringkasan" },
+    { key: "dashboard-titik", label: "Titik" },
+    { key: "form-titik", label: "Input" },
     { key: "selesai", label: "Selesai" },
   ];
   const stepIndex = steps.findIndex(s => s.key === step);
@@ -262,11 +257,9 @@ export default function InputPage() {
             {steps.map((s, i) => (
               <div key={s.key} className="flex items-center flex-1">
                 <div className={`h-[6px] rounded-full flex-1 transition-all duration-700 ease-out shadow-inner ${
-                  i < stepIndex 
-                    ? "bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-emerald-500/20" 
-                    : i === stepIndex 
-                      ? "bg-gradient-to-r from-blue-500 to-indigo-500 shadow-blue-500/30" 
-                      : "bg-slate-200/80"
+                  i <= stepIndex 
+                    ? "bg-gradient-to-r from-blue-500 to-indigo-500 shadow-blue-500/30" 
+                    : "bg-slate-200/80"
                 }`} />
               </div>
             ))}
@@ -282,7 +275,7 @@ export default function InputPage() {
         </div>
       </header>
 
-      <main className="max-w-md mx-auto px-4 py-8 relative z-10 transition-all duration-500">
+      <main className="max-w-md mx-auto px-4 py-8 relative z-10 transition-all duration-500 pb-28">
         
         {/* ── Step 1: Identitas ───────────────────────────────────────── */}
         {step === "identitas" && (
@@ -421,356 +414,222 @@ export default function InputPage() {
           </div>
         )}
 
-        {/* ── Step 3: Input Tinggi Air Reservoir ─────────────────────── */}
-        {step === "input-reservoir" && selectedReservoir && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500 fill-mode-both">
-            <div className="flex items-center justify-between px-1">
-              <button 
-                onClick={() => setStep("pilih-reservoir")} 
-                className="h-8 px-3 rounded-full bg-white border border-slate-200 text-[11px] font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-all shadow-sm active:scale-95 flex items-center gap-1"
-              >
-                 <ArrowLeft className="h-3 w-3" /> Ganti Reservoir
-              </button>
-            </div>
-
-            <div className="bg-white/90 backdrop-blur-2xl rounded-[28px] border border-white p-6 shadow-[0_8px_32px_rgba(0,0,0,0.04)] relative overflow-hidden">
-              {/* Subtle background glow */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400/10 blur-[40px] rounded-full pointer-events-none" />
-
-              <div className="flex items-center gap-4 mb-8">
-                <div className="h-14 w-14 rounded-[16px] bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-[0_4px_12px_rgba(59,130,246,0.3)]">
-                  <Droplets className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-1">Pengukuran Reservoir</p>
-                  <h2 className="text-xl font-extrabold text-slate-800 tracking-tight leading-tight">{selectedReservoir.name}</h2>
-                </div>
-              </div>
-
-              {/* Kapasitas referensi */}
-              <div className="mb-8 p-4 bg-slate-50/80 rounded-2xl border border-slate-100 shadow-inner">
-                <div className="flex justify-between items-baseline mb-3">
-                  <span className="text-[11px] font-bold tracking-widest text-slate-400 uppercase">Kapasitas Total</span>
-                  <span className="font-extrabold text-slate-700 text-sm bg-white px-2 py-0.5 rounded-md shadow-sm border border-slate-100">{selectedReservoir.kapasitas} cm</span>
-                </div>
-                <div className="w-full h-3 rounded-full bg-slate-200/80 overflow-hidden shadow-inner">
-                  <div
-                    className="h-full rounded-full transition-all duration-700 ease-out relative"
-                    style={{
-                      width: `${Math.min(100, (tinggiAirNum ?? selectedReservoir.tinggiAir) / selectedReservoir.kapasitas * 100)}%`,
-                      background: (tinggiAirNum ?? selectedReservoir.tinggiAir) > 100 ? "linear-gradient(to right, #34d399, #10b981)" : (tinggiAirNum ?? selectedReservoir.tinggiAir) > 50 ? "linear-gradient(to right, #fbbf24, #f59e0b)" : "linear-gradient(to right, #f87171, #ef4444)",
-                    }}
-                  >
-                    <div className="absolute inset-0 bg-white/20 rounded-full" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Input tinggi air */}
-              <div className="relative z-10">
-                <label className="block text-[11px] font-bold tracking-widest text-slate-400 uppercase mb-3 text-center">Tinggi Air Saat Ini (cm)</label>
-                <div className="relative max-w-xs mx-auto">
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    min="0"
-                    max="999"
-                    step="0.1"
-                    placeholder="0.0"
-                    value={tinggiAirInput}
-                    onChange={e => setTinggiAirInput(e.target.value)}
-                    className="w-full h-20 px-4 text-4xl font-black text-slate-800 bg-white border-2 border-slate-200/80 rounded-[20px] outline-none focus:border-blue-500 focus:ring-[6px] focus:ring-blue-500/15 transition-all text-center placeholder:text-slate-200 shadow-sm"
-                  />
-                  {tinggiAirInput && <span className="absolute right-6 top-1/2 -translate-y-1/2 text-lg font-bold text-slate-400 pointer-events-none">cm</span>}
-                </div>
-              </div>
-
-              {/* Warning jika < 100 cm */}
-              {tinggiAirNum !== null && tinggiAirNum < 100 && (
-                <div className="mt-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/60 rounded-[20px] flex items-start gap-3 shadow-inner animate-in slide-in-from-top-2 fade-in duration-300">
-                  <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
-                    <AlertTriangle className="h-4 w-4 text-amber-600" />
-                  </div>
-                  <div>
-                    <p className="text-[13px] font-extrabold text-amber-900">Tinggi Air Rendah!</p>
-                    <p className="text-[11px] font-medium text-amber-700/80 mt-1 leading-relaxed">
-                      Tinggi air <strong>{tinggiAirNum} cm</strong> di bawah batas waspada (100 cm). Pastikan pompa suplai berjalan normal.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <button
-              onClick={handleReservoirDone}
-              disabled={!tinggiAirInput}
-              className="group w-full flex items-center justify-center gap-2 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white text-sm font-bold shadow-[0_8px_20px_rgba(79,70,229,0.25)] hover:shadow-[0_12px_24px_rgba(79,70,229,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-300 disabled:opacity-50 disabled:grayscale disabled:hover:translate-y-0 disabled:active:scale-100 disabled:shadow-none"
-            >
-              Simpan & Lanjut Manometer <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </button>
-          </div>
-        )}
-
-        {/* ── Step 4: Input Manometer ──────────────────────────────────── */}
-        {step === "input-manometer" && currentManometer && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-500 fill-mode-both">
-            {/* Header posisi */}
-            <div className="flex items-center justify-between px-1">
-              <button 
-                onClick={handleManometerPrev} 
-                className="h-8 px-3 rounded-full bg-white border border-slate-200 text-[11px] font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-all shadow-sm active:scale-95 flex items-center gap-1"
-              >
-                <ArrowLeft className="h-3 w-3" /> {currentManometerIndex === 0 ? "Reservoir" : "Kembali"}
-              </button>
-              <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
-                <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse" />
-                <span className="text-[10px] font-extrabold text-indigo-700 tracking-wider">
-                  TITIK {currentManometerIndex + 1} / {allManometersInOrder.length}
-                </span>
-              </div>
-            </div>
-
-            <div className="bg-white/90 backdrop-blur-2xl rounded-[28px] border border-white p-6 shadow-[0_8px_32px_rgba(0,0,0,0.04)] relative overflow-hidden">
-               {/* Subtle background glow */}
-               <div className={`absolute -top-10 -right-10 w-40 h-40 rounded-full pointer-events-none blur-[50px] opacity-20 transition-colors duration-500 ${
-                 currentTekananNum !== null && currentTekananNum < 0.5 ? "bg-red-500" : 
-                 currentTekananNum !== null && currentTekananNum < 1 ? "bg-amber-500" : 
-                 currentTekananNum !== null ? "bg-emerald-500" : "bg-indigo-400"
-               }`} />
-
-              <div className="flex items-center gap-4 mb-6 relative z-10">
-                <div className="h-14 w-14 rounded-[16px] bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-[0_4px_12px_rgba(99,102,241,0.3)]">
-                  <Gauge className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-1">Input Titik Manometer</p>
-                  <h2 className="text-xl font-extrabold text-slate-800 tracking-tight leading-tight">{currentManometer.manometer.name}</h2>
-                </div>
-              </div>
-
-              {/* Lokasi info */}
-              <div className="mb-6 grid grid-cols-2 gap-3 relative z-10">
-                <div className="p-3 bg-slate-50 rounded-[16px] border border-slate-100 shadow-inner">
-                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Jalur Distribusi</p>
-                   <p className="text-xs font-bold text-slate-700 truncate">Menuju {currentManometer.dopendName}</p>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-[16px] border border-slate-100 shadow-inner">
-                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Posisi KM</p>
-                   <p className="text-xs font-bold text-slate-700">KM {currentManometer.manometer.posisiKm}</p>
-                </div>
-              </div>
-
-              {/* Mini map - visual jalur */}
-              <div className="mb-8 p-4 bg-slate-50/80 rounded-[20px] border border-slate-100/80 shadow-inner">
-                <div className="flex justify-between items-end mb-3">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Progress Jalur</p>
-                  {/* Koordinat */}
-                  <div className="flex items-center gap-1 text-[9px] font-mono text-slate-400 bg-white px-2 py-0.5 rounded border border-slate-200">
-                    <MapPin className="h-2.5 w-2.5" />
-                    <span>{currentManometer.manometer.lat.toFixed(4)}, {currentManometer.manometer.lng.toFixed(4)}</span>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-0.5 px-2">
-                  {/* Reservoir dot */}
-                  <div className="relative">
-                    <div className="h-4 w-4 rounded-full bg-blue-500 shrink-0 border-2 border-white shadow-sm z-10 relative" title="Reservoir" />
-                    <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[8px] font-bold text-blue-600 truncate max-w-[40px]">RES</div>
-                  </div>
-                  {/* Manometer dots */}
-                  {allManometersInOrder
-                    .filter(m => m.dopendName === currentManometer.dopendName)
-                    .map((m, i) => {
-                      const isActive = m.manometer.id === currentManometer.manometer.id;
-                      const inputVal = manometerInputs.find(mi => mi.id === m.manometer.id)?.tekanan;
-                      const filled = !!inputVal;
-                      return (
-                        <div key={m.manometer.id} className="flex items-center flex-1">
-                          <div className={`h-[4px] flex-1 transition-colors duration-500 m-0.5 rounded-full ${filled ? "bg-emerald-400" : isActive ? "bg-indigo-300" : "bg-slate-200"}`} />
-                          <div className={`relative z-10 h-5 w-5 rounded-full border-[3px] flex items-center justify-center shrink-0 transition-all duration-500 ${
-                            isActive ? "border-indigo-500 bg-white scale-125 shadow-[0_0_12px_rgba(99,102,241,0.5)]" :
-                            filled ? "border-emerald-500 bg-emerald-500" : "border-slate-300 bg-white"
-                          }`}>
-                            {isActive && <div className="h-1.5 w-1.5 rounded-full bg-indigo-500" />}
-                            {filled && !isActive && <Check className="h-2.5 w-2.5 text-white" />}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  <div className="h-[4px] flex-1 bg-slate-200 m-0.5 rounded-full" />
-                  {/* Dopend dot */}
-                  <div className="relative">
-                    <div className="h-4 w-4 rounded-md bg-rose-500 shrink-0 border-2 border-white shadow-sm z-10 relative rotate-45" title="Dopend" />
-                    <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[8px] font-bold text-rose-600 truncate max-w-[40px]">DOP</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Input tekanan */}
-              <div className="relative z-10">
-                <label className="block text-[11px] font-bold tracking-widest text-slate-400 uppercase mb-3 text-center">Tekanan Saat Ini (bar)</label>
-                <div className="relative max-w-[200px] mx-auto">
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    min="0"
-                    max="20"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={currentTekananVal}
-                    onChange={e => updateManometerInput(e.target.value)}
-                    className="w-full h-20 px-4 text-4xl font-black text-slate-800 bg-white border-2 border-slate-200/80 rounded-[20px] outline-none focus:border-indigo-500 focus:ring-[6px] focus:ring-indigo-500/15 transition-all text-center placeholder:text-slate-200 shadow-sm"
-                  />
-                  {currentTekananVal && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400 pointer-events-none">bar</span>}
-                </div>
-              </div>
-
-              {/* Warning jika < 1 bar */}
-              {currentTekananNum !== null && currentTekananNum < 1 && (
-                <div className={`mt-6 p-4 rounded-[20px] flex items-start gap-3 shadow-inner animate-in slide-in-from-top-2 fade-in duration-300 border ${
-                  currentTekananNum < 0.5
-                    ? "bg-gradient-to-r from-red-50 to-pink-50 border-red-200/60"
-                    : "bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200/60"
-                }`}>
-                  <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
-                    currentTekananNum < 0.5 ? "bg-red-100" : "bg-amber-100"
-                  }`}>
-                    <AlertTriangle className={`h-4 w-4 ${
-                      currentTekananNum < 0.5 ? "text-red-600" : "text-amber-600"
-                    }`} />
-                  </div>
-                  <div>
-                    <p className={`text-[13px] font-extrabold ${currentTekananNum < 0.5 ? "text-red-900" : "text-amber-900"}`}>
-                      {currentTekananNum < 0.5 ? "Tekanan KRITIS!" : "Tekanan Rendah!"}
-                    </p>
-                    <p className={`text-[11px] font-medium leading-relaxed mt-1 ${currentTekananNum < 0.5 ? "text-red-700/80" : "text-amber-700/80"}`}>
-                      Level {currentTekananNum} bar {currentTekananNum < 0.5 ? "sangat rendah" : "di bawah normal"}.
-                      Aliran ke <strong>{currentManometer.dopendName}</strong> dapat terganggu.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <button
-              onClick={handleManometerNext}
-              disabled={!currentTekananVal}
-              className="group w-full flex items-center justify-center gap-2 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white text-sm font-bold shadow-[0_8px_20px_rgba(99,102,241,0.25)] hover:shadow-[0_12px_24px_rgba(99,102,241,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-300 disabled:opacity-50 disabled:grayscale disabled:hover:translate-y-0 disabled:active:scale-100 disabled:shadow-none"
-            >
-              {currentManometerIndex < allManometersInOrder.length - 1
-                ? <>Lanjut {allManometersInOrder[currentManometerIndex + 1].manometer.name} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></>
-                : <>Selesai & Lihat Ringkasan <Check className="h-4 w-4" /></>
-              }
-            </button>
-          </div>
-        )}
-
-        {/* ── Step 5: Ringkasan ───────────────────────────────────────── */}
-        {step === "ringkasan" && selectedReservoir && (
+        {/* ── Step 3: Dashboard Titik (Grid Acak) ──────────────────────── */}
+        {step === "dashboard-titik" && selectedReservoir && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500 fill-mode-both">
             <div className="flex items-center justify-between px-1">
               <div>
-                <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">Ringkasan Data</h2>
-                <p className="text-[11px] text-slate-500 font-medium mt-1 uppercase tracking-widest">Verifikasi Akhir</p>
+                <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">Kondisi Saat Ini</h2>
+                <p className="text-[11px] text-slate-500 font-medium mt-1">Pilih titik untuk diinput</p>
               </div>
-              <button onClick={() => { setCurrentManometerIndex(allManometersInOrder.length - 1); setStep("input-manometer"); }} className="h-8 px-3 rounded-full bg-white border border-slate-200 text-[11px] font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-all shadow-sm active:scale-95 flex items-center gap-1">
-                <ArrowLeft className="h-3 w-3" /> Edit
+              <button onClick={() => setStep("pilih-reservoir")} className="h-8 px-3 rounded-full bg-white border border-slate-200 text-[11px] font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-all shadow-sm active:scale-95 flex items-center gap-1">
+                <ArrowLeft className="h-3 w-3" /> Kembali
               </button>
             </div>
 
             <div className="bg-white/90 backdrop-blur-2xl rounded-[28px] border border-white p-5 shadow-[0_8px_32px_rgba(0,0,0,0.04)]">
-              {/* Info petugas */}
-              <div className="p-4 bg-slate-50/80 rounded-[20px] border border-slate-100 mb-5 relative overflow-hidden">
-                {/* Decoration */}
-                <div className="absolute right-0 top-0 h-full w-20 bg-gradient-to-l from-indigo-100/50 to-transparent pointer-events-none" />
-                <div className="space-y-2 text-xs relative z-10">
-                  <div className="flex justify-between items-center pb-2 border-b border-slate-200/50">
-                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Petugas</span>
-                    <span className="font-extrabold text-slate-700 text-sm">{petugas}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Waktu</span>
-                    <span className="font-bold text-slate-600">{today} · Sesi {sesi === "pagi" ? "Pagi" : "Sore"}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Reservoir */}
+              {/* Reservoir Card */}
               <div className="mb-5">
-                <div className="flex items-center justify-between mb-3 px-1">
-                  <div className="flex items-center gap-1.5">
-                    <Droplets className="h-4 w-4 text-blue-500" />
-                    <span className="text-[11px] font-extrabold text-slate-700 uppercase tracking-widest">Reservoir Utama</span>
-                  </div>
+                <div className="flex items-center gap-1.5 mb-2 px-1">
+                  <Droplets className="h-4 w-4 text-blue-500" />
+                  <span className="text-[11px] font-extrabold text-slate-700 uppercase tracking-widest">Reservoir Utama</span>
                 </div>
-                <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-[20px] border border-blue-100 shadow-inner flex justify-between items-center">
+                <button onClick={() => openForm(selectedReservoir.id)} className="w-full text-left p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-[20px] border border-blue-100 shadow-sm flex justify-between items-center group hover:shadow-md transition-shadow">
                   <div>
                     <h3 className="text-sm font-bold text-slate-800">{selectedReservoir.name}</h3>
-                    <p className="text-[10px] text-slate-500 font-medium">Batas waspada: 100 cm</p>
+                    <p className="text-[10px] text-slate-500 font-medium mt-0.5">Batas waspada: 100 cm</p>
                   </div>
-                  <div className="text-right">
-                    <span className={`text-2xl font-black ${
-                      (Number(tinggiAirInput) || 0) < 100 ? "text-amber-500" : "text-emerald-500"
-                    }`}>
-                      {tinggiAirInput}
-                    </span>
-                    <span className="text-xs font-bold text-slate-400 ml-1">cm</span>
+                  <div className="text-right flex items-center gap-3">
+                    {tinggiAirInput ? (
+                        <>
+                          <div>
+                            <span className={`text-xl font-black ${Number(tinggiAirInput) < 100 ? "text-amber-500" : "text-emerald-500"}`}>{tinggiAirInput}</span>
+                            <span className="text-[10px] font-bold text-slate-400 ml-1">cm</span>
+                          </div>
+                          <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                        </>
+                    ) : (
+                        <span className="text-xs font-bold text-blue-600 bg-blue-100 px-3 py-1.5 rounded-lg flex items-center gap-1">
+                          <Edit3 className="h-3 w-3" /> Input
+                        </span>
+                    )}
                   </div>
-                </div>
+                </button>
               </div>
 
-              {/* Manometers */}
+              {/* Manometers Grid */}
               <div>
                 <div className="flex items-center justify-between mb-3 px-1">
                   <div className="flex items-center gap-1.5">
                     <Gauge className="h-4 w-4 text-purple-500" />
-                    <span className="text-[11px] font-extrabold text-slate-700 uppercase tracking-widest">Titik Manometer ({manometerInputs.length})</span>
+                    <span className="text-[11px] font-extrabold text-slate-700 uppercase tracking-widest">Titik Manometer ({allManometersInOrder.length})</span>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  {manometerInputs.map(mi => {
-                    const man = MANOMETERS.find(m => m.id === mi.id);
-                    const val = mi.tekanan ? Number(mi.tekanan) : null;
-                    const st = getManometerStatus(val);
+                <div className="grid grid-cols-1 gap-2">
+                  {allManometersInOrder.map(({manometer, dopendName}) => {
+                    const val = manometerInputs[manometer.id];
+                    const numVal = val ? Number(val) : null;
+                    const st = getManometerStatus(numVal);
+                    
                     return (
-                      <div key={mi.id} className="p-3.5 bg-white rounded-[16px] border border-slate-200/70 shadow-sm flex items-center justify-between group hover:border-indigo-200 transition-colors">
+                      <button 
+                        key={manometer.id} 
+                        onClick={() => openForm(manometer.id)}
+                        className={`w-full p-3.5 bg-white rounded-[16px] border ${val ? "border-emerald-200 bg-emerald-50/10" : "border-slate-200/70"} shadow-sm flex items-center justify-between group hover:border-indigo-300 transition-colors block text-left`}
+                      >
                         <div>
-                          <p className="text-xs font-bold text-slate-800">{man?.name ?? mi.id}</p>
-                          <p className="text-[10px] text-slate-400 font-mono mt-0.5">KM {man?.posisiKm}</p>
+                          <p className="text-sm font-bold text-slate-800">{manometer.name}</p>
+                          <p className="text-[10px] text-slate-400 font-medium mt-0.5 truncate max-w-[150px]">Jalur {dopendName} · KM {manometer.posisiKm}</p>
                         </div>
-                        <div className="text-right flex items-center gap-3">
-                          <span className={`block text-[10px] font-bold px-2 py-1 rounded-md ${
-                            st === "normal" ? "bg-emerald-50 text-emerald-600" :
-                            st === "waspada" ? "bg-amber-50 text-amber-600" :
-                            st === "kritis" ? "bg-red-50 text-red-600" : "bg-slate-50 text-slate-500"
-                          }`}>
-                            {STATUS_LABELS[st]}
-                          </span>
-                          <span className="text-sm font-black w-14 text-right" style={{ color: STATUS_COLORS[st] }}>
-                            {mi.tekanan || "—"} <span className="text-[10px] opacity-60">bar</span>
-                          </span>
+                        <div className="text-right flex items-center gap-3 shrink-0">
+                          {val ? (
+                            <>
+                              <span className={`text-base font-black`} style={{ color: STATUS_COLORS[st] }}>
+                                {val} <span className="text-[10px] opacity-60">bar</span>
+                              </span>
+                              <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                            </>
+                          ) : (
+                            <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg flex items-center gap-1">
+                              <Edit3 className="h-3 w-3 text-slate-400" /> Input
+                            </span>
+                          )}
                         </div>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
               </div>
             </div>
 
+            {/* Bottom Floating Submit Action */}
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-xl border-t border-slate-200 z-50">
+              <button
+                onClick={handleSubmit}
+                className="group w-full max-w-md mx-auto flex items-center justify-center gap-2 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white text-sm font-bold shadow-[0_8px_20px_rgba(16,185,129,0.25)] hover:shadow-[0_12px_24px_rgba(16,185,129,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-300 relative overflow-hidden"
+              >
+                {/* Shine effect */}
+                <div className="absolute top-0 -inset-full h-full w-1/2 z-5 block transform -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-20 group-hover:animate-[shine_1s]" />
+                <Send className="h-4 w-4" /> Kiri Data ({Object.keys(manometerInputs).length + (tinggiAirInput ? 1 : 0)} Terisi)
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 4: Form Input Titik ───────────────────────────────── */}
+        {step === "form-titik" && selectedReservoir && targetPointId && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500 fill-mode-both">
+            <div className="flex items-center justify-between px-1">
+              <button onClick={closeForm} className="h-8 px-3 rounded-full bg-white border border-slate-200 text-[11px] font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-all shadow-sm active:scale-95 flex items-center gap-1">
+                 <ArrowLeft className="h-3 w-3" /> Batal
+              </button>
+              <div className="text-[10px] font-extrabold text-indigo-700 tracking-wider bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
+                 Mode {isFormReservoir ? "Reservoir" : "Manometer"}
+              </div>
+            </div>
+
+            <div className="bg-white/90 backdrop-blur-2xl rounded-[28px] border border-white p-6 shadow-[0_8px_32px_rgba(0,0,0,0.04)] relative overflow-hidden">
+               {/* Subtle background glow */}
+               <div className={`absolute -top-10 -right-10 w-40 h-40 rounded-full pointer-events-none blur-[50px] opacity-20 transition-colors duration-500 ${
+                 isFormReservoir ? "bg-blue-500" :
+                 (currentTekananNum !== null && currentTekananNum < 0.5 ? "bg-red-500" : 
+                 currentTekananNum !== null && currentTekananNum < 1 ? "bg-amber-500" : 
+                 currentTekananNum !== null ? "bg-emerald-500" : "bg-indigo-400")
+               }`} />
+
+              <div className="flex items-center gap-4 mb-8 relative z-10">
+                <div className={`h-14 w-14 rounded-[16px] bg-gradient-to-br flex items-center justify-center ${
+                  isFormReservoir ? "from-blue-500 to-blue-600 shadow-blue-500/30" : "from-indigo-500 to-purple-600 shadow-indigo-500/30"
+                } shadow-md`}>
+                  {isFormReservoir ? <Droplets className="h-6 w-6 text-white" /> : <Gauge className="h-6 w-6 text-white" />}
+                </div>
+                <div>
+                  <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isFormReservoir ? "text-blue-500" : "text-indigo-500"}`}>
+                    Pengukuran Saat Ini
+                  </p>
+                  <h2 className="text-xl font-extrabold text-slate-800 tracking-tight leading-tight">
+                    {isFormReservoir ? selectedReservoir.name : targetManometerInfo?.manometer.name}
+                  </h2>
+                </div>
+              </div>
+
+              {/* Detail Info untuk Manometer */}
+              {!isFormReservoir && targetManometerInfo && (
+                <div className="mb-6 grid grid-cols-2 gap-3 relative z-10">
+                  <div className="p-3 bg-slate-50 rounded-[16px] border border-slate-100 shadow-inner">
+                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Jalur Distribusi</p>
+                     <p className="text-xs font-bold text-slate-700 truncate">Ke {targetManometerInfo.dopendName}</p>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-[16px] border border-slate-100 shadow-inner">
+                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Posisi KM</p>
+                     <p className="text-xs font-bold text-slate-700">KM {targetManometerInfo.manometer.posisiKm}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Input Area */}
+              <div className="relative z-10">
+                <label className="block text-[11px] font-bold tracking-widest text-slate-400 uppercase mb-3 text-center">
+                  {isFormReservoir ? "Tinggi Air (cm)" : "Tekanan (bar)"}
+                </label>
+                <div className="relative max-w-[200px] mx-auto">
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    max={isFormReservoir ? "999" : "20"}
+                    step={isFormReservoir ? "0.1" : "0.01"}
+                    placeholder={isFormReservoir ? "0.0" : "0.00"}
+                    value={isFormReservoir ? tinggiAirInput : currentTekananVal}
+                    onChange={e => {
+                      if (isFormReservoir) {
+                        setTinggiAirInput(e.target.value);
+                      } else {
+                        setManometerInputs(prev => ({ ...prev, [targetPointId]: e.target.value }));
+                      }
+                    }}
+                    className={`w-full h-20 px-4 text-4xl font-black text-slate-800 bg-white border-2 border-slate-200/80 rounded-[20px] outline-none transition-all text-center placeholder:text-slate-200 shadow-sm focus:ring-[6px] ${
+                      isFormReservoir ? "focus:border-blue-500 focus:ring-blue-500/15" : "focus:border-indigo-500 focus:ring-indigo-500/15"
+                    }`}
+                  />
+                  {(isFormReservoir ? tinggiAirInput : currentTekananVal) && (
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400 pointer-events-none">
+                      {isFormReservoir ? "cm" : "bar"}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Warnings */}
+              {!isFormReservoir && currentTekananNum !== null && currentTekananNum < 1 && (
+                <div className={`mt-6 p-4 rounded-[20px] flex items-start gap-3 shadow-inner animate-in slide-in-from-top-2 fade-in duration-300 border ${currentTekananNum < 0.5 ? "bg-red-50 border-red-200/60" : "bg-amber-50 border-amber-200/60"}`}>
+                  <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${currentTekananNum < 0.5 ? "bg-red-100" : "bg-amber-100"}`}>
+                    <AlertTriangle className={`h-4 w-4 ${currentTekananNum < 0.5 ? "text-red-600" : "text-amber-600"}`} />
+                  </div>
+                  <div>
+                    <p className={`text-[13px] font-extrabold ${currentTekananNum < 0.5 ? "text-red-900" : "text-amber-900"}`}>{currentTekananNum < 0.5 ? "Tekanan KRITIS!" : "Tekanan Rendah!"}</p>
+                    <p className={`text-[11px] font-medium leading-relaxed mt-1 ${currentTekananNum < 0.5 ? "text-red-700/80" : "text-amber-700/80"}`}>
+                      Aliran ke <strong>{targetManometerInfo?.dopendName}</strong> dapat terganggu.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button
-              onClick={handleSubmit}
-              className="group w-full flex items-center justify-center gap-2 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-white text-sm font-bold shadow-[0_8px_20px_rgba(16,185,129,0.25)] hover:shadow-[0_12px_24px_rgba(16,185,129,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-300 relative overflow-hidden"
+              onClick={closeForm}
+              className={`group w-full flex items-center justify-center gap-2 h-14 rounded-2xl text-white text-sm font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-300 disabled:opacity-50 disabled:grayscale ${
+                isFormReservoir ? "bg-gradient-to-br from-blue-500 to-blue-700 shadow-blue-500/25" : "bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-500/25"
+              }`}
             >
-              {/* Shine effect */}
-              <div className="absolute top-0 -inset-full h-full w-1/2 z-5 block transform -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-20 group-hover:animate-[shine_1s]" />
-              <Send className="h-4 w-4" /> Konfirmasi & Kirim Data
+              Simpan Input <Check className="h-4 w-4" />
             </button>
           </div>
         )}
 
-        {/* ── Step 6: Selesai ─────────────────────────────────────────── */}
+        {/* ── Step 5: Selesai ─────────────────────────────────────────── */}
         {step === "selesai" && (
-          <div className="p-6 pt-16 text-center space-y-8 animate-in zoom-in-95 fade-in duration-500">
+          <div className="p-6 pt-16 text-center space-y-8 animate-in zoom-in-95 fade-in duration-500 relative z-10 bg-white/80 backdrop-blur-2xl rounded-3xl pb-16">
             <div className="flex justify-center relative">
               <div className="absolute inset-0 bg-emerald-400 rounded-full blur-[40px] opacity-30 animate-pulse" />
               <div className="relative h-24 w-24 rounded-full bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center shadow-inner border border-white">
@@ -781,21 +640,15 @@ export default function InputPage() {
             <div className="space-y-2">
               <h2 className="text-2xl font-black text-slate-800 tracking-tight">Sukses Terkirim!</h2>
               <p className="text-sm text-slate-500 font-medium leading-relaxed max-w-[250px] mx-auto">
-                Laporan kondisi pengaliran dari <strong>{selectedReservoir?.name}</strong> telah diperbarui.
+                Data terbaru pengaliran <strong>{selectedReservoir?.name}</strong> berhasil dikirim ke server.
               </p>
             </div>
 
             <div className="space-y-3 pt-4">
-              <button
-                onClick={resetForm}
-                className="w-full flex items-center justify-center gap-2 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white text-sm font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-300"
-              >
+              <button onClick={resetForm} className="w-full flex items-center justify-center gap-2 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white text-sm font-bold shadow-lg transition-all duration-300 active:scale-[0.98]">
                 <Droplets className="h-4 w-4" /> Input Reservoir Lain
               </button>
-              <button
-                onClick={() => navigate("/")}
-                className="w-full flex items-center justify-center gap-2 h-14 rounded-2xl bg-white border-2 border-slate-200 text-slate-700 text-sm font-bold hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98] transition-all duration-300 shadow-sm"
-              >
+              <button onClick={() => navigate("/")} className="w-full flex items-center justify-center gap-2 h-14 rounded-2xl bg-white border-2 border-slate-200 text-slate-700 text-sm font-bold active:scale-[0.98] transition-all shadow-sm">
                 <Home className="h-4 w-4 text-slate-400" /> Kembali ke Beranda
               </button>
             </div>
@@ -805,16 +658,9 @@ export default function InputPage() {
 
       <style>{`
         /* Hide scrollbar for stepper */
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .hide-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        @keyframes shine {
-          100% { left: 125%; }
-        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes shine { 100% { left: 125%; } }
       `}</style>
     </div>
   );

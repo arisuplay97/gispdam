@@ -898,8 +898,14 @@ export default function DireksiDashboard() {
                     ))}
                   </div>
                   <select className={`text-xs border rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer ${darkMode ? "bg-gray-800 border-gray-700 text-gray-200" : "bg-white border-gray-200 text-gray-600"}`} value={selectedPointId} onChange={(e) => setSelectedPointId(e.target.value)}>
-                    <option value="all">Semua Titik</option>
-                    {activePoints.map((pt) => (<option key={pt.id} value={pt.id}>{pt.name}</option>))}
+                    <option value="all">Semua Titik (Agregat)</option>
+                    {RESERVOIRS.map(r => (
+                      <optgroup key={r.id} label={r.name}>
+                        {getJalurForReservoir(r.id).flatMap(j => getManometersForJalur(j.id)).map(m => (
+                          <option key={m.id} value={m.id}>{m.name}</option>
+                        ))}
+                      </optgroup>
+                    ))}
                   </select>
                 </div>
               </div>

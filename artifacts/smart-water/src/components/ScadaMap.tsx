@@ -1,3 +1,4 @@
+import { useLocation } from "wouter";
 import {
   MapContainer,
   TileLayer,
@@ -401,6 +402,7 @@ export function ScadaMap({
   macroUrl,
 }: ScadaMapProps) {
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   const createValve = useCreateValve();
   const createPipe = useCreatePipe();
   const deleteValve = useDeleteValve();
@@ -582,7 +584,7 @@ export function ScadaMap({
             />
           </LayersControl.BaseLayer>
 
-          <LayersControl.BaseLayer name="🗺 OpenStreetMap (Standar)">
+          <LayersControl.BaseLayer checked name="🗺 OpenStreetMap (Standar)">
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -597,7 +599,7 @@ export function ScadaMap({
             />
           </LayersControl.BaseLayer>
 
-          <LayersControl.BaseLayer checked name="✨ Clean Smooth Light">
+          <LayersControl.BaseLayer name="✨ Clean Smooth Light">
             <TileLayer
               url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
@@ -870,8 +872,8 @@ export function ScadaMap({
                   positions={seg.positions}
                   pathOptions={{
                     color: seg.color,
-                    weight: 4,
-                    opacity: 0.85,
+                    weight: 8,
+                    opacity: 0.95,
                     dashArray: seg.dashArray,
                     className: seg.dashArray ? undefined : "pipeline-animated",
                   }}
@@ -919,6 +921,16 @@ export function ScadaMap({
                            </span>
                         </div>
                       </div>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          localStorage.setItem('pending_input_point', r.id);
+                          setLocation('/input');
+                        }}
+                        className="mt-4 w-full flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold py-1.5 px-3 rounded-lg shadow-sm text-[11px] transition-colors active:scale-95"
+                      >
+                        <ClipboardEdit className="h-3 w-3" /> Input Data Saat Ini
+                      </button>
                     </div>
                   </Popup>
                   <LeafletTooltip direction="top" offset={[0, -18]} opacity={1}
@@ -1013,6 +1025,17 @@ export function ScadaMap({
                           Wilayah <strong className="font-black">{affectedArea}</strong> berpotensi turun debit airnya.
                         </div>
                       )}
+                      
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          localStorage.setItem('pending_input_point', m.id);
+                          setLocation('/input');
+                        }}
+                        className="mt-4 w-full flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 px-3 rounded-lg shadow-sm text-[11px] transition-colors active:scale-95"
+                      >
+                        <ClipboardEdit className="h-3 w-3" /> Input Data Titik Ini
+                      </button>
                     </div>
                   </Popup>
                   <LeafletTooltip direction="top" offset={[0, -14]} opacity={1}
