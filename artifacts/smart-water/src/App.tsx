@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import DireksiDashboard from "@/pages/DireksiDashboard";
+import InputPage from "@/pages/InputPage";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { setBaseUrl } from "@workspace/api-client-react";
 
@@ -28,6 +29,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/dashboard" component={DireksiDashboard} />
+      <Route path="/input" component={InputPage} />
       <Route component={NotFound} />
     </Switch>
   );

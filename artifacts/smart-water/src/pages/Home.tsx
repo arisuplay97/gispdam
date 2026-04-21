@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { RadioReceiver, Layers, Activity, Clock, ChevronDown, ChevronUp, Menu, X } from "lucide-react";
+import { RadioReceiver, Layers, Activity, Clock, ChevronDown, ChevronUp, Menu, X, ClipboardEdit } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 import {
@@ -101,6 +101,7 @@ export default function Home() {
     sources: true,
     pipes: true,
     monitoring: true,
+    networkPipes: true,
   });
   const toggleLayer = (key: keyof typeof visibleLayers) =>
     setVisibleLayers((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -261,6 +262,15 @@ export default function Home() {
         >
           <Menu className="h-5 w-5 text-slate-700" />
         </button>
+
+        {/* ── Mobile: Input Data button ── */}
+        <a
+          href="/input"
+          className="absolute left-14 top-2 z-[1001] flex h-10 items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50/95 px-3 shadow-md backdrop-blur-sm md:hidden"
+        >
+          <ClipboardEdit className="h-4 w-4 text-emerald-700" />
+          <span className="text-xs font-semibold text-emerald-700">Input Data</span>
+        </a>
 
         {/* ── Top Left (beside sidebar): Telemetry button — hidden on mobile ── */}
         <div className="absolute left-4 top-4 z-[1000] hidden md:flex flex-col items-start gap-2">

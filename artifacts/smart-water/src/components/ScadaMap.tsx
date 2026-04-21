@@ -9,15 +9,23 @@ import {
   useMapEvents,
   Circle,
   ZoomControl,
+  Tooltip as LeafletTooltip,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { Eye, EyeOff, Maximize, Minimize } from "lucide-react";
+import { Eye, EyeOff, Maximize, Minimize, ClipboardEdit, BarChart3 } from "lucide-react";
 import { EditControl } from "react-leaflet-draw";
 import "leaflet-draw/dist/leaflet.draw.css";
 import { LineChart, Line, Tooltip as RechartsTooltip, YAxis } from "recharts";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import { MonitoringLayer, type MonitoringData } from "./MonitoringLayer";
+import {
+  RESERVOIRS, DOPENDS, MANOMETERS, JALUR_PIPA,
+  getJalurCoordinates, getManometersForJalur, getDopend, getReservoir,
+  getAffectedArea, getManometerStatus,
+  STATUS_COLORS, STATUS_LABELS,
+  type ManometerStatus,
+} from "@/data/networkData";
 
 import {
   useCreateValve,
@@ -185,6 +193,7 @@ export interface ScadaMapProps {
     sources: boolean;
     pipes: boolean;
     monitoring: boolean;
+    networkPipes: boolean;
   };
   onToggleLayer?: (key: string) => void;
   // Monitoring
@@ -384,7 +393,7 @@ export function ScadaMap({
   pipeColor = "#a855f7",
   visibleLayers = {
     valves: true, pipelines: true, customers: true,
-    serviceLines: true, sources: true, pipes: true, monitoring: true,
+    serviceLines: true, sources: true, pipes: true, monitoring: true, networkPipes: true,
   },
   onToggleLayer,
   monitoringData,
@@ -822,6 +831,202 @@ export function ScadaMap({
             editMode={editMode}
           />
         )}
+
+        {/* ── Network Distribution Layer (Pipa Jaringan + Manometer + Dopend) ── */}
+        {visibleLayers.networkPipes && (
+          <>
+            {/* Pipa Jaringan dari setiap Reservoir ke Dopend */}
+            {JALUR_PIPA.map(jalur => {
+              const coords = getJalurCoordinates(jalur.id);
+              const manometers = getManometersForJalur(jalur.id);
+              if (coords.length < 2) return null;
+
+              // Build pipe segments: between each coordinate pair, color based on manometer status
+              const segments: { positions: [number, number][]; color: string; dashArray?: string }[] = [];
+              let foundCritical = false;
+
+              for (let i = 0; i < coords.length - 1; i++) {
+                // After first point (reservoir), check manometer at index i-1
+                if (i > 0 && i - 1 < manometers.length) {
+                  const man = manometers[i - 1];
+                  if (man.status === "kritis") foundCritical = true;
+                  else if (man.status === "waspada" && !foundCritical) {
+                    // waspada doesn't make subsequent lines red
+                  }
+                }
+
+                const color = foundCritical ? "#ef4444" : "#3b82f6";
+                const dashArray = foundCritical ? "8 8" : undefined;
+                segments.push({
+                  positions: [coords[i], coords[i + 1]],
+                  color,
+                  dashArray,
+                });
+              }
+
+              return segments.map((seg, si) => (
+                <Polyline
+                  key={`net-${jalur.id}-seg-${si}`}
+                  positions={seg.positions}
+                  pathOptions={{
+                    color: seg.color,
+                    weight: 4,
+                    opacity: 0.85,
+                    dashArray: seg.dashArray,
+                    className: seg.dashArray ? undefined : "pipeline-animated",
+                  }}
+                />
+              ));
+            })}
+
+            {/* Reservoir Markers */}
+            {RESERVOIRS.map(r => {
+              const statusColor = r.status === "normal" ? "#22c55e" : r.status === "waspada" ? "#f59e0b" : "#ef4444";
+              const statusBg = r.status === "normal" ? "#f0fdf4" : r.status === "waspada" ? "#fffbeb" : "#fef2f2";
+              const icon = L.divIcon({
+                className: "bg-transparent",
+                html: `<div style="position:relative;width:32px;height:32px">
+                  <div style="width:32px;height:32px;border-radius:6px;background:${statusColor};border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+                  </div>
+                </div>`,
+                iconSize: [32, 32],
+                iconAnchor: [16, 16],
+              });
+              return (
+                <Marker key={`res-${r.id}`} position={[r.lat, r.lng]} icon={icon}>
+                  <Popup minWidth={220} className="premium-popup">
+                    <div className="text-slate-800 p-1" style={{ minWidth: 200 }}>
+                      <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
+                        <div className="h-6 w-6 rounded-md flex items-center justify-center shadow-sm" style={{ background: statusColor }}>
+                          <Droplets className="h-3.5 w-3.5 text-white" />
+                        </div>
+                        <h3 className="font-extrabold text-slate-800 text-sm tracking-tight">{r.name}</h3>
+                      </div>
+                      <div className="space-y-2 text-xs">
+                        <div className="flex justify-between items-center bg-slate-50 p-1.5 rounded-md">
+                           <span className="text-slate-500 font-bold uppercase text-[9px] tracking-wider">Tinggi Air</span>
+                           <span className="font-black text-sm" style={{ color: statusColor }}>{r.tinggiAir} <span className="text-[10px] opacity-70">cm</span></span>
+                        </div>
+                        <div className="flex justify-between items-center px-1.5">
+                           <span className="text-slate-500 font-bold uppercase text-[9px] tracking-wider">Kapasitas</span>
+                           <span className="font-semibold text-slate-600">{r.kapasitas} <span className="text-[10px] opacity-70">cm</span></span>
+                        </div>
+                        <div className="flex justify-between items-center px-1.5">
+                           <span className="text-slate-500 font-bold uppercase text-[9px] tracking-wider">Status</span>
+                           <span className="font-bold text-[10px] px-2 py-0.5 rounded shadow-sm" style={{ background: statusBg, color: statusColor }}>
+                             {r.status === 'normal' ? 'Normal' : r.status === 'waspada' ? 'Waspada' : 'Kritis'}
+                           </span>
+                        </div>
+                      </div>
+                    </div>
+                  </Popup>
+                  <LeafletTooltip direction="top" offset={[0, -18]} opacity={1}
+                    className="!bg-white !border-0 !shadow-xl !rounded-xl !font-sans !px-3 !py-2">
+                    <div className="text-center">
+                      <p className="font-bold text-xs text-slate-900">{r.name}</p>
+                      <p className="text-[10px] font-semibold" style={{ color: statusColor }}>{r.tinggiAir} cm</p>
+                    </div>
+                  </LeafletTooltip>
+                </Marker>
+              );
+            })}
+
+            {/* Dopend Markers */}
+            {DOPENDS.map(d => {
+              const icon = L.divIcon({
+                className: "bg-transparent",
+                html: `<div style="width:22px;height:22px;border-radius:4px;background:#6366f1;border:2.5px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                </div>`,
+                iconSize: [22, 22],
+                iconAnchor: [11, 11],
+              });
+              return (
+                <Marker key={`dop-${d.id}`} position={[d.lat, d.lng]} icon={icon}>
+                  <Popup>
+                    <div className="text-slate-800" style={{ minWidth: 150 }}>
+                      <h3 className="font-bold text-indigo-700 text-sm">{d.name}</h3>
+                      <p className="text-xs text-slate-500 mt-1">Titik akhir distribusi</p>
+                    </div>
+                  </Popup>
+                  <LeafletTooltip direction="top" offset={[0, -14]} opacity={1}
+                    className="!bg-white !border-0 !shadow-xl !rounded-xl !font-sans !px-2 !py-1">
+                    <p className="font-bold text-[10px] text-slate-900">{d.name}</p>
+                  </LeafletTooltip>
+                </Marker>
+              );
+            })}
+
+            {/* Manometer Markers */}
+            {MANOMETERS.map(m => {
+              const color = STATUS_COLORS[m.status];
+              const icon = L.divIcon({
+                className: "bg-transparent",
+                html: `<div style="position:relative;width:24px;height:24px">
+                  <div style="width:24px;height:24px;border-radius:50%;background:white;border:3px solid ${color};box-shadow:0 2px 8px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;${m.status === 'kritis' ? 'animation:criticalPulse 1.1s ease-in-out infinite;' : ''}">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round">
+                      <circle cx="12" cy="14" r="8"/>
+                      <line x1="12" y1="14" x2="12" y2="8"/>
+                      <line x1="12" y1="14" x2="16" y2="11"/>
+                    </svg>
+                  </div>
+                </div>`,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12],
+              });
+
+              const affectedArea = getAffectedArea(m.id);
+
+              return (
+                <Marker key={`man-${m.id}`} position={[m.lat, m.lng]} icon={icon}>
+                  <Popup minWidth={240} className="premium-popup">
+                    <div className="text-slate-800 p-1" style={{ minWidth: 220 }}>
+                      <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
+                        <div className="h-6 w-6 rounded-md flex items-center justify-center shadow-sm" style={{ background: color }}>
+                          <Gauge className="h-3.5 w-3.5 text-white" />
+                        </div>
+                        <h3 className="font-extrabold text-slate-800 text-sm tracking-tight">{m.name}</h3>
+                      </div>
+                      <div className="space-y-2 text-xs">
+                        <div className="flex justify-between items-center bg-slate-50 p-1.5 rounded-md border border-slate-100/50">
+                          <span className="text-slate-500 font-bold uppercase text-[9px] tracking-wider">Tekanan</span>
+                          <span className="font-black text-sm" style={{ color }}>{m.tekanan !== null ? m.tekanan : '—'} <span className="text-[10px] opacity-70">bar</span></span>
+                        </div>
+                        <div className="flex justify-between items-center px-1.5 pt-1">
+                          <span className="text-slate-500 font-bold uppercase text-[9px] tracking-wider">Status</span>
+                          <span className="font-bold px-2 py-0.5 rounded shadow-sm text-[10px]" style={{
+                            color,
+                            background: m.status === 'normal' ? '#f0fdf4' : m.status === 'waspada' ? '#fffbeb' : m.status === 'kritis' ? '#fef2f2' : '#f8fafc'
+                          }}>{STATUS_LABELS[m.status]}</span>
+                        </div>
+                        <div className="flex justify-between items-center px-1.5">
+                          <span className="text-slate-500 font-bold uppercase text-[9px] tracking-wider">Posisi</span>
+                          <span className="font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded text-[10px]">KM {m.posisiKm}</span>
+                        </div>
+                      </div>
+                      {(m.status === 'waspada' || m.status === 'kritis') && affectedArea && (
+                        <div className={`mt-3 p-2.5 rounded-xl text-[10px] font-medium leading-relaxed shadow-inner border border-l-[3px] ${
+                          m.status === 'kritis' ? 'bg-red-50 border-red-200 border-l-red-500 text-red-800' : 'bg-amber-50 border-amber-200 border-l-amber-500 text-amber-800'
+                        }`}>
+                          <strong className="block mb-0.5">⚠️ Gangguan Distribusi</strong>
+                          Wilayah <strong className="font-black">{affectedArea}</strong> berpotensi turun debit airnya.
+                        </div>
+                      )}
+                    </div>
+                  </Popup>
+                  <LeafletTooltip direction="top" offset={[0, -14]} opacity={1}
+                    className="!bg-white !border-0 !shadow-xl !rounded-xl !font-sans !px-2 !py-1">
+                    <div className="text-center">
+                      <p className="font-bold text-[10px] text-slate-900">{m.name}</p>
+                      <p className="text-[10px] font-bold" style={{ color }}>{m.tekanan !== null ? `${m.tekanan} bar` : '—'}</p>
+                    </div>
+                  </LeafletTooltip>
+                </Marker>
+              );
+            })}
+          </>
+        )}
       </MapContainer>
 
       {/* ── Interactive Legend (click to toggle, hover to highlight) */}
@@ -852,6 +1057,7 @@ export function ScadaMap({
               { key: "customers",    label: "Pelanggan",            swatch: <span className="h-4 w-4 rounded-full border-2 border-white bg-emerald-500 shadow inline-flex items-center justify-center shrink-0"><svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span> },
               { key: "serviceLines", label: "Sambungan Pelanggan",  swatch: <span className="h-[2px] w-5 inline-block" style={{ background: "repeating-linear-gradient(90deg,#0ea5e9 0,#0ea5e9 4px,transparent 4px,transparent 7px)" }} /> },
               { key: "monitoring",   label: "Titik Monitoring",     swatch: <span className="inline-flex shrink-0"><svg width="18" height="20" viewBox="0 0 40 46" fill="none"><polygon points="20,7 33.8,15 33.8,31 20,39 6.2,31 6.2,15" fill="#dcfce7" stroke="#16a34a" strokeWidth="2" strokeLinejoin="round"/><polygon points="20,11 30.4,17 30.4,29 20,35 9.6,29 9.6,17" fill="#bbf7d0" opacity="0.8"/><text x="20" y="27" textAnchor="middle" fill="#16a34a" fontSize="10" fontWeight="900" fontFamily="monospace" letterSpacing="-0.5">RES</text></svg></span> },
+              { key: "networkPipes", label: "Jaringan Distribusi",  swatch: <span className="flex items-center gap-0.5"><span className="h-3 w-3 rounded-full border-2 border-emerald-500 bg-white" /><span className="h-[3px] w-3 bg-blue-500 rounded" /><span className="h-3 w-3 rounded-full border-2 border-amber-500 bg-white" /></span> },
             ] as Array<{ key: keyof typeof visibleLayers; label: string; swatch: React.ReactNode }>).map(({ key, label, swatch }) => {
               const isVisible = visibleLayers[key];
               const isHov = hoveredLegendLayer === key;
@@ -882,6 +1088,16 @@ export function ScadaMap({
           🎯 Klik pada peta untuk menentukan koordinat valve baru
         </div>
       )}
+
+      {/* ── Navigation Buttons (top-left below telemetry area) ────── */}
+      <div className="absolute top-16 left-4 z-[999] flex flex-col gap-2 md:hidden">
+        <a href="/input" className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-slate-200 shadow-md text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition-all">
+          <ClipboardEdit className="h-3.5 w-3.5" /> Input Data
+        </a>
+        <a href="/dashboard" className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-slate-200 shadow-md text-xs font-semibold text-blue-700 hover:bg-blue-50 transition-all">
+          <BarChart3 className="h-3.5 w-3.5" /> Dashboard
+        </a>
+      </div>
     </div>
   );
 }

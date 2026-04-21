@@ -12,8 +12,16 @@ import {
 import {
   ArrowLeft, AlertTriangle, TrendingUp, FileDown,
   Droplets, Clock, Moon, Sun, Sparkles, Loader2,
+  ClipboardEdit, Map as MapIcon, Gauge, ChevronDown,
 } from "lucide-react";
 import { MONITORING_POINTS, type MonitoringData, type MonitoringPoint } from "@/components/MonitoringLayer";
+import {
+  RESERVOIRS, MANOMETERS, JALUR_PIPA, DOPENDS,
+  getJalurForReservoir, getManometersForJalur, getDopend, getReservoir,
+  getAffectedArea, getCriticalManometers, getProblematicManometers,
+  STATUS_COLORS, STATUS_LABELS,
+  type Reservoir as NetworkReservoir,
+} from "@/data/networkData";
 import { useGetMonitoringData, useListMonitoringPoints } from "@workspace/api-client-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -344,7 +352,7 @@ async function exportPDF(statuses: PointStatus[]) {
       .summary td:first-child { text-align: left; font-weight: 600; }
       /* Main table */
       .section-title { font-size: 10pt; font-weight: 700; text-transform: uppercase;
-        letter-spacing: 0.05em; color: #374151; margin-bottom: 6px; }
+        letter-spacing: 0.05em; color: #374151; margin-bottom: 6px; margin-top: 20px; }
       table.data { width: 100%; border-collapse: collapse; }
       table.data th {
         background: #f3f4f6; text-align: left; padding: 6px 8px;
@@ -354,6 +362,7 @@ async function exportPDF(statuses: PointStatus[]) {
       table.data td { padding: 6px 8px; border: 1px solid #e5e7eb; font-size: 10pt; vertical-align: top; }
       .footer { margin-top: 24px; border-top: 1px solid #d1d5db; padding-top: 8px;
         text-align: center; color: #9ca3af; font-size: 8pt; }
+      .alert-box { background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 8px 12px; margin: 12px 0; font-size: 9pt; color: #991b1b; }
       @media print { body { padding: 12px 18px; } }
     </style>
   </head><body>
@@ -390,6 +399,65 @@ async function exportPDF(statuses: PointStatus[]) {
       </tr></thead>
       <tbody>${rowsHtml}</tbody>
     </table>
+
+    ${/* PDF Section: Kondisi Tekanan Jaringan */(() => {
+      const manRows = MANOMETERS.map((m, i) => {
+        const jalur = JALUR_PIPA.find(j => j.manometerIds.includes(m.id));
+        const res = jalur ? getReservoir(jalur.reservoirId) : null;
+        const dop = jalur ? getDopend(jalur.dopendId) : null;
+        const statusColor = m.status === 'normal' ? '#15803d' : m.status === 'waspada' ? '#b45309' : m.status === 'kritis' ? '#dc2626' : '#6b7280';
+        const statusLabel = m.status === 'normal' ? 'Normal' : m.status === 'waspada' ? 'Waspada' : m.status === 'kritis' ? 'Kritis' : 'Belum Input';
+        return \`<tr style="background:\${i % 2 === 0 ? '#fff' : '#f8f9fa'};">
+          <td style="text-align:center;">\${i+1}</td>
+          <td><strong>\${m.name}</strong></td>
+          <td>\${res?.name ?? '-'} → \${dop?.name ?? '-'}</td>
+          <td style="text-align:center;">\${m.tekanan !== null ? m.tekanan + ' bar' : '—'}</td>
+          <td style="text-align:center;">\${m.tekanan !== null ? m.tekanan + ' bar' : '—'}</td>
+          <td style="color:\${statusColor};font-weight:600;">\${statusLabel}</td>
+        </tr>\`;
+      }).join('');
+      return \`<div class="section-title">Kondisi Tekanan Jaringan</div>
+      <table class="data">
+        <thead><tr>
+          <th style="width:30px;text-align:center;">No</th>
+          <th>Nama Manometer</th>
+          <th>Jalur (Reservoir → Dopend)</th>
+          <th style="width:80px;text-align:center;">Tekanan Pagi</th>
+          <th style="width:80px;text-align:center;">Tekanan Sore</th>
+          <th style="width:70px;">Status</th>
+        </tr></thead>
+        <tbody>\${manRows}</tbody>
+      </table>\`;
+    })()}
+
+    ${/* PDF Section: Wilayah Berpotensi Terdampak */(() => {
+      const problematic = getProblematicManometers();
+      if (problematic.length === 0) return '';
+      const affectedRows = problematic.map((m, i) => {
+        const area = getAffectedArea(m.id);
+        const statusLabel = m.status === 'waspada' ? 'Waspada' : 'Kritis';
+        const statusColor = m.status === 'kritis' ? '#dc2626' : '#b45309';
+        return \`<tr style="background:\${i % 2 === 0 ? '#fff' : '#f8f9fa'};">
+          <td style="text-align:center;">\${i+1}</td>
+          <td><strong>\${m.name}</strong></td>
+          <td style="color:\${statusColor};font-weight:600;">\${m.tekanan !== null ? m.tekanan + ' bar' : '—'}</td>
+          <td style="color:\${statusColor};font-weight:600;">\${statusLabel}</td>
+          <td>\${area ?? '-'}</td>
+        </tr>\`;
+      }).join('');
+      return \`<div class="section-title" style="color:#dc2626;">⚠ Wilayah Berpotensi Terdampak</div>
+      <div class="alert-box">Ditemukan \${problematic.length} manometer dengan status waspada/kritis yang berpotensi memengaruhi distribusi air ke wilayah hilir.</div>
+      <table class="data">
+        <thead><tr>
+          <th style="width:30px;text-align:center;">No</th>
+          <th>Manometer</th>
+          <th style="width:80px;">Tekanan</th>
+          <th style="width:70px;">Status</th>
+          <th>Wilayah Terdampak</th>
+        </tr></thead>
+        <tbody>\${affectedRows}</tbody>
+      </table>\`;
+    })()}
 
     <div class="footer">
       Dokumen ini dicetak otomatis oleh Tiara Manajemen Distribusi &bull; ${dateStr} &bull; ${timeStr}
@@ -591,6 +659,12 @@ export default function DireksiDashboard() {
               <FileDown className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Export Laporan</span>
             </button>
+            <a href="/input" className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              darkMode ? "bg-emerald-600 text-white hover:bg-emerald-500" : "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+            }`}>
+              <ClipboardEdit className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Input Data</span>
+            </a>
           </div>
         </div>
       </header>
@@ -600,12 +674,165 @@ export default function DireksiDashboard() {
         <span>{dateStr}</span>
       </div>
 
+      {/* Critical Manometer Alert Banner */}
+      {(() => {
+        const criticalMans = getCriticalManometers();
+        if (criticalMans.length === 0) return null;
+        return (
+          <div className={`px-4 sm:px-8 py-3 border-b ${
+            darkMode ? "bg-red-950/50 border-red-900" : "bg-red-50 border-red-100"
+          }`}>
+            <div className="max-w-[1440px] mx-auto flex items-start gap-3">
+              <AlertTriangle className={`h-5 w-5 shrink-0 mt-0.5 ${darkMode ? "text-red-400" : "text-red-600"}`} />
+              <div className="flex-1">
+                <p className={`text-sm font-bold ${darkMode ? "text-red-300" : "text-red-800"}`}>
+                  ⚠ {criticalMans.length} Manometer Kritis Terdeteksi!
+                </p>
+                <div className="mt-1 space-y-0.5">
+                  {criticalMans.map(m => {
+                    const area = getAffectedArea(m.id);
+                    return (
+                      <p key={m.id} className={`text-xs ${darkMode ? "text-red-400" : "text-red-700"}`}>
+                        <span className="font-semibold">{m.name}</span> — Tekanan {m.tekanan} bar
+                        {area && <span> → Wilayah terdampak: <strong>{area}</strong></span>}
+                      </p>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Content */}
       <div className="px-4 sm:px-8 py-6 max-w-[1440px] mx-auto">
         <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-6">
 
           {/* LEFT COL */}
           <div className="space-y-6">
+
+            {/* ── Jaringan Distribusi Section ───────────────────────── */}
+            <div className={`rounded-[24px] border p-6 transition-colors shadow-sm relative overflow-hidden ${darkMode ? "bg-gray-900 border-gray-800" : "bg-white border-gray-100"}`}>
+              {/* Subtle background glow */}
+              {!darkMode && <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-50 rounded-full blur-[80px] pointer-events-none" />}
+              
+              <div className="flex items-center justify-between mb-6 relative z-10">
+                <div className="flex items-center gap-3">
+                  <div className={`flex items-center justify-center w-10 h-10 rounded-xl shadow-inner ${darkMode ? "bg-blue-900/40 text-blue-400" : "bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-600 border border-blue-100"}`}>
+                    <Gauge className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-extrabold tracking-tight">Jaringan Distribusi</h3>
+                    <p className={`text-[11px] font-medium ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Pemantauan Tekanan & Tinggi Air</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Reservoir cards in a grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 relative z-10">
+                {RESERVOIRS.map(r => {
+                  const jalurs = getJalurForReservoir(r.id);
+                  const allMans = jalurs.flatMap(j => getManometersForJalur(j.id));
+                  const kritisCount = allMans.filter(m => m.status === "kritis").length;
+                  const waspadaCount = allMans.filter(m => m.status === "waspada").length;
+                  const statusColor = r.status === "normal" ? (darkMode ? "#4ade80" : "#16a34a") : r.status === "waspada" ? "#f59e0b" : "#ef4444";
+                  const statusBg = r.status === "normal" ? (darkMode ? "rgba(74,222,128,0.1)" : "#f0fdf4") : r.status === "waspada" ? (darkMode ? "rgba(245,158,11,0.1)" : "#fffbeb") : (darkMode ? "rgba(239,68,68,0.1)" : "#fef2f2");
+                  const pct = Math.round((r.tinggiAir / r.kapasitas) * 100);
+
+                  return (
+                    <div key={r.id} className={`relative rounded-[20px] border p-5 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 ${darkMode ? "bg-gray-800/80 border-gray-700 hover:border-gray-600" : "bg-white border-gray-100 hover:border-indigo-100"}`}>
+                      <div className="absolute right-0 top-0 w-24 h-24 rounded-tr-[20px] rounded-bl-full pointer-events-none" style={{ background: `radial-gradient(circle at top right, ${statusBg}, transparent 70%)` }} />
+                      
+                      <div className="flex items-center gap-2.5 mb-3 relative z-10">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg shadow-sm" style={{ background: statusBg }}>
+                          <Droplets className="h-4 w-4" style={{ color: statusColor }} />
+                        </div>
+                        <span className="text-sm font-bold truncate">{r.name}</span>
+                      </div>
+                      <div className="flex items-baseline gap-2 mb-3 relative z-10">
+                        <span className="text-3xl font-black tracking-tight" style={{ color: statusColor }}>{r.tinggiAir}</span>
+                        <span className={`text-[11px] font-semibold ${darkMode ? "text-gray-500" : "text-gray-400"}`}>cm / {r.kapasitas}</span>
+                      </div>
+                      {/* Progress bar */}
+                      <div className={`h-2 w-full rounded-full mb-3 shadow-inner ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
+                        <div className="h-full rounded-full transition-all duration-700 ease-out relative overflow-hidden" style={{ width: `${Math.min(100, pct)}%`, background: statusColor }}>
+                          <div className="absolute inset-0 bg-white/20" />
+                        </div>
+                      </div>
+                      {/* Manometer summary */}
+                      <div className="flex items-center gap-2 text-[10px]">
+                        <span className={darkMode ? "text-gray-500" : "text-gray-400"}>{allMans.length} manometer</span>
+                        {kritisCount > 0 && <span className="text-red-500 font-bold">{kritisCount} kritis</span>}
+                        {waspadaCount > 0 && <span className="text-amber-500 font-bold">{waspadaCount} waspada</span>}
+                        {kritisCount === 0 && waspadaCount === 0 && <span className="text-emerald-500 font-semibold">✓ semua normal</span>}
+                      </div>
+                      {/* Dopend targets */}
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {jalurs.map(j => {
+                          const dop = getDopend(j.dopendId);
+                          return dop ? (
+                            <span key={j.id} className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${darkMode ? "bg-gray-700 text-gray-400" : "bg-gray-200 text-gray-500"}`}>
+                              → {dop.name}
+                            </span>
+                          ) : null;
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Manometer detail table */}
+              <div className={`rounded-[16px] border overflow-hidden shadow-sm relative z-10 ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead>
+                    <tr className={darkMode ? "bg-gray-800 border-b border-gray-700" : "bg-slate-50 border-b border-gray-200/80"}>
+                      <th className={`px-4 py-3 font-bold uppercase tracking-wider text-[10px] ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Manometer</th>
+                      <th className={`px-4 py-3 font-bold uppercase tracking-wider text-[10px] ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Jalur</th>
+                      <th className={`text-center px-4 py-3 font-bold uppercase tracking-wider text-[10px] ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Tekanan</th>
+                      <th className={`text-center px-4 py-3 font-bold uppercase tracking-wider text-[10px] ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {MANOMETERS.map((m, i) => {
+                      const jalur = JALUR_PIPA.find(j => j.manometerIds.includes(m.id));
+                      const res = jalur ? getReservoir(jalur.reservoirId) : null;
+                      const dop = jalur ? getDopend(jalur.dopendId) : null;
+                      const color = STATUS_COLORS[m.status];
+                      return (
+                        <tr key={m.id} className={`border-b last:border-0 ${
+                          darkMode ? "border-gray-700/50 hover:bg-gray-800/80" : "border-gray-100 hover:bg-gray-50/80"
+                        } transition-colors`}>
+                          <td className="px-4 py-3 font-semibold">{m.name}</td>
+                          <td className={`px-4 py-3 font-medium ${darkMode ? "text-gray-500" : "text-gray-500"}`}>
+                            <span className="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded text-[10px] mr-1">{res?.name?.replace("Reservoir ", "")}</span> 
+                            → 
+                            <span className="bg-rose-50 text-rose-600 px-1.5 py-0.5 rounded text-[10px] ml-1">{dop?.name?.replace("Dopend ", "")}</span>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className="font-extrabold text-sm" style={{ color }}>{m.tekanan !== null ? m.tekanan : "—"}</span>
+                            {m.tekanan !== null && <span className="text-[10px] ml-1 opacity-70" style={{ color }}>bar</span>}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className="inline-flex px-2.5 py-1 rounded-md text-[10px] font-bold shadow-sm" style={{
+                              color,
+                              background: m.status === "normal" ? (darkMode ? "rgba(34,197,94,0.15)" : "#f0fdf4")
+                                : m.status === "waspada" ? (darkMode ? "rgba(245,158,11,0.15)" : "#fffbeb")
+                                : m.status === "kritis" ? (darkMode ? "rgba(239,68,68,0.15)" : "#fef2f2")
+                                : (darkMode ? "rgba(156,163,175,0.15)" : "#f8fafc"),
+                            }}>
+                              {STATUS_LABELS[m.status]}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
             {/* Metric Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className={`rounded-xl border p-5 transition-colors ${darkMode ? "bg-gray-900 border-gray-800" : "bg-white border-gray-200"}`}>
