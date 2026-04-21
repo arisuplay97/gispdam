@@ -88,57 +88,75 @@ function aggregatePoints(
 }
 
 function generateChartData(
-  monitoringData: Record<string, MonitoringData>,
+  rawRows: { pointId: string; session: string; date: string; tinggiAir?: number | null; tekanan?: number | null }[],
   selectedPointId: string,
   period: ChartPeriod,
 ) {
   const now = new Date();
   const data: any[] = [];
 
+  // Build per-day aggregates straight from raw DB rows
+  function dayStats(dateStr: string) {
+    const rows = rawRows.filter(r => {
+      if (new Date(r.date).toISOString().split("T")[0] !== dateStr) return false;
+      if (selectedPointId !== "all" && r.pointId !== selectedPointId) return false;
+      return true;
+    });
+    let tT = 0, tP = 0, cT = 0, cP = 0;
+    rows.forEach(r => {
+      if (r.tinggiAir != null) { tT += r.tinggiAir; cT++; }
+      if (r.tekanan != null)   { tP += r.tekanan;   cP++; }
+    });
+    return {
+      tinggiAir: cT > 0 ? Number((tT / cT).toFixed(1)) : null,
+      tekanan:   cP > 0 ? Number((tP / cP).toFixed(2)) : null,
+    };
+  }
+
   if (period === "daily") {
-    // 7 hari terakhir
     for (let i = 6; i >= 0; i--) {
       const d = new Date(); d.setDate(now.getDate() - i);
+      const dateStr = d.toISOString().split("T")[0];
       const dayName = HARI[d.getDay()];
-      const dateStr = `${d.getDate()}/${d.getMonth() + 1}`;
-      const vals = aggregatePoints(MONITORING_POINTS, monitoringData, selectedPointId, i);
-      data.push({ ...vals, label: dayName, sublabel: dateStr });
+      const dateLabel = `${d.getDate()}/${d.getMonth() + 1}`;
+      data.push({ ...dayStats(dateStr), label: dayName, sublabel: dateLabel });
     }
   } else if (period === "weekly") {
-    // 4 minggu terakhir
     for (let w = 3; w >= 0; w--) {
-      let tT = 0, tP = 0, cnt = 0;
+      let tT = 0, tP = 0, cT = 0, cP = 0;
       for (let d = 0; d < 7; d++) {
-        const idx = w * 7 + d;
-        const vals = aggregatePoints(MONITORING_POINTS, monitoringData, selectedPointId, idx);
-        if (vals.tinggiAir != null) { tT += vals.tinggiAir; cnt++; }
-        if (vals.tekanan != null)   { tP += vals.tekanan; }
+        const dd = new Date(); dd.setDate(now.getDate() - w * 7 - d);
+        const ds = dd.toISOString().split("T")[0];
+        const s = dayStats(ds);
+        if (s.tinggiAir != null) { tT += s.tinggiAir; cT++; }
+        if (s.tekanan != null)   { tP += s.tekanan;   cP++; }
       }
       const weekStart = new Date(); weekStart.setDate(now.getDate() - w * 7 - 6);
-      const weekEnd = new Date(); weekEnd.setDate(now.getDate() - w * 7);
+      const weekEnd = new Date();   weekEnd.setDate(now.getDate() - w * 7);
       data.push({
         label: `Mgg ${4 - w}`,
-        sublabel: `${weekStart.getDate()}/${weekStart.getMonth() + 1}-${weekEnd.getDate()}/${weekEnd.getMonth() + 1}`,
-        tinggiAir: cnt > 0 ? Number((tT / cnt).toFixed(1)) : null,
-        tekanan:   cnt > 0 ? Number((tP / cnt).toFixed(2)) : null,
+        sublabel: `${weekStart.getDate()}/${weekStart.getMonth() + 1}–${weekEnd.getDate()}/${weekEnd.getMonth() + 1}`,
+        tinggiAir: cT > 0 ? Number((tT / cT).toFixed(1)) : null,
+        tekanan:   cP > 0 ? Number((tP / cP).toFixed(2)) : null,
       });
     }
   } else {
-    // 6 bulan terakhir
     for (let m = 5; m >= 0; m--) {
       const target = new Date(now.getFullYear(), now.getMonth() - m, 1);
-      let tT = 0, tP = 0, cnt = 0;
-      // simulate ~30 days worth
-      for (let d = 0; d < 30; d++) {
-        const vals = aggregatePoints(MONITORING_POINTS, monitoringData, selectedPointId, m * 30 + d);
-        if (vals.tinggiAir != null) { tT += vals.tinggiAir; cnt++; }
-        if (vals.tekanan != null)   { tP += vals.tekanan; }
+      let tT = 0, tP = 0, cT = 0, cP = 0;
+      for (let d = 0; d < 31; d++) {
+        const dd = new Date(target.getFullYear(), target.getMonth(), d + 1);
+        if (dd.getMonth() !== target.getMonth()) break;
+        const ds = dd.toISOString().split("T")[0];
+        const s = dayStats(ds);
+        if (s.tinggiAir != null) { tT += s.tinggiAir; cT++; }
+        if (s.tekanan != null)   { tP += s.tekanan;   cP++; }
       }
       data.push({
         label: BULAN[target.getMonth()],
         sublabel: `${target.getFullYear()}`,
-        tinggiAir: cnt > 0 ? Number((tT / cnt).toFixed(1)) : null,
-        tekanan:   cnt > 0 ? Number((tP / cnt).toFixed(2)) : null,
+        tinggiAir: cT > 0 ? Number((tT / cT).toFixed(1)) : null,
+        tekanan:   cP > 0 ? Number((tP / cP).toFixed(2)) : null,
       });
     }
   }
@@ -477,12 +495,12 @@ export default function DireksiDashboard() {
   const { data: customNames } = useNetworkNodeNames();
   const [darkMode, setDarkMode] = useState(false);
 
-  // Gunakan titik dari DB; jika kosong fallback ke MONITORING_POINTS hardcoded
-  const activePoints: MonitoringPoint[] = useMemo(() => {
-    if (dbPoints && dbPoints.length > 0)
-      return dbPoints.map(p => ({ id: p.pointId, name: p.name, lat: p.lat, lng: p.lng }));
-    return MONITORING_POINTS;
-  }, [dbPoints]);
+  // Titik jaringan = gabungan RESERVOIRS + MANOMETERS dari networkData (IDs: RES-01..03, MAN-01..09)
+  // Ini sesuai dengan pointId yang dipakai saat seeding dummy data dan input lapangan
+  const activePoints: MonitoringPoint[] = useMemo(() => [
+    ...RESERVOIRS.map(r => ({ id: r.id, name: customNames?.[r.id] || r.name, lat: r.lat, lng: r.lng })),
+    ...MANOMETERS.map(m => ({ id: m.id, name: customNames?.[m.id] || m.name, lat: m.lat, lng: m.lng })),
+  ], [customNames]);
 
   // Style untuk animasi cahaya garis prediksi (bolak-balik)
   const animStyle = `
@@ -516,7 +534,19 @@ export default function DireksiDashboard() {
   const [selectedPointId, setSelectedPointId] = useState<string>("all");
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("daily");
 
-  const chartRaw = useMemo(() => generateChartData(monitoringData, selectedPointId, chartPeriod), [monitoringData, selectedPointId, chartPeriod]);
+  // Flatten rawMonitoringData (array from API) for chart generation
+  const flatRawRows = useMemo(() => {
+    if (!rawMonitoringData) return [];
+    return rawMonitoringData.map(r => ({
+      pointId: r.pointId,
+      session: r.session,
+      date: r.date,
+      tinggiAir: r.tinggiAir ?? null,
+      tekanan: r.tekanan ?? null,
+    }));
+  }, [rawMonitoringData]);
+
+  const chartRaw = useMemo(() => generateChartData(flatRawRows, selectedPointId, chartPeriod), [flatRawRows, selectedPointId, chartPeriod]);
   // AI state — hanya dieksekusi ketika tombol ditekan
   const [aiPredictions, setAiPredictions] = useState<{ predTinggi: number; predTekanan: number }[] | null>(null);
   const [isAILoading, setIsAILoading] = useState(false);
