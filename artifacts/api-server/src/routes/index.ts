@@ -9,6 +9,7 @@ import telemetryRouter from "./telemetry";
 import dashboardRouter from "./dashboard";
 import monitoringRouter from "./monitoring";
 import aiRouter from "./ai";
+import networkNodeNamesRouter from "./network_node_names";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(telemetryRouter);
 router.use(dashboardRouter);
 router.use(monitoringRouter);
 router.use(aiRouter);
+router.use(networkNodeNamesRouter);
 
 export default router;
