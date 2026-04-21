@@ -13,7 +13,7 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { Eye, EyeOff, Maximize, Minimize, ClipboardEdit, BarChart3 } from "lucide-react";
+import { Eye, EyeOff, Maximize, Minimize, ClipboardEdit, BarChart3, Droplets, Gauge } from "lucide-react";
 import { EditControl } from "react-leaflet-draw";
 import "leaflet-draw/dist/leaflet.draw.css";
 import { LineChart, Line, Tooltip as RechartsTooltip, YAxis } from "recharts";
