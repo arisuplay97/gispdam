@@ -407,16 +407,16 @@ async function exportPDF(statuses: PointStatus[]) {
         const dop = jalur ? getDopend(jalur.dopendId) : null;
         const statusColor = m.status === 'normal' ? '#15803d' : m.status === 'waspada' ? '#b45309' : m.status === 'kritis' ? '#dc2626' : '#6b7280';
         const statusLabel = m.status === 'normal' ? 'Normal' : m.status === 'waspada' ? 'Waspada' : m.status === 'kritis' ? 'Kritis' : 'Belum Input';
-        return \`<tr style="background:\${i % 2 === 0 ? '#fff' : '#f8f9fa'};">
-          <td style="text-align:center;">\${i+1}</td>
-          <td><strong>\${m.name}</strong></td>
-          <td>\${res?.name ?? '-'} → \${dop?.name ?? '-'}</td>
-          <td style="text-align:center;">\${m.tekanan !== null ? m.tekanan + ' bar' : '—'}</td>
-          <td style="text-align:center;">\${m.tekanan !== null ? m.tekanan + ' bar' : '—'}</td>
-          <td style="color:\${statusColor};font-weight:600;">\${statusLabel}</td>
-        </tr>\`;
+        return `<tr style="background:${i % 2 === 0 ? '#fff' : '#f8f9fa'};">
+          <td style="text-align:center;">${i+1}</td>
+          <td><strong>${m.name}</strong></td>
+          <td>${res?.name ?? '-'} → ${dop?.name ?? '-'}</td>
+          <td style="text-align:center;">${m.tekanan !== null ? m.tekanan + ' bar' : '—'}</td>
+          <td style="text-align:center;">${m.tekanan !== null ? m.tekanan + ' bar' : '—'}</td>
+          <td style="color:${statusColor};font-weight:600;">${statusLabel}</td>
+        </tr>`;
       }).join('');
-      return \`<div class="section-title">Kondisi Tekanan Jaringan</div>
+      return `<div class="section-title">Kondisi Tekanan Jaringan</div>
       <table class="data">
         <thead><tr>
           <th style="width:30px;text-align:center;">No</th>
@@ -426,8 +426,8 @@ async function exportPDF(statuses: PointStatus[]) {
           <th style="width:80px;text-align:center;">Tekanan Sore</th>
           <th style="width:70px;">Status</th>
         </tr></thead>
-        <tbody>\${manRows}</tbody>
-      </table>\`;
+        <tbody>${manRows}</tbody>
+      </table>`;
     })()}
 
     ${/* PDF Section: Wilayah Berpotensi Terdampak */(() => {
@@ -437,16 +437,16 @@ async function exportPDF(statuses: PointStatus[]) {
         const area = getAffectedArea(m.id);
         const statusLabel = m.status === 'waspada' ? 'Waspada' : 'Kritis';
         const statusColor = m.status === 'kritis' ? '#dc2626' : '#b45309';
-        return \`<tr style="background:\${i % 2 === 0 ? '#fff' : '#f8f9fa'};">
-          <td style="text-align:center;">\${i+1}</td>
-          <td><strong>\${m.name}</strong></td>
-          <td style="color:\${statusColor};font-weight:600;">\${m.tekanan !== null ? m.tekanan + ' bar' : '—'}</td>
-          <td style="color:\${statusColor};font-weight:600;">\${statusLabel}</td>
-          <td>\${area ?? '-'}</td>
-        </tr>\`;
+        return `<tr style="background:${i % 2 === 0 ? '#fff' : '#f8f9fa'};">
+          <td style="text-align:center;">${i+1}</td>
+          <td><strong>${m.name}</strong></td>
+          <td style="color:${statusColor};font-weight:600;">${m.tekanan !== null ? m.tekanan + ' bar' : '—'}</td>
+          <td style="color:${statusColor};font-weight:600;">${statusLabel}</td>
+          <td>${area ?? '-'}</td>
+        </tr>`;
       }).join('');
-      return \`<div class="section-title" style="color:#dc2626;">⚠ Wilayah Berpotensi Terdampak</div>
-      <div class="alert-box">Ditemukan \${problematic.length} manometer dengan status waspada/kritis yang berpotensi memengaruhi distribusi air ke wilayah hilir.</div>
+      return `<div class="section-title" style="color:#dc2626;">⚠ Wilayah Berpotensi Terdampak</div>
+      <div class="alert-box">Ditemukan ${problematic.length} manometer dengan status waspada/kritis yang berpotensi memengaruhi distribusi air ke wilayah hilir.</div>
       <table class="data">
         <thead><tr>
           <th style="width:30px;text-align:center;">No</th>
@@ -455,8 +455,8 @@ async function exportPDF(statuses: PointStatus[]) {
           <th style="width:70px;">Status</th>
           <th>Wilayah Terdampak</th>
         </tr></thead>
-        <tbody>\${affectedRows}</tbody>
-      </table>\`;
+        <tbody>${affectedRows}</tbody>
+      </table>`;
     })()}
 
     <div class="footer">
