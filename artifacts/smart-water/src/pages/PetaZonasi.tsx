@@ -60,7 +60,16 @@ export default function PetaZonasi() {
     });
   }, [searchTerm, statusFilter]);
 
-  const geoJsonData = useMemo(() => getGeoJsonFeatures(), []);
+  const [geoJsonData, setGeoJsonData] = useState<any>(null);
+
+  React.useEffect(() => {
+    fetch('/data/lombok_tengah.geojson')
+      .then(res => res.json())
+      .then(data => {
+        setGeoJsonData(data);
+      })
+      .catch(err => console.error("Failed to load geojson", err));
+  }, []);
 
   const handleZoneClick = (zone: ZonasiData) => {
     setSelectedZone(zone);
@@ -79,8 +88,9 @@ export default function PetaZonasi() {
   };
 
   const getStyle = (feature: any) => {
-    const status = feature.properties.status as keyof typeof statusColors;
-    const isSelected = selectedZone?.id === feature.properties.id;
+    const zone = zonasiData.find(z => z.nama === feature.properties.kecamatan);
+    const status = zone ? (zone.status as keyof typeof statusColors) : 'normal';
+    const isSelected = zone && selectedZone?.id === zone.id;
     return {
       fillColor: statusColors[status].fill,
       weight: isSelected ? 3 : 1,
@@ -91,6 +101,12 @@ export default function PetaZonasi() {
   };
 
   const onEachFeature = (feature: any, layer: any) => {
+    // Bind a simple tooltip
+    layer.bindTooltip(feature.properties.kecamatan || "Kecamatan", {
+      direction: 'center',
+      className: 'bg-white font-semibold text-slate-800 shadow-sm border border-slate-200 px-2 py-1 rounded'
+    });
+
     layer.on({
       mouseover: (e: any) => {
         const layer = e.target;
@@ -105,7 +121,7 @@ export default function PetaZonasi() {
         layer.setStyle(getStyle(feature));
       },
       click: () => {
-        const zone = zonasiData.find(z => z.id === feature.properties.id);
+        const zone = zonasiData.find(z => z.nama === feature.properties.kecamatan);
         if (zone) handleZoneClick(zone);
       }
     });
@@ -240,15 +256,18 @@ export default function PetaZonasi() {
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
               url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
             />
-            <GeoJSON 
-              data={geoJsonData as any} 
-              style={getStyle}
-              onEachFeature={onEachFeature}
-            >
-              <Tooltip sticky>
-                {/* We use a simple function or component for Tooltip if needed. For now, GeoJSON handles it internally or we can use onEachFeature to bind tooltip */}
-              </Tooltip>
-            </GeoJSON>
+            {geoJsonData && (
+              <GeoJSON 
+                key="zonasi-layer"
+                data={geoJsonData} 
+                style={getStyle}
+                onEachFeature={onEachFeature}
+              >
+                <Tooltip sticky>
+                  {/* Tooltip handled implicitly or we could bind it here */}
+                </Tooltip>
+              </GeoJSON>
+            )}
             <MapUpdater center={mapCenter} zoom={mapZoom} />
           </MapContainer>
 
