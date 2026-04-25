@@ -308,9 +308,18 @@ export default function PetaZonasi() {
                       &times;
                     </Button>
                   </div>
-                  <Badge className={`w-fit mt-2 ${statusColors[selectedZone.status].bg} ${statusColors[selectedZone.status].text} hover:${statusColors[selectedZone.status].bg} border-0`}>
-                    {statusLabels[selectedZone.status]}
-                  </Badge>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Badge className={`${statusColors[selectedZone.status].bg} ${statusColors[selectedZone.status].text} hover:${statusColors[selectedZone.status].bg} border-0`}>
+                      {statusLabels[selectedZone.status]}
+                    </Badge>
+                    <div 
+                      className="text-xs font-bold px-2 py-0.5 rounded-md bg-white text-slate-700 border border-slate-200 shadow-sm flex items-center gap-1 cursor-help" 
+                      title="Batas Skor: Hijau (>80), Kuning (50-80), Merah (<50)"
+                    >
+                      <Gauge className="w-3 h-3 text-slate-400" />
+                      Skor Kinerja: {selectedZone.skorKinerja}
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent className="pt-4 flex flex-col gap-4">
                   <div className="grid grid-cols-2 gap-y-4 gap-x-2">
