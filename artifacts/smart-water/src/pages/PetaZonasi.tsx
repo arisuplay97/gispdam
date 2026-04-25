@@ -158,7 +158,12 @@ export default function PetaZonasi() {
       {/* Print Styles */}
       <style>{`
         @media print {
+          body { 
+            -webkit-print-color-adjust: exact !important; 
+            print-color-adjust: exact !important; 
+          }
           .print-hide { display: none !important; }
+          .leaflet-control-layers, .leaflet-control-zoom { display: none !important; }
           .print-full { 
             position: absolute !important;
             top: 0 !important;
@@ -320,23 +325,94 @@ export default function PetaZonasi() {
 
           {/* North Arrow with UBTS */}
           <div className="absolute top-4 right-4 z-[1000] pointer-events-none drop-shadow-md print-hide">
-            <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-              {/* Compass circle (transparent/clean) */}
-              <circle cx="30" cy="30" r="28" stroke="#64748b" strokeWidth="1.5" fill="white" fillOpacity="0.8" />
-              <circle cx="30" cy="30" r="2" fill="#1e293b" />
-              {/* North arrow (dark) */}
-              <polygon points="30,4 34,26 30,22 26,26" fill="#1e293b" />
-              {/* South arrow (light) */}
-              <polygon points="30,56 34,34 30,38 26,34" fill="#94a3b8" />
-              {/* East tick */}
-              <line x1="54" y1="30" x2="48" y2="30" stroke="#64748b" strokeWidth="1.5" />
-              {/* West tick */}
-              <line x1="6" y1="30" x2="12" y2="30" stroke="#64748b" strokeWidth="1.5" />
-              {/* Labels */}
-              <text x="30" y="14" textAnchor="middle" fill="#1e293b" fontSize="10" fontWeight="bold">U</text>
-              <text x="30" y="52" textAnchor="middle" fill="#64748b" fontSize="9" fontWeight="bold">S</text>
-              <text x="49" y="33" textAnchor="middle" fill="#64748b" fontSize="9" fontWeight="bold">T</text>
-              <text x="11" y="33" textAnchor="middle" fill="#64748b" fontSize="9" fontWeight="bold">B</text>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="100" height="100">
+              <defs>
+                <radialGradient id="ringGrad" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor="#e0e0e0"/>
+                  <stop offset="100%" stopColor="#b8b8b8"/>
+                </radialGradient>
+              </defs>
+
+              <circle cx="300" cy="300" r="152" fill="url(#ringGrad)" stroke="#111" strokeWidth="5"/>
+              <circle cx="300" cy="300" r="132" fill="none" stroke="#111" strokeWidth="3"/>
+              <circle cx="300" cy="300" r="122" fill="none" stroke="#111" strokeWidth="1.5"/>
+
+              <path d="M 305,178 Q 370,195 422,295 Q 395,255 345,215 Q 330,200 305,178 Z" fill="#111" opacity="0.18"/>
+              <path d="M 295,422 Q 230,405 178,305 Q 205,345 255,385 Q 270,400 295,422 Z" fill="#111" opacity="0.18"/>
+              <path d="M 295,178 Q 230,195 178,295 Q 205,255 255,215 Q 270,200 295,178 Z" fill="#111" opacity="0.18"/>
+              <path d="M 305,422 Q 370,405 422,305 Q 395,345 345,385 Q 330,400 305,422 Z" fill="#111" opacity="0.18"/>
+
+              <g fill="none" stroke="#111" strokeWidth="2.5">
+                <circle cx="300" cy="150" r="5.5"/>
+                <circle cx="359" cy="159" r="5.5"/>
+                <circle cx="409" cy="185" r="5.5"/>
+                <circle cx="441" cy="231" r="5.5"/>
+                <circle cx="452" cy="300" r="5.5"/>
+                <circle cx="441" cy="369" r="5.5"/>
+                <circle cx="409" cy="415" r="5.5"/>
+                <circle cx="359" cy="441" r="5.5"/>
+                <circle cx="300" cy="452" r="5.5"/>
+                <circle cx="241" cy="441" r="5.5"/>
+                <circle cx="191" cy="415" r="5.5"/>
+                <circle cx="159" cy="369" r="5.5"/>
+                <circle cx="148" cy="300" r="5.5"/>
+                <circle cx="159" cy="231" r="5.5"/>
+                <circle cx="191" cy="185" r="5.5"/>
+                <circle cx="241" cy="159" r="5.5"/>
+              </g>
+
+              <g fill="#111">
+                <polygon points="300,143  294,157  306,157"/>
+                <polygon points="359,152  349,164  360,168"/>
+                <polygon points="406,178  394,186  399,198"/>
+                <polygon points="437,224  424,229  430,242"/>
+                <polygon points="457,300  443,294  443,306"/>
+                <polygon points="437,376  430,358  424,371"/>
+                <polygon points="406,422  399,402  394,414"/>
+                <polygon points="359,448  360,432  349,436"/>
+                <polygon points="300,457  306,443  294,443"/>
+                <polygon points="241,448  252,436  240,432"/>
+                <polygon points="194,422  206,414  201,402"/>
+                <polygon points="163,376  176,371  170,358"/>
+                <polygon points="143,300  157,306  157,294"/>
+                <polygon points="163,224  170,242  176,229"/>
+                <polygon points="194,178  201,198  206,186"/>
+                <polygon points="241,152  240,168  252,164"/>
+              </g>
+
+              <polygon points="300,300 282,235 300,50 318,235" fill="#1a1a1a"/>
+              <polygon points="300,300 300,50 318,235"          fill="#888"/>
+              <polygon points="300,300 282,365 300,550 318,365" fill="#1a1a1a"/>
+              <polygon points="300,300 282,365 300,550"         fill="#888"/>
+              <polygon points="300,300 235,282 50,300 235,318"  fill="#1a1a1a"/>
+              <polygon points="300,300 50,300 235,318"          fill="#888"/>
+              <polygon points="300,300 365,282 550,300 365,318" fill="#1a1a1a"/>
+              <polygon points="300,300 365,318 550,300"         fill="#888"/>
+              <polygon points="300,300 314,286 392,208 286,314" fill="#1a1a1a"/>
+              <polygon points="300,300 392,208 314,286"         fill="#666"/>
+              <polygon points="300,300 314,314 392,392 286,286" fill="#1a1a1a"/>
+              <polygon points="300,300 392,392 314,314"         fill="#666"/>
+              <polygon points="300,300 286,314 208,392 314,286" fill="#1a1a1a"/>
+              <polygon points="300,300 208,392 286,314"         fill="#666"/>
+              <polygon points="300,300 286,286 208,208 314,314" fill="#1a1a1a"/>
+              <polygon points="300,300 208,208 286,286"         fill="#666"/>
+
+              <polygon points="300,300 282,235 300,50 318,235"   fill="none" stroke="#111" strokeWidth="1.5" strokeLinejoin="round"/>
+              <polygon points="300,300 282,365 300,550 318,365"  fill="none" stroke="#111" strokeWidth="1.5" strokeLinejoin="round"/>
+              <polygon points="300,300 235,282 50,300 235,318"   fill="none" stroke="#111" strokeWidth="1.5" strokeLinejoin="round"/>
+              <polygon points="300,300 365,282 550,300 365,318"  fill="none" stroke="#111" strokeWidth="1.5" strokeLinejoin="round"/>
+              <polygon points="300,300 314,286 392,208 286,314"  fill="none" stroke="#111" strokeWidth="1" strokeLinejoin="round"/>
+              <polygon points="300,300 314,314 392,392 286,286"  fill="none" stroke="#111" strokeWidth="1" strokeLinejoin="round"/>
+              <polygon points="300,300 286,314 208,392 314,286"  fill="none" stroke="#111" strokeWidth="1" strokeLinejoin="round"/>
+              <polygon points="300,300 286,286 208,208 314,314"  fill="none" stroke="#111" strokeWidth="1" strokeLinejoin="round"/>
+
+              <circle cx="300" cy="300" r="24" fill="#d0d0d0" stroke="#111" strokeWidth="3.5"/>
+              <circle cx="300" cy="300" r="9"  fill="#111"/>
+
+              <text x="300" y="40" textAnchor="middle" fontFamily="'Arial Black', Arial, sans-serif" fontSize="68" fontWeight="900" fill="#111">U</text>
+              <text x="55" y="322" textAnchor="middle" fontFamily="'Arial Black', Arial, sans-serif" fontSize="68" fontWeight="900" fill="#111">B</text>
+              <text x="545" y="322" textAnchor="middle" fontFamily="'Arial Black', Arial, sans-serif" fontSize="68" fontWeight="900" fill="#111">T</text>
+              <text x="300" y="592" textAnchor="middle" fontFamily="'Arial Black', Arial, sans-serif" fontSize="68" fontWeight="900" fill="#111">S</text>
             </svg>
           </div>
 
