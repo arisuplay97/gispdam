@@ -12,9 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 // Fix Leaflet default icon issue if needed, but we don't use markers here so it's fine.
 
 const statusColors = {
-  normal: { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-500', fill: '#22c55e' },
-  warning: { bg: 'bg-yellow-100', text: 'text-yellow-700', border: 'border-yellow-500', fill: '#eab308' },
-  critical: { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-500', fill: '#ef4444' }
+  normal: { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-500', fill: '#7cb342' },
+  warning: { bg: 'bg-yellow-100', text: 'text-yellow-700', border: 'border-yellow-500', fill: '#fbc02d' },
+  critical: { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-500', fill: '#e53935' }
 };
 
 const statusLabels = {
@@ -266,15 +266,15 @@ export default function PetaZonasi() {
             <h4 className="text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">Legenda Status</h4>
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-green-500 opacity-80 border border-green-700"></div>
+                <div className="w-4 h-4 rounded opacity-80 border" style={{ backgroundColor: statusColors.normal.fill, borderColor: '#558b2f' }}></div>
                 <span className="text-sm font-medium text-slate-700">Normal</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-yellow-500 opacity-80 border border-yellow-700"></div>
+                <div className="w-4 h-4 rounded opacity-80 border" style={{ backgroundColor: statusColors.warning.fill, borderColor: '#f57f17' }}></div>
                 <span className="text-sm font-medium text-slate-700">Perlu Perhatian</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-red-500 opacity-80 border border-red-700"></div>
+                <div className="w-4 h-4 rounded opacity-80 border" style={{ backgroundColor: statusColors.critical.fill, borderColor: '#c62828' }}></div>
                 <span className="text-sm font-medium text-slate-700">Kritis</span>
               </div>
             </div>
