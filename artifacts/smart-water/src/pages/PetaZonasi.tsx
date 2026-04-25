@@ -121,11 +121,16 @@ export default function PetaZonasi() {
   };
 
   const onEachFeature = (feature: any, layer: any) => {
-    // Bind a simple tooltip
-    layer.bindTooltip(feature.properties.kecamatan || "Kecamatan", {
-      direction: 'center',
-      className: 'bg-white font-semibold text-slate-800 shadow-sm border border-slate-200 px-2 py-1 rounded'
-    });
+    // Bind a permanent text label
+    const regionName = feature.properties.kecamatan || "Kecamatan";
+    layer.bindTooltip(
+      `<span style="color: #334155; font-weight: 700; font-size: 11px; text-shadow: 1px 1px 0 rgba(255,255,255,0.8), -1px -1px 0 rgba(255,255,255,0.8), 1px -1px 0 rgba(255,255,255,0.8), -1px 1px 0 rgba(255,255,255,0.8);">${regionName}</span>`, 
+      {
+        permanent: true,
+        direction: 'center',
+        className: 'bg-transparent border-0 shadow-none'
+      }
+    );
 
     layer.on({
       mouseover: (e: any) => {
@@ -317,7 +322,7 @@ export default function PetaZonasi() {
                       title="Batas Skor: Hijau (>80), Kuning (50-80), Merah (<50)"
                     >
                       <Gauge className="w-3 h-3 text-slate-400" />
-                      Skor Kinerja: {selectedZone.skorKinerja}
+                      Skor Wilayah: {selectedZone.skorKinerja}
                     </div>
                   </div>
                 </CardHeader>
