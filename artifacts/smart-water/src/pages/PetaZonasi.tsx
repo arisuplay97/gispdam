@@ -262,7 +262,7 @@ export default function PetaZonasi() {
           </Button>
 
           {/* Legend */}
-          <div className="absolute bottom-6 left-6 z-[1000] bg-white/90 backdrop-blur px-4 py-3 rounded-lg shadow-md border border-slate-200 pointer-events-none">
+          <div className="absolute bottom-6 left-6 z-[1000] bg-white/90 backdrop-blur px-4 py-3 rounded-lg shadow-md border border-slate-200 pointer-events-none max-w-[280px]">
             <h4 className="text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">Legenda Status</h4>
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
@@ -277,6 +277,11 @@ export default function PetaZonasi() {
                 <div className="w-4 h-4 rounded opacity-80 border" style={{ backgroundColor: statusColors.critical.fill, borderColor: '#c62828' }}></div>
                 <span className="text-sm font-medium text-slate-700">Kritis</span>
               </div>
+            </div>
+            <div className="mt-3 pt-2 border-t border-slate-200/60">
+              <p className="text-[10px] leading-tight text-slate-500 italic">
+                *Warna merupakan indikator prioritas pemantauan, bukan menunjukkan seluruh wilayah kecamatan mengalami gangguan.
+              </p>
             </div>
           </div>
 
