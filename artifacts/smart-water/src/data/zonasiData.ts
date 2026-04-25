@@ -27,9 +27,7 @@ export const zonasiData: ZonasiData[] = [
     updateTerakhir: "2026-04-25 08:00",
     catatan: "Distribusi stabil di area pusat layanan",
     rekomendasi: "Monitoring rutin",
-    coordinates: [[
-      [116.27, -8.70], [116.30, -8.70], [116.30, -8.73], [116.27, -8.73], [116.27, -8.70]
-    ]]
+    coordinates: [[[116.25165063509462,-8.6625],[116.25165063509462,-8.637500000000001],[116.23,-8.625],[116.20834936490539,-8.637500000000001],[116.20834936490539,-8.6625],[116.23,-8.675],[116.25165063509462,-8.6625]]]
   },
   {
     id: "praya-tengah",
@@ -43,9 +41,7 @@ export const zonasiData: ZonasiData[] = [
     updateTerakhir: "2026-04-25 08:10",
     catatan: "Tekanan mulai turun di area ujung jaringan",
     rekomendasi: "Pantau tekanan ujung dan cek jam puncak pemakaian",
-    coordinates: [[
-      [116.30, -8.70], [116.33, -8.70], [116.33, -8.73], [116.30, -8.73], [116.30, -8.70]
-    ]]
+    coordinates: [[[116.29495190528384,-8.6625],[116.29495190528384,-8.637500000000001],[116.27330127018922,-8.625],[116.2516506350946,-8.637500000000001],[116.2516506350946,-8.6625],[116.27330127018922,-8.675],[116.29495190528384,-8.6625]]]
   },
   {
     id: "praya-timur",
@@ -59,9 +55,7 @@ export const zonasiData: ZonasiData[] = [
     updateTerakhir: "2026-04-25 08:30",
     catatan: "Perlu monitoring tambahan pada jalur distribusi",
     rekomendasi: "Cek tekanan ujung dan kemungkinan hambatan aliran",
-    coordinates: [[
-      [116.33, -8.70], [116.36, -8.70], [116.36, -8.73], [116.33, -8.73], [116.33, -8.70]
-    ]]
+    coordinates: [[[116.33825317547307,-8.6625],[116.33825317547307,-8.637500000000001],[116.31660254037845,-8.625],[116.29495190528384,-8.637500000000001],[116.29495190528384,-8.6625],[116.31660254037845,-8.675],[116.33825317547307,-8.6625]]]
   },
   {
     id: "praya-barat",
@@ -75,9 +69,7 @@ export const zonasiData: ZonasiData[] = [
     updateTerakhir: "2026-04-25 08:20",
     catatan: "Kondisi layanan relatif aman",
     rekomendasi: "Pertahankan monitoring rutin",
-    coordinates: [[
-      [116.24, -8.73], [116.27, -8.73], [116.27, -8.76], [116.24, -8.76], [116.24, -8.73]
-    ]]
+    coordinates: [[[116.38155444566229,-8.6625],[116.38155444566229,-8.637500000000001],[116.35990381056767,-8.625],[116.33825317547306,-8.637500000000001],[116.33825317547306,-8.6625],[116.35990381056767,-8.675],[116.38155444566229,-8.6625]]]
   },
   {
     id: "praya-barat-daya",
@@ -91,9 +83,7 @@ export const zonasiData: ZonasiData[] = [
     updateTerakhir: "2026-04-25 08:15",
     catatan: "Tekanan fluktuatif di beberapa titik",
     rekomendasi: "Cek tekanan ujung dan pola pemakaian pelanggan",
-    coordinates: [[
-      [116.21, -8.73], [116.24, -8.73], [116.24, -8.76], [116.21, -8.76], [116.21, -8.73]
-    ]]
+    coordinates: [[[116.27330127018924,-8.7],[116.27330127018924,-8.675],[116.25165063509462,-8.6625],[116.23,-8.675],[116.23,-8.7],[116.25165063509462,-8.7125],[116.27330127018924,-8.7]]]
   },
   {
     id: "jonggat",
@@ -107,9 +97,7 @@ export const zonasiData: ZonasiData[] = [
     updateTerakhir: "2026-04-25 08:05",
     catatan: "Aliran stabil",
     rekomendasi: "Monitoring rutin",
-    coordinates: [[
-      [116.24, -8.67], [116.27, -8.67], [116.27, -8.70], [116.24, -8.70], [116.24, -8.67]
-    ]]
+    coordinates: [[[116.31660254037845,-8.7],[116.31660254037845,-8.675],[116.29495190528384,-8.6625],[116.27330127018922,-8.675],[116.27330127018922,-8.7],[116.29495190528384,-8.7125],[116.31660254037845,-8.7]]]
   },
   {
     id: "kopang",
@@ -123,9 +111,7 @@ export const zonasiData: ZonasiData[] = [
     updateTerakhir: "2026-04-25 08:25",
     catatan: "Tekanan rendah, indikasi air tidak sampai ke beberapa area",
     rekomendasi: "Prioritaskan pengecekan lapangan dan cek level reservoir",
-    coordinates: [[
-      [116.33, -8.64], [116.36, -8.64], [116.36, -8.67], [116.33, -8.67], [116.33, -8.64]
-    ]]
+    coordinates: [[[116.35990381056767,-8.7],[116.35990381056767,-8.675],[116.33825317547306,-8.6625],[116.31660254037844,-8.675],[116.31660254037844,-8.7],[116.33825317547306,-8.7125],[116.35990381056767,-8.7]]]
   },
   {
     id: "janapria",
@@ -139,9 +125,7 @@ export const zonasiData: ZonasiData[] = [
     updateTerakhir: "2026-04-25 08:18",
     catatan: "Masih perlu perhatian pada tekanan ujung",
     rekomendasi: "Pantau area ujung jaringan dan evaluasi distribusi",
-    coordinates: [[
-      [116.36, -8.67], [116.39, -8.67], [116.39, -8.70], [116.36, -8.70], [116.36, -8.67]
-    ]]
+    coordinates: [[[116.25165063509462,-8.737499999999999],[116.25165063509462,-8.7125],[116.23,-8.7],[116.20834936490539,-8.7125],[116.20834936490539,-8.737499999999999],[116.23,-8.75],[116.25165063509462,-8.737499999999999]]]
   },
   {
     id: "batukliang",
@@ -155,9 +139,7 @@ export const zonasiData: ZonasiData[] = [
     updateTerakhir: "2026-04-25 08:12",
     catatan: "Kondisi aman",
     rekomendasi: "Monitoring rutin",
-    coordinates: [[
-      [116.30, -8.67], [116.33, -8.67], [116.33, -8.70], [116.30, -8.70], [116.30, -8.67]
-    ]]
+    coordinates: [[[116.29495190528384,-8.737499999999999],[116.29495190528384,-8.7125],[116.27330127018922,-8.7],[116.2516506350946,-8.7125],[116.2516506350946,-8.737499999999999],[116.27330127018922,-8.75],[116.29495190528384,-8.737499999999999]]]
   },
   {
     id: "batukliang-utara",
@@ -171,9 +153,7 @@ export const zonasiData: ZonasiData[] = [
     updateTerakhir: "2026-04-25 08:28",
     catatan: "Zona kritis, tekanan sangat rendah",
     rekomendasi: "Cek level bak, tekanan ujung, dan potensi hambatan distribusi",
-    coordinates: [[
-      [116.30, -8.64], [116.33, -8.64], [116.33, -8.67], [116.30, -8.67], [116.30, -8.64]
-    ]]
+    coordinates: [[[116.33825317547307,-8.737499999999999],[116.33825317547307,-8.7125],[116.31660254037845,-8.7],[116.29495190528384,-8.7125],[116.29495190528384,-8.737499999999999],[116.31660254037845,-8.75],[116.33825317547307,-8.737499999999999]]]
   },
   {
     id: "pringgarata",
@@ -187,9 +167,7 @@ export const zonasiData: ZonasiData[] = [
     updateTerakhir: "2026-04-25 08:14",
     catatan: "Distribusi baik",
     rekomendasi: "Monitoring rutin",
-    coordinates: [[
-      [116.27, -8.64], [116.30, -8.64], [116.30, -8.67], [116.27, -8.67], [116.27, -8.64]
-    ]]
+    coordinates: [[[116.38155444566229,-8.737499999999999],[116.38155444566229,-8.7125],[116.35990381056767,-8.7],[116.33825317547306,-8.7125],[116.33825317547306,-8.737499999999999],[116.35990381056767,-8.75],[116.38155444566229,-8.737499999999999]]]
   },
   {
     id: "pujut",
@@ -203,9 +181,7 @@ export const zonasiData: ZonasiData[] = [
     updateTerakhir: "2026-04-25 08:40",
     catatan: "Tekanan rendah pada sebagian wilayah, terutama area ujung layanan",
     rekomendasi: "Prioritaskan pengecekan jaringan dan evaluasi distribusi gravitasi",
-    coordinates: [[
-      [116.27, -8.76], [116.30, -8.76], [116.30, -8.79], [116.27, -8.79], [116.27, -8.76]
-    ]]
+    coordinates: [[[116.31660254037845,-8.775],[116.31660254037845,-8.750000000000002],[116.29495190528384,-8.7375],[116.27330127018922,-8.750000000000002],[116.27330127018922,-8.775],[116.29495190528384,-8.787500000000001],[116.31660254037845,-8.775]]]
   }
 ];
 
