@@ -288,7 +288,7 @@ export default function PetaZonasi() {
             variant="secondary" 
             size="icon" 
             onClick={toggleFullscreen} 
-            className="absolute top-4 right-4 z-[1000] shadow-md bg-white hover:bg-slate-100"
+            className="absolute top-4 right-16 z-[1000] shadow-md bg-white hover:bg-slate-100"
           >
             {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
           </Button>
