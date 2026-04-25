@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { MapContainer, TileLayer, GeoJSON, Tooltip, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, Tooltip, useMap, ZoomControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Search, Filter, RefreshCcw, Download, AlertTriangle, CheckCircle, Info, Droplets, Gauge, Maximize, Minimize } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -230,7 +230,7 @@ export default function PetaZonasi() {
             center={[-8.70, 116.30]} 
             zoom={11} 
             className="w-full h-full z-0"
-            zoomControl={true}
+            zoomControl={false}
           >
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -248,8 +248,16 @@ export default function PetaZonasi() {
                 </Tooltip>
               </GeoJSON>
             )}
+            <ZoomControl position="bottomright" />
             <MapUpdater center={mapCenter} zoom={mapZoom} />
           </MapContainer>
+
+          {/* Map Title Overlay */}
+          <div className="absolute top-4 left-4 z-[1000] bg-white/90 backdrop-blur px-4 py-3 rounded-lg shadow-md border border-slate-200 pointer-events-none max-w-md">
+            <h2 className="text-sm font-bold text-slate-800 leading-tight">
+              PETA ZONASI LAYANAN AIR PERUMDAM TIRTA ARDHIA RINJANI LOMBOK TENGAH
+            </h2>
+          </div>
 
           {/* Map Controls & Overlays */}
           <Button 
@@ -279,7 +287,7 @@ export default function PetaZonasi() {
               </div>
             </div>
             <div className="mt-3 pt-2 border-t border-slate-200/60">
-              <p className="text-[10px] leading-tight text-slate-500 italic">
+              <p className="text-[10px] leading-tight text-slate-700 font-bold italic">
                 *Warna merupakan indikator prioritas pemantauan, bukan menunjukkan seluruh wilayah kecamatan mengalami gangguan.
               </p>
             </div>
