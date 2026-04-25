@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { MapContainer, TileLayer, GeoJSON, Tooltip, useMap, ZoomControl } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, Tooltip, useMap, ZoomControl, LayersControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Search, Filter, RefreshCcw, Download, AlertTriangle, CheckCircle, Info, Droplets, Gauge, Maximize, Minimize } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -237,10 +237,27 @@ export default function PetaZonasi() {
             className="w-full h-full z-0"
             zoomControl={false}
           >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-            />
+            <LayersControl position="topright">
+              <LayersControl.BaseLayer checked name="Peta Dasar (Light)">
+                <TileLayer
+                  attribution='&copy; <a href="https://carto.com/attributions">CARTO</a>'
+                  url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                />
+              </LayersControl.BaseLayer>
+              <LayersControl.BaseLayer name="OpenStreetMap">
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+              </LayersControl.BaseLayer>
+              <LayersControl.BaseLayer name="Google Satellite">
+                <TileLayer
+                  attribution='&copy; Google'
+                  url="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
+                  maxZoom={20}
+                />
+              </LayersControl.BaseLayer>
+            </LayersControl>
             {geoJsonData && (
               <GeoJSON 
                 key="zonasi-layer"
