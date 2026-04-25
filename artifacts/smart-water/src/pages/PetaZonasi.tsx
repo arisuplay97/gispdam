@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { MapContainer, TileLayer, GeoJSON, Tooltip, useMap, ZoomControl, LayersControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Search, Filter, RefreshCcw, Download, AlertTriangle, CheckCircle, Info, Droplets, Gauge, Maximize, Minimize, Printer } from 'lucide-react';
+import { Search, Filter, RefreshCcw, Download, AlertTriangle, CheckCircle, Info, Droplets, Gauge, Maximize, Minimize, Printer, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -39,6 +39,7 @@ export default function PetaZonasi() {
   const [mapCenter, setMapCenter] = useState<[number, number]>([-8.70, 116.30]);
   const [mapZoom, setMapZoom] = useState(11);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const mapWrapperRef = React.useRef<HTMLDivElement>(null);
 
   const toggleFullscreen = () => {
@@ -193,8 +194,8 @@ export default function PetaZonasi() {
       <div className="flex-1 flex overflow-hidden px-4 pb-4 pt-4 gap-4">
         
         {/* Sidebar */}
-        <div className="w-72 flex flex-col gap-4 print-hide">
-          <Card className="flex-1 flex flex-col shadow-sm border-slate-200 overflow-hidden">
+        <div className={`flex flex-col gap-4 print-hide transition-all duration-300 ${sidebarOpen ? 'w-72' : 'w-0 overflow-hidden'}`}>
+          <Card className="flex-1 flex flex-col shadow-sm border-slate-200 overflow-hidden min-w-[288px]">
             <div className="p-4 border-b border-slate-100 flex flex-col gap-3">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
@@ -253,7 +254,7 @@ export default function PetaZonasi() {
             className="w-full h-full z-0"
             zoomControl={false}
           >
-            <LayersControl position="bottomleft">
+            <LayersControl position="topright">
               <LayersControl.BaseLayer checked name="Peta Dasar (Light)">
                 <TileLayer
                   attribution='&copy; <a href="https://carto.com/attributions">CARTO</a>'
@@ -298,13 +299,28 @@ export default function PetaZonasi() {
             </h2>
           </div>
 
-          {/* North Arrow */}
-          <div className="absolute top-4 right-4 z-[1000] pointer-events-none print-hide">
-            <svg width="40" height="56" viewBox="0 0 40 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <polygon points="20,0 28,24 20,18 12,24" fill="#334155" />
-              <polygon points="20,18 28,24 20,48 12,24" fill="#94a3b8" />
-              <text x="20" y="55" textAnchor="middle" fill="#334155" fontSize="10" fontWeight="bold">N</text>
-            </svg>
+          {/* North Arrow with UBTS */}
+          <div className="absolute top-4 right-4 z-[1000] pointer-events-none">
+            <div className="bg-white/90 backdrop-blur rounded-lg shadow-md border border-slate-200 p-2">
+              <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                {/* Compass circle */}
+                <circle cx="30" cy="30" r="28" stroke="#cbd5e1" strokeWidth="1" fill="white" fillOpacity="0.5" />
+                <circle cx="30" cy="30" r="2" fill="#334155" />
+                {/* North arrow (dark) */}
+                <polygon points="30,4 34,26 30,22 26,26" fill="#334155" />
+                {/* South arrow (light) */}
+                <polygon points="30,56 34,34 30,38 26,34" fill="#94a3b8" />
+                {/* East tick */}
+                <line x1="54" y1="30" x2="46" y2="30" stroke="#94a3b8" strokeWidth="1.5" />
+                {/* West tick */}
+                <line x1="6" y1="30" x2="14" y2="30" stroke="#94a3b8" strokeWidth="1.5" />
+                {/* Labels */}
+                <text x="30" y="12" textAnchor="middle" fill="#334155" fontSize="8" fontWeight="bold">U</text>
+                <text x="30" y="54" textAnchor="middle" fill="#94a3b8" fontSize="8" fontWeight="bold">S</text>
+                <text x="50" y="33" textAnchor="middle" fill="#94a3b8" fontSize="8" fontWeight="bold">T</text>
+                <text x="10" y="33" textAnchor="middle" fill="#94a3b8" fontSize="8" fontWeight="bold">B</text>
+              </svg>
+            </div>
           </div>
 
           {/* Fullscreen Button */}
@@ -312,9 +328,19 @@ export default function PetaZonasi() {
             variant="secondary" 
             size="icon" 
             onClick={toggleFullscreen} 
-            className="absolute top-4 right-16 z-[1000] shadow-md bg-white hover:bg-slate-100 print-hide"
+            className="absolute top-20 right-5 z-[1000] shadow-md bg-white hover:bg-slate-100 print-hide"
           >
             {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+          </Button>
+
+          {/* Sidebar Toggle */}
+          <Button 
+            variant="secondary" 
+            size="icon" 
+            onClick={() => setSidebarOpen(!sidebarOpen)} 
+            className="absolute top-20 left-5 z-[1000] shadow-md bg-white hover:bg-slate-100 print-hide"
+          >
+            {sidebarOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
           </Button>
 
           {/* Legend */}
