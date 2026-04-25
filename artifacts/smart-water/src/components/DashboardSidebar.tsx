@@ -413,6 +413,23 @@ export function DashboardSidebar({
             <polyline points="9 18 15 12 9 6"/>
           </svg>
         </a>
+
+        {/* ── Peta Zonasi Layanan Link ──────────────────────────────── */}
+        <a
+          href="/zonasi"
+          className="flex items-center gap-3 w-full rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 px-4 py-3 text-sm font-semibold text-emerald-700 shadow-sm hover:from-emerald-100 hover:to-teal-100 hover:shadow-md transition-all group mt-3"
+        >
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 shadow-sm group-hover:scale-105 transition-transform">
+            <Map className="h-4 w-4 text-white" />
+          </div>
+          <div>
+            <span className="block text-sm font-bold">Peta Zonasi Layanan</span>
+            <span className="block text-[10px] font-medium text-emerald-500">Monitoring per Kecamatan</span>
+          </div>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-auto opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </a>
         {/* ── Search ─────────────────────────────────────────────── */}
         <section>
           <h2 className="mb-3 text-sm font-semibold text-slate-700">Cari Data Jaringan</h2>

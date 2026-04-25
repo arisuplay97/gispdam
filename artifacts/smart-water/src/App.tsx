@@ -25,6 +25,7 @@ const queryClient = new QueryClient({
 });
 
 import DataBulanan from "@/pages/DataBulanan";
+import PetaZonasi from "@/pages/PetaZonasi";
 
 function Router() {
   return (
@@ -32,6 +33,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/dashboard" component={DireksiDashboard} />
       <Route path="/data-bulanan" component={DataBulanan} />
+      <Route path="/zonasi" component={PetaZonasi} />
       <Route path="/input" component={InputPage} />
       <Route component={NotFound} />
     </Switch>
