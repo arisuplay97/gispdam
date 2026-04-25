@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { MapContainer, TileLayer, GeoJSON, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Search, Filter, RefreshCcw, Download, AlertTriangle, CheckCircle, Info, Droplets, Gauge } from 'lucide-react';
+import { Search, Filter, RefreshCcw, Download, AlertTriangle, CheckCircle, Info, Droplets, Gauge, Maximize, Minimize } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -38,6 +38,26 @@ export default function PetaZonasi() {
   const [selectedZone, setSelectedZone] = useState<ZonasiData | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number]>([-8.70, 116.30]);
   const [mapZoom, setMapZoom] = useState(11);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const mapWrapperRef = React.useRef<HTMLDivElement>(null);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      mapWrapperRef.current?.requestFullscreen().catch(err => {
+        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  };
+
+  React.useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
 
   // Compute summary
   const summary = useMemo(() => {
@@ -148,48 +168,8 @@ export default function PetaZonasi() {
         </div>
       </header>
 
-      {/* Summary Cards */}
-      <div className="px-6 py-4 grid grid-cols-2 md:grid-cols-6 gap-4 z-10">
-        <Card className="shadow-sm border-slate-200">
-          <CardContent className="p-4 flex flex-col justify-center items-center text-center">
-            <p className="text-sm text-slate-500 font-medium">Total Kecamatan</p>
-            <p className="text-2xl font-bold text-slate-800">{summary.total}</p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm border-green-200 bg-green-50">
-          <CardContent className="p-4 flex flex-col justify-center items-center text-center">
-            <p className="text-sm text-green-700 font-medium flex items-center"><CheckCircle className="w-4 h-4 mr-1"/> Normal</p>
-            <p className="text-2xl font-bold text-green-700">{summary.normal}</p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm border-yellow-200 bg-yellow-50">
-          <CardContent className="p-4 flex flex-col justify-center items-center text-center">
-            <p className="text-sm text-yellow-700 font-medium flex items-center"><AlertTriangle className="w-4 h-4 mr-1"/> Warning</p>
-            <p className="text-2xl font-bold text-yellow-700">{summary.warning}</p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm border-red-200 bg-red-50">
-          <CardContent className="p-4 flex flex-col justify-center items-center text-center">
-            <p className="text-sm text-red-700 font-medium flex items-center"><AlertTriangle className="w-4 h-4 mr-1"/> Kritis</p>
-            <p className="text-2xl font-bold text-red-700">{summary.critical}</p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm border-slate-200">
-          <CardContent className="p-4 flex flex-col justify-center items-center text-center">
-            <p className="text-sm text-slate-500 font-medium flex items-center"><Gauge className="w-4 h-4 mr-1"/> Rata-rata Tekanan</p>
-            <p className="text-2xl font-bold text-slate-800">{summary.avgTekanan} bar</p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm border-slate-200">
-          <CardContent className="p-4 flex flex-col justify-center items-center text-center">
-            <p className="text-sm text-slate-500 font-medium">Total Keluhan</p>
-            <p className="text-2xl font-bold text-slate-800">{summary.totalKeluhan}</p>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden px-6 pb-6 gap-6">
+      <div className="flex-1 flex overflow-hidden px-6 pb-6 pt-6 gap-6">
         
         {/* Sidebar */}
         <div className="w-80 flex flex-col gap-4">
@@ -245,11 +225,11 @@ export default function PetaZonasi() {
         </div>
 
         {/* Map Area */}
-        <div className="flex-1 relative rounded-xl overflow-hidden border border-slate-200 shadow-sm">
+        <div ref={mapWrapperRef} className={`flex-1 relative rounded-xl overflow-hidden shadow-sm ${isFullscreen ? 'z-[9999] border-0' : 'border border-slate-200'}`}>
           <MapContainer 
             center={[-8.70, 116.30]} 
             zoom={11} 
-            className="w-full h-full"
+            className="w-full h-full z-0"
             zoomControl={true}
           >
             <TileLayer
@@ -271,9 +251,38 @@ export default function PetaZonasi() {
             <MapUpdater center={mapCenter} zoom={mapZoom} />
           </MapContainer>
 
+          {/* Map Controls & Overlays */}
+          <Button 
+            variant="secondary" 
+            size="icon" 
+            onClick={toggleFullscreen} 
+            className="absolute top-4 right-4 z-[1000] shadow-md bg-white hover:bg-slate-100"
+          >
+            {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+          </Button>
+
+          {/* Legend */}
+          <div className="absolute bottom-6 left-6 z-[1000] bg-white/90 backdrop-blur px-4 py-3 rounded-lg shadow-md border border-slate-200 pointer-events-none">
+            <h4 className="text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">Legenda Status</h4>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-green-500 opacity-80 border border-green-700"></div>
+                <span className="text-sm font-medium text-slate-700">Normal</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-yellow-500 opacity-80 border border-yellow-700"></div>
+                <span className="text-sm font-medium text-slate-700">Perlu Perhatian</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-red-500 opacity-80 border border-red-700"></div>
+                <span className="text-sm font-medium text-slate-700">Kritis</span>
+              </div>
+            </div>
+          </div>
+
           {/* Detail Panel Float */}
           {selectedZone && (
-            <div className="absolute top-4 right-4 w-80 z-[1000] animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="absolute top-16 right-4 w-80 z-[1000] animate-in fade-in slide-in-from-right-4 duration-300">
               <Card className="shadow-lg border-0 ring-1 ring-slate-200">
                 <CardHeader className="pb-3 border-b border-slate-100 bg-slate-50/50">
                   <div className="flex justify-between items-start">
