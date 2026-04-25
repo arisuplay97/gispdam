@@ -277,9 +277,8 @@ export default function PetaZonasi() {
           {/* Map Title Overlay */}
           <div className="absolute top-4 left-4 z-[1000] bg-white/90 backdrop-blur px-4 py-3 rounded-lg shadow-md border border-slate-200 pointer-events-none max-w-md">
             <h2 className="text-sm font-bold text-slate-800 leading-tight">
-              PETA ZONASI LAYANAN AIR<br />
-              PERUMDAM TIRTA ARDHIA RINJANI<br />
-              KABUPATEN LOMBOK TENGAH
+              PETA ZONASI WILAYAH LAYANAN AIR<br />
+              PERUMDAM TIRTA ARDHIA RINJANI
             </h2>
           </div>
 
