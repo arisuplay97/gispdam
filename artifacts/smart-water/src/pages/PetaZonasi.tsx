@@ -172,6 +172,11 @@ export default function PetaZonasi() {
           }
           body { overflow: hidden !important; }
         }
+        /* Pindahkan posisi kontrol layer Leaflet ke tengah kanan */
+        .leaflet-top.leaflet-right {
+          top: 50% !important;
+          transform: translateY(-50%);
+        }
       `}</style>
 
       {/* Compact Header */}
@@ -246,11 +251,25 @@ export default function PetaZonasi() {
           </Card>
         </div>
 
-        {/* Map Area */}
-        <div ref={mapWrapperRef} className={`flex-1 relative rounded-xl overflow-hidden shadow-sm print-full ${isFullscreen ? 'z-[9999] border-0' : 'border border-slate-200'}`}>
-          <MapContainer 
-            center={[-8.70, 116.30]} 
-            zoom={11} 
+        {/* Map Area Wrapper */}
+        <div className="flex-1 flex gap-2 relative">
+          
+          {/* Sidebar Toggle Button (Outside Map) */}
+          <div className="flex flex-col justify-center print-hide">
+            <Button 
+              variant="outline" 
+              onClick={() => setSidebarOpen(!sidebarOpen)} 
+              className="h-16 w-6 p-0 bg-white border-slate-200 text-slate-600 hover:bg-slate-100 rounded shadow-sm z-50 flex items-center justify-center"
+              title={sidebarOpen ? "Sembunyikan Panel" : "Tampilkan Panel"}
+            >
+              {sidebarOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
+            </Button>
+          </div>
+
+          <div ref={mapWrapperRef} className={`flex-1 relative rounded-xl overflow-hidden shadow-sm print-full ${isFullscreen ? 'z-[9999] border-0 fixed inset-0' : 'border border-slate-200'}`}>
+            <MapContainer 
+              center={[-8.70, 116.30]} 
+              zoom={11} 
             className="w-full h-full z-0"
             zoomControl={false}
           >
@@ -300,27 +319,25 @@ export default function PetaZonasi() {
           </div>
 
           {/* North Arrow with UBTS */}
-          <div className="absolute top-4 right-4 z-[1000] pointer-events-none">
-            <div className="bg-white/90 backdrop-blur rounded-lg shadow-md border border-slate-200 p-2">
-              <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-                {/* Compass circle */}
-                <circle cx="30" cy="30" r="28" stroke="#cbd5e1" strokeWidth="1" fill="white" fillOpacity="0.5" />
-                <circle cx="30" cy="30" r="2" fill="#334155" />
-                {/* North arrow (dark) */}
-                <polygon points="30,4 34,26 30,22 26,26" fill="#334155" />
-                {/* South arrow (light) */}
-                <polygon points="30,56 34,34 30,38 26,34" fill="#94a3b8" />
-                {/* East tick */}
-                <line x1="54" y1="30" x2="46" y2="30" stroke="#94a3b8" strokeWidth="1.5" />
-                {/* West tick */}
-                <line x1="6" y1="30" x2="14" y2="30" stroke="#94a3b8" strokeWidth="1.5" />
-                {/* Labels */}
-                <text x="30" y="12" textAnchor="middle" fill="#334155" fontSize="8" fontWeight="bold">U</text>
-                <text x="30" y="54" textAnchor="middle" fill="#94a3b8" fontSize="8" fontWeight="bold">S</text>
-                <text x="50" y="33" textAnchor="middle" fill="#94a3b8" fontSize="8" fontWeight="bold">T</text>
-                <text x="10" y="33" textAnchor="middle" fill="#94a3b8" fontSize="8" fontWeight="bold">B</text>
-              </svg>
-            </div>
+          <div className="absolute top-4 right-4 z-[1000] pointer-events-none drop-shadow-md print-hide">
+            <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {/* Compass circle (transparent/clean) */}
+              <circle cx="30" cy="30" r="28" stroke="#64748b" strokeWidth="1.5" fill="white" fillOpacity="0.8" />
+              <circle cx="30" cy="30" r="2" fill="#1e293b" />
+              {/* North arrow (dark) */}
+              <polygon points="30,4 34,26 30,22 26,26" fill="#1e293b" />
+              {/* South arrow (light) */}
+              <polygon points="30,56 34,34 30,38 26,34" fill="#94a3b8" />
+              {/* East tick */}
+              <line x1="54" y1="30" x2="48" y2="30" stroke="#64748b" strokeWidth="1.5" />
+              {/* West tick */}
+              <line x1="6" y1="30" x2="12" y2="30" stroke="#64748b" strokeWidth="1.5" />
+              {/* Labels */}
+              <text x="30" y="14" textAnchor="middle" fill="#1e293b" fontSize="10" fontWeight="bold">U</text>
+              <text x="30" y="52" textAnchor="middle" fill="#64748b" fontSize="9" fontWeight="bold">S</text>
+              <text x="49" y="33" textAnchor="middle" fill="#64748b" fontSize="9" fontWeight="bold">T</text>
+              <text x="11" y="33" textAnchor="middle" fill="#64748b" fontSize="9" fontWeight="bold">B</text>
+            </svg>
           </div>
 
           {/* Fullscreen Button */}
@@ -328,19 +345,9 @@ export default function PetaZonasi() {
             variant="secondary" 
             size="icon" 
             onClick={toggleFullscreen} 
-            className="absolute top-20 right-5 z-[1000] shadow-md bg-white hover:bg-slate-100 print-hide"
+            className="absolute top-20 right-4 z-[1000] shadow-md bg-white hover:bg-slate-100 print-hide"
           >
             {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
-          </Button>
-
-          {/* Sidebar Toggle */}
-          <Button 
-            variant="secondary" 
-            size="icon" 
-            onClick={() => setSidebarOpen(!sidebarOpen)} 
-            className="absolute top-20 left-5 z-[1000] shadow-md bg-white hover:bg-slate-100 print-hide"
-          >
-            {sidebarOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
           </Button>
 
           {/* Legend */}
@@ -432,6 +439,7 @@ export default function PetaZonasi() {
               </Card>
             </div>
           )}
+        </div>
         </div>
       </div>
     </div>
