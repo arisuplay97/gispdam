@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { MapContainer, TileLayer, GeoJSON, Tooltip, useMap, ZoomControl, LayersControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Search, Filter, RefreshCcw, Download, AlertTriangle, CheckCircle, Info, Droplets, Gauge, Maximize, Minimize } from 'lucide-react';
+import { Search, Filter, RefreshCcw, Download, AlertTriangle, CheckCircle, Info, Droplets, Gauge, Maximize, Minimize, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -154,30 +154,46 @@ export default function PetaZonasi() {
 
   return (
     <div className="flex flex-col h-screen bg-slate-50 text-slate-900 font-sans">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center shadow-sm z-10">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Peta Zonasi Layanan PDAM Lombok Tengah</h1>
-          <p className="text-sm text-slate-500 mt-1">Monitoring kondisi layanan air berbasis sistem gravitasi per kecamatan</p>
-        </div>
-        <div className="flex space-x-3">
-          <Button variant="outline" onClick={() => window.location.reload()} className="text-blue-600 border-blue-200 hover:bg-blue-50">
-            <RefreshCcw className="w-4 h-4 mr-2" /> Refresh Data
+      {/* Print Styles */}
+      <style>{`
+        @media print {
+          .print-hide { display: none !important; }
+          .print-full { 
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+          }
+          body { overflow: hidden !important; }
+        }
+      `}</style>
+
+      {/* Compact Header */}
+      <header className="bg-white border-b border-slate-200 px-6 py-2 flex justify-between items-center shadow-sm z-10 print-hide">
+        <h1 className="text-base font-bold text-slate-800">Peta Zonasi Wilayah Layanan</h1>
+        <div className="flex space-x-2">
+          <Button variant="outline" size="sm" onClick={() => window.location.reload()} className="text-blue-600 border-blue-200 hover:bg-blue-50 h-8 text-xs">
+            <RefreshCcw className="w-3.5 h-3.5 mr-1" /> Refresh
           </Button>
-          <Button variant="outline" onClick={resetFilter} className="text-slate-600">
-            Reset Filter
+          <Button variant="outline" size="sm" onClick={resetFilter} className="text-slate-600 h-8 text-xs">
+            Reset
           </Button>
-          <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-            <Download className="w-4 h-4 mr-2" /> Export Laporan
+          <Button variant="outline" size="sm" onClick={() => window.print()} className="text-slate-600 h-8 text-xs">
+            <Printer className="w-3.5 h-3.5 mr-1" /> Cetak
           </Button>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden px-6 pb-6 pt-6 gap-6">
+      <div className="flex-1 flex overflow-hidden px-4 pb-4 pt-4 gap-4">
         
         {/* Sidebar */}
-        <div className="w-80 flex flex-col gap-4">
+        <div className="w-72 flex flex-col gap-4 print-hide">
           <Card className="flex-1 flex flex-col shadow-sm border-slate-200 overflow-hidden">
             <div className="p-4 border-b border-slate-100 flex flex-col gap-3">
               <div className="relative">
@@ -230,14 +246,14 @@ export default function PetaZonasi() {
         </div>
 
         {/* Map Area */}
-        <div ref={mapWrapperRef} className={`flex-1 relative rounded-xl overflow-hidden shadow-sm ${isFullscreen ? 'z-[9999] border-0' : 'border border-slate-200'}`}>
+        <div ref={mapWrapperRef} className={`flex-1 relative rounded-xl overflow-hidden shadow-sm print-full ${isFullscreen ? 'z-[9999] border-0' : 'border border-slate-200'}`}>
           <MapContainer 
             center={[-8.70, 116.30]} 
             zoom={11} 
             className="w-full h-full z-0"
             zoomControl={false}
           >
-            <LayersControl position="topright">
+            <LayersControl position="bottomleft">
               <LayersControl.BaseLayer checked name="Peta Dasar (Light)">
                 <TileLayer
                   attribution='&copy; <a href="https://carto.com/attributions">CARTO</a>'
@@ -282,12 +298,21 @@ export default function PetaZonasi() {
             </h2>
           </div>
 
-          {/* Map Controls & Overlays */}
+          {/* North Arrow */}
+          <div className="absolute top-4 right-4 z-[1000] pointer-events-none print-hide">
+            <svg width="40" height="56" viewBox="0 0 40 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <polygon points="20,0 28,24 20,18 12,24" fill="#334155" />
+              <polygon points="20,18 28,24 20,48 12,24" fill="#94a3b8" />
+              <text x="20" y="55" textAnchor="middle" fill="#334155" fontSize="10" fontWeight="bold">N</text>
+            </svg>
+          </div>
+
+          {/* Fullscreen Button */}
           <Button 
             variant="secondary" 
             size="icon" 
             onClick={toggleFullscreen} 
-            className="absolute top-4 right-16 z-[1000] shadow-md bg-white hover:bg-slate-100"
+            className="absolute top-4 right-16 z-[1000] shadow-md bg-white hover:bg-slate-100 print-hide"
           >
             {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
           </Button>
@@ -318,7 +343,7 @@ export default function PetaZonasi() {
 
           {/* Detail Panel Float */}
           {selectedZone && (
-            <div className="absolute top-16 right-4 w-80 z-[1000] animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="absolute top-4 right-20 w-80 z-[1000] animate-in fade-in slide-in-from-right-4 duration-300 print-hide">
               <Card className="shadow-lg border-0 ring-1 ring-slate-200">
                 <CardHeader className="pb-3 border-b border-slate-100 bg-slate-50/50">
                   <div className="flex justify-between items-start">
