@@ -185,27 +185,27 @@ export default function PetaZonasi() {
       `}</style>
 
       {/* Compact Header */}
-      <header className="bg-white border-b border-slate-200 px-6 py-2 flex justify-between items-center shadow-sm z-10 print-hide">
-        <h1 className="text-base font-bold text-slate-800">Peta Zonasi Wilayah Layanan</h1>
-        <div className="flex space-x-2">
+      <header className="bg-white border-b border-slate-200 px-4 md:px-6 py-2 flex flex-wrap gap-2 justify-between items-center shadow-sm z-10 print-hide">
+        <h1 className="text-sm md:text-base font-bold text-slate-800">Peta Zonasi Wilayah Layanan</h1>
+        <div className="flex space-x-1 md:space-x-2">
           <Button variant="outline" size="sm" onClick={() => window.location.reload()} className="text-blue-600 border-blue-200 hover:bg-blue-50 h-8 text-xs">
-            <RefreshCcw className="w-3.5 h-3.5 mr-1" /> Refresh
+            <RefreshCcw className="w-3.5 h-3.5 mr-1 hidden sm:inline" /> Refresh
           </Button>
           <Button variant="outline" size="sm" onClick={resetFilter} className="text-slate-600 h-8 text-xs">
             Reset
           </Button>
           <Button variant="outline" size="sm" onClick={() => window.print()} className="text-slate-600 h-8 text-xs">
-            <Printer className="w-3.5 h-3.5 mr-1" /> Cetak
+            <Printer className="w-3.5 h-3.5 mr-1 hidden sm:inline" /> Cetak
           </Button>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden px-4 pb-4 pt-4 gap-4">
+      <div className="flex-1 flex overflow-hidden px-2 md:px-4 pb-2 md:pb-4 pt-2 md:pt-4 gap-2 md:gap-4 relative">
         
         {/* Sidebar */}
-        <div className={`flex flex-col gap-4 print-hide transition-all duration-300 ${sidebarOpen ? 'w-72' : 'w-0 overflow-hidden'}`}>
-          <Card className="flex-1 flex flex-col shadow-sm border-slate-200 overflow-hidden min-w-[288px]">
+        <div className={`absolute md:relative z-[1001] md:z-auto h-[calc(100%-1rem)] md:h-auto flex flex-col gap-4 print-hide transition-all duration-300 ${sidebarOpen ? 'w-72 translate-x-0' : 'w-0 -translate-x-full md:translate-x-0 overflow-hidden'}`}>
+          <Card className="flex-1 flex flex-col shadow-2xl md:shadow-sm border-slate-200 overflow-hidden min-w-[288px] bg-white">
             <div className="p-4 border-b border-slate-100 flex flex-col gap-3">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
@@ -260,11 +260,11 @@ export default function PetaZonasi() {
         <div className="flex-1 flex gap-2 relative">
           
           {/* Sidebar Toggle Button (Outside Map) */}
-          <div className="flex flex-col justify-center print-hide">
+          <div className="absolute md:static left-0 top-1/2 -translate-y-1/2 md:translate-y-0 flex flex-col justify-center print-hide z-[1002] md:z-50 pointer-events-auto">
             <Button 
               variant="outline" 
               onClick={() => setSidebarOpen(!sidebarOpen)} 
-              className="h-16 w-6 p-0 bg-white border-slate-200 text-slate-600 hover:bg-slate-100 rounded shadow-sm z-50 flex items-center justify-center"
+              className="h-16 w-6 p-0 bg-white border-slate-200 text-slate-600 hover:bg-slate-100 rounded-r-md md:rounded shadow-md md:shadow-sm flex items-center justify-center border-l-0 md:border-l"
               title={sidebarOpen ? "Sembunyikan Panel" : "Tampilkan Panel"}
             >
               {sidebarOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
@@ -324,7 +324,7 @@ export default function PetaZonasi() {
           </div>
 
           {/* North Arrow with UBTS */}
-          <div className="absolute top-4 right-4 z-[1000] pointer-events-none drop-shadow-md print-hide">
+          <div className="absolute top-4 right-4 z-[1000] pointer-events-none drop-shadow-md">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="100" height="100">
               <defs>
                 <radialGradient id="ringGrad" cx="50%" cy="50%" r="50%">
@@ -421,14 +421,14 @@ export default function PetaZonasi() {
             variant="secondary" 
             size="icon" 
             onClick={toggleFullscreen} 
-            className="absolute top-20 right-4 z-[1000] shadow-md bg-white hover:bg-slate-100 print-hide"
+            className="absolute top-[calc(50%-3.5rem)] right-2.5 z-[1000] shadow-md bg-white hover:bg-slate-100 print-hide"
           >
             {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
           </Button>
 
           {/* Legend */}
-          <div className="absolute bottom-6 left-6 z-[1000] bg-white/90 backdrop-blur px-4 py-3 rounded-lg shadow-md border border-slate-200 pointer-events-none max-w-[280px]">
-            <h4 className="text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">Legenda Status</h4>
+          <div className="absolute bottom-4 left-4 md:bottom-6 md:left-6 z-[1000] bg-white/90 backdrop-blur px-3 py-2 md:px-4 md:py-3 rounded-lg shadow-md border border-slate-200 pointer-events-none max-w-[200px] md:max-w-[280px]">
+            <h4 className="text-[10px] md:text-xs font-bold text-slate-700 mb-1 md:mb-2 uppercase tracking-wider">Legenda Status</h4>
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded opacity-80 border" style={{ backgroundColor: statusColors.normal.fill, borderColor: '#558b2f' }}></div>
@@ -452,8 +452,8 @@ export default function PetaZonasi() {
 
           {/* Detail Panel Float */}
           {selectedZone && (
-            <div className="absolute top-4 right-20 w-80 z-[1000] animate-in fade-in slide-in-from-right-4 duration-300 print-hide">
-              <Card className="shadow-lg border-0 ring-1 ring-slate-200">
+            <div className="absolute top-2 right-2 left-10 md:top-4 md:right-20 md:left-auto md:w-80 max-w-sm z-[1000] animate-in fade-in slide-in-from-right-4 duration-300 print-hide">
+              <Card className="shadow-2xl md:shadow-lg border-0 ring-1 ring-slate-200">
                 <CardHeader className="pb-3 border-b border-slate-100 bg-slate-50/50">
                   <div className="flex justify-between items-start">
                     <div>
