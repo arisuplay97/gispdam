@@ -125,14 +125,18 @@ export default function PetaZonasi() {
   const onEachFeature = (feature: any, layer: any) => {
     // Bind a permanent text label
     const regionName = feature.properties.kecamatan || "Kecamatan";
-    layer.bindTooltip(
-      `<span style="color: #334155; font-weight: 700; font-size: 11px; text-shadow: 1px 1px 0 rgba(255,255,255,0.8), -1px -1px 0 rgba(255,255,255,0.8), 1px -1px 0 rgba(255,255,255,0.8), -1px 1px 0 rgba(255,255,255,0.8);">${regionName}</span>`, 
-      {
-        permanent: true,
-        direction: 'center',
-        className: 'bg-transparent border-0 shadow-none'
-      }
-    );
+    
+    // Penyesuaian posisi untuk wilayah yang kurang tengah (Praya Barat & Pujut)
+    let offset: [number, number] = [0, 0];
+    if (regionName === "Praya Barat") offset = [0, -40];
+    if (regionName === "Pujut") offset = [0, -100]; // Pujut wilayahnya panjang ke bawah, perlu naik lebih tinggi
+
+    layer.bindTooltip(regionName, {
+      permanent: true,
+      direction: 'center',
+      className: 'custom-tooltip',
+      offset: offset
+    });
 
     layer.on({
       mouseover: (e: any) => {
@@ -197,6 +201,24 @@ export default function PetaZonasi() {
                   drop-shadow(3px 3px 0px rgba(0,0,0,0.2))
                   drop-shadow(4px 4px 0px rgba(0,0,0,0.1))
                   drop-shadow(8px 8px 10px rgba(0,0,0,0.5));
+        }
+        /* Style Label Wilayah */
+        .custom-tooltip {
+          background: white !important;
+          border: 1px solid #e2e8f0 !important;
+          border-radius: 6px !important;
+          padding: 4px 8px !important;
+          font-weight: 800 !important;
+          font-size: 10px !important;
+          color: #1e293b !important;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1) !important;
+          text-transform: uppercase;
+          letter-spacing: 0.025em;
+          opacity: 1 !important;
+          white-space: nowrap;
+        }
+        .custom-tooltip::before {
+          display: none !important;
         }
       `}</style>
 
