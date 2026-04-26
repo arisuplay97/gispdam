@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { MapContainer, TileLayer, GeoJSON, Tooltip, useMap, ZoomControl, LayersControl } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, Tooltip, useMap, ZoomControl, LayersControl, useMapEvents, LayerGroup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Search, Filter, RefreshCcw, Download, AlertTriangle, CheckCircle, Info, Droplets, Gauge, Maximize, Minimize, Printer, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,19 @@ const MapUpdater = ({ center, zoom }: { center: [number, number], zoom: number }
   return null;
 };
 
+// Component to handle 3D toggle from LayersControl
+const MapEvents = ({ setIs3D }: { setIs3D: (val: boolean) => void }) => {
+  useMapEvents({
+    overlayadd: (e) => {
+      if (e.name === "Efek Timbul (3D)") setIs3D(true);
+    },
+    overlayremove: (e) => {
+      if (e.name === "Efek Timbul (3D)") setIs3D(false);
+    }
+  });
+  return null;
+};
+
 export default function PetaZonasi() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -40,6 +53,7 @@ export default function PetaZonasi() {
   const [mapZoom, setMapZoom] = useState(11);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [is3D, setIs3D] = useState(false);
   const mapWrapperRef = React.useRef<HTMLDivElement>(null);
 
   const toggleFullscreen = () => {
@@ -118,7 +132,7 @@ export default function PetaZonasi() {
       opacity: 1,
       color: isSelected ? '#1e293b' : 'white',
       fillOpacity: isSelected ? 0.9 : 0.75,
-      className: 'zone-3d'
+      className: is3D ? 'zone-3d' : ''
     };
   };
 
@@ -129,7 +143,7 @@ export default function PetaZonasi() {
     // Penyesuaian posisi untuk wilayah yang kurang tengah (Praya Barat & Pujut)
     let offset: [number, number] = [0, 0];
     if (regionName === "Praya Barat") offset = [0, -40];
-    if (regionName === "Pujut") offset = [0, -100]; // Pujut wilayahnya panjang ke bawah, perlu naik lebih tinggi
+    if (regionName === "Pujut") offset = [40, -100]; // Pindah lebih ke kanan dan ke atas
 
     layer.bindTooltip(regionName, {
       permanent: true,
@@ -334,7 +348,11 @@ export default function PetaZonasi() {
                   maxZoom={20}
                 />
               </LayersControl.BaseLayer>
+              <LayersControl.Overlay name="Efek Timbul (3D)">
+                <LayerGroup />
+              </LayersControl.Overlay>
             </LayersControl>
+            <MapEvents setIs3D={setIs3D} />
             {geoJsonData && (
               <GeoJSON 
                 key="zonasi-layer"
