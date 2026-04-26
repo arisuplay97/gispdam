@@ -114,10 +114,11 @@ export default function PetaZonasi() {
     const isSelected = zone && selectedZone?.id === zone.id;
     return {
       fillColor: statusColors[status].fill,
-      weight: isSelected ? 3 : 1,
+      weight: isSelected ? 3 : 1.5,
       opacity: 1,
-      color: isSelected ? '#000' : 'white',
-      fillOpacity: isSelected ? 0.9 : 0.6
+      color: isSelected ? '#1e293b' : 'white',
+      fillOpacity: isSelected ? 0.9 : 0.75,
+      className: 'zone-3d'
     };
   };
 
@@ -181,6 +182,21 @@ export default function PetaZonasi() {
         .leaflet-top.leaflet-right {
           top: 50% !important;
           transform: translateY(-50%);
+        }
+        /* Efek 3D / Timbul untuk Poligon Peta */
+        .zone-3d {
+          filter: drop-shadow(1px 1px 0px rgba(0,0,0,0.2)) 
+                  drop-shadow(2px 2px 0px rgba(0,0,0,0.2)) 
+                  drop-shadow(3px 3px 0px rgba(0,0,0,0.1))
+                  drop-shadow(5px 5px 6px rgba(0,0,0,0.4));
+          transition: filter 0.2s ease-in-out;
+        }
+        .zone-3d:hover {
+          filter: drop-shadow(1px 1px 0px rgba(0,0,0,0.3)) 
+                  drop-shadow(2px 2px 0px rgba(0,0,0,0.3)) 
+                  drop-shadow(3px 3px 0px rgba(0,0,0,0.2))
+                  drop-shadow(4px 4px 0px rgba(0,0,0,0.1))
+                  drop-shadow(8px 8px 10px rgba(0,0,0,0.5));
         }
       `}</style>
 
