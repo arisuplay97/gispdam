@@ -275,25 +275,23 @@ export default function PetaZonasi() {
             <MapContainer 
               center={[-8.70, 116.30]} 
               zoom={11} 
-            className="w-full h-full z-0"
-            zoomControl={false}
-          >
+              className="w-full h-full z-0"
+              zoomControl={false}
+              attributionControl={false}
+            >
             <LayersControl position="topright">
               <LayersControl.BaseLayer checked name="Peta Dasar (Light)">
                 <TileLayer
-                  attribution='&copy; <a href="https://carto.com/attributions">CARTO</a>'
                   url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
                 />
               </LayersControl.BaseLayer>
               <LayersControl.BaseLayer name="OpenStreetMap">
                 <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
               </LayersControl.BaseLayer>
               <LayersControl.BaseLayer name="Google Satellite">
                 <TileLayer
-                  attribution='&copy; Google'
                   url="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
                   maxZoom={20}
                 />
