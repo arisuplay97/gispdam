@@ -143,7 +143,7 @@ export default function PetaZonasi() {
     // Penyesuaian posisi untuk wilayah yang kurang tengah (Praya Barat & Pujut)
     let offset: [number, number] = [0, 0];
     if (regionName === "Praya Barat") offset = [0, -40];
-    if (regionName === "Pujut") offset = [40, -100]; // Pindah lebih ke kanan dan ke atas
+    if (regionName === "Pujut") offset = [60, -120]; // Pindah lebih ke kanan dan ke atas
 
     layer.bindTooltip(regionName, {
       permanent: true,
@@ -355,7 +355,7 @@ export default function PetaZonasi() {
             <MapEvents setIs3D={setIs3D} />
             {geoJsonData && (
               <GeoJSON 
-                key="zonasi-layer"
+                key={`zonasi-layer-${is3D}`}
                 data={geoJsonData} 
                 style={getStyle}
                 onEachFeature={onEachFeature}
